@@ -1,13 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
-  <POU Name="MAIN" Id="{ff2cc2b3-37fa-4751-9ea9-2181601b74ac}">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="MAIN" Id="{ff2cc2b3-37fa-4751-9ea9-2181601b74ac}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
+	Machine : FB_Machine;
 END_VAR
-]]>
-    </Declaration>
+]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[Machine(
+	Ctrl:= GVL_Remote.Ctrl, 
+	Status:= GVL_Remote.Status, 
+	Service:= GVL_Remote.Service, 
+	Admin:= GVL_Remote.Admin);]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

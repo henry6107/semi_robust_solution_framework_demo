@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_GC_Service" Id="{9bc19b9e-b9e1-48f5-a1d5-11458e0dc8e6}">
+    <Declaration><![CDATA[TYPE ST_GC_Service :
+STRUCT
+	SpinAxisJogService : ST_GCSpinAxisJogService;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

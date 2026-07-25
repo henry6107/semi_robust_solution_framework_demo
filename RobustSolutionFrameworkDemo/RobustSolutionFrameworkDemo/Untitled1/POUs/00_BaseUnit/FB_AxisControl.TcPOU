@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_AxisControl" Id="{28a42f80-195a-4223-a1bf-e623b7d6079c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_AxisControl
+VAR_INPUT
+	Axis	: REFERENCE TO AXIS_REF;
+END_VAR
+
+VAR_OUTPUT
+	AxisStatus : ST_AxisStatus;
+	ErrorText : STRING;
+END_VAR
+
+VAR
+	_MCMoveAbs	: MC_MoveAbsolute;
+	_MCReset	: MC_Reset;
+	_MCStop		: MC_Stop;
+	_MCMoveVel	: MC_MoveVelocity;
+	_MCPower	: MC_Power;
+	_MCJog		: MC_Jog;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT __ISVALIDREF(Axis) THEN
+	ErrorText := 'Axis Reference is Invalid.';
+	RETURN;
+ELSE
+	ErrorText := '';
+END_IF
+
+_MCPower(Axis:= Axis,
+			Enable:= TRUE,
+			Enable_Positive:= TRUE,
+			Enable_Negative:= TRUE,
+			Override:= 100);
+			
+_MCReset(Axis:= Axis);
+_MCStop(Axis:= Axis);
+_MCMoveAbs(Axis:= Axis);
+_MCMoveVel(Axis:= Axis);
+_MCJog(Axis:= Axis);
+
+Axis.ReadStatus();
+AxisStatus := Axis.Status; ]]></ST>
+    </Implementation>
+    <Method Name="M_Jog" Id="{dc88b92a-725e-4df4-aa19-7fa274329a3a}">
+      <Declaration><![CDATA[METHOD M_Jog
+VAR_INPUT
+	JogForward : BOOL;
+	JogBackwards : BOOL;
+	Mode : E_JogMode;
+	Position : LREAL;
+	Velocity : LREAL;
+	Acceleration : LREAL;
+	Deceleration : LREAL;
+END_VAR
+
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+	ErrorId : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_MCJog.JogForward := JogForward;
+_MCJog.JogBackwards := JogBackwards;
+_MCJog.Mode := Mode;
+_MCJog.Position := Position;
+_MCJog.Velocity := Velocity;
+_MCJog.Acceleration := Acceleration;
+_MCJog.Deceleration := Deceleration;
+
+Done := _MCJog.Done;
+Error := _MCJog.Error;
+ErrorId := _MCJog.ErrorId;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_MoveAbs" Id="{12c6fae0-35a4-42f7-a077-cdf0cbcaba8d}">
+      <Declaration><![CDATA[METHOD M_MoveAbs
+VAR_INPUT
+	Execute : BOOL;
+	Position : LREAL;
+	Velocity : LREAL;
+	Acceleration : LREAL;
+	Deceleration : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_MCMoveAbs.Execute := Execute;
+_MCMoveAbs.Position := Position;
+_MCMoveAbs.Velocity := Velocity;
+_MCMoveAbs.Acceleration := Acceleration;
+_MCMoveAbs.Deceleration := Deceleration;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_MoveVel" Id="{2b358657-cee5-4620-ae42-419450a93b24}">
+      <Declaration><![CDATA[METHOD M_MoveVel : BOOL
+VAR_INPUT
+	Execute : BOOL;
+	Velocity : LREAL;
+	Acceleration : LREAL;
+	Deceleration : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_MCMoveVel.Execute := Execute;
+_MCMoveVel.Velocity := Velocity;
+_MCMoveVel.Acceleration := Acceleration;
+_MCMoveVel.Deceleration := Deceleration;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Reset" Id="{73fb1eb2-f7fa-423b-ae99-c942ced73b28}">
+      <Declaration><![CDATA[METHOD M_Reset
+VAR_INPUT
+	Execute : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_MCReset.Execute := Execute;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Stop" Id="{2df51e0d-c316-436a-9fe7-294a4bc52bdf}">
+      <Declaration><![CDATA[METHOD M_Stop
+VAR_INPUT
+	Execute : BOOL;
+	Deceleration : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_MCStop.Execute := Execute;
+_MCStop.Deceleration := Deceleration;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

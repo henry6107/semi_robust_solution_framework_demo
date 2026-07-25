@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_Machine_Admin" Id="{d23aeff5-7f8d-4f83-aa59-3a3e7fc5f334}">
+    <Declaration><![CDATA[TYPE ST_Machine_Admin :
+STRUCT
+	GC_Admin : ST_GC_Admin;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

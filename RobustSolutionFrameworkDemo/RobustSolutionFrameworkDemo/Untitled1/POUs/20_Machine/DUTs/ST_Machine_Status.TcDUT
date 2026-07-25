@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_Machine_Status" Id="{2b74a9ea-acd7-4edd-8254-848459290d00}">
+    <Declaration><![CDATA[TYPE ST_Machine_Status:
+STRUCT
+	Machine_Status : ST_PML_Base_Out;
+	GC_Status : ST_PML_Base_Out;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

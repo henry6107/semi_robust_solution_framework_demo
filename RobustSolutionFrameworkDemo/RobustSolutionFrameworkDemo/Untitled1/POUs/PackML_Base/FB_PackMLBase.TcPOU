@@ -346,7 +346,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnAborting := Done;]]></ST>
+H_OnAborting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnClearing" Id="{3403ef10-749e-425d-81c7-aa09980fc7da}" FolderPath="State Action Hook Method\">
@@ -357,7 +357,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnClearing := Done;]]></ST>
+H_OnClearing := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnComplete" Id="{c6c044b2-0836-4192-a54d-4875856d12b0}" FolderPath="State Action Hook Method\">
@@ -378,7 +378,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnCompleting := Done;]]></ST>
+H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnExecute" Id="{b44dc1df-23a6-4acf-aaac-94c4f43cef35}" FolderPath="State Action Hook Method\">
@@ -389,7 +389,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Execute is stable by default; derived FBs decide when the process is done.
-H_OnExecute := Busy;]]></ST>
+H_OnExecute := E_PackMLHookResult.Busy;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnHeld" Id="{44f5e96b-d14a-41e4-981a-73134384adb2}" FolderPath="State Action Hook Method\">
@@ -410,7 +410,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnHolding := Done;]]></ST>
+H_OnHolding := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnIdle" Id="{e8d1bb5c-d66f-4b90-80aa-5521f4b1e39c}" FolderPath="State Action Hook Method\">
@@ -442,7 +442,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnResetting := Done;]]></ST>
+H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnStarting" Id="{d244760c-0e73-42e0-9524-ef70583c8446}" FolderPath="State Action Hook Method\">
@@ -453,7 +453,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnStarting := Done;]]></ST>
+H_OnStarting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnStateChanged" Id="{b39fd166-f67a-4543-bd9f-b74320073c49}" FolderPath="Useful Hook Method\">
@@ -485,7 +485,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnStopping := Done;]]></ST>
+H_OnStopping := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnSuspended" Id="{af02e98b-4ca8-4346-9586-599f47a3f0c8}" FolderPath="State Action Hook Method\">
@@ -506,7 +506,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnSuspending := Done;]]></ST>
+H_OnSuspending := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnUndefined" Id="{348c6696-4691-4303-b7e8-15f37a1c30ff}" FolderPath="State Action Hook Method\">
@@ -517,7 +517,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// The base FB leaves Undefined immediately unless a derived FB delays startup.
-H_OnUndefined := Done;]]></ST>
+H_OnUndefined := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnUnholding" Id="{900cc882-799f-423d-876a-12412604b19e}" FolderPath="State Action Hook Method\">
@@ -528,7 +528,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnUnholding := Done;]]></ST>
+H_OnUnholding := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnUnsuspending" Id="{d4125dcf-e5e7-4271-a103-073060450909}" FolderPath="State Action Hook Method\">
@@ -539,7 +539,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnUnsuspending := Done;]]></ST>
+H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_BuildCommandRejectedByModeText" Id="{9bed73e9-8908-4db2-9191-2df23f4176bd}" FolderPath="Private Method\">

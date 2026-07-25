@@ -18,7 +18,62 @@
     <LibraryReferences>{f48a1a77-eb4b-4435-8c0b-d884e3848626}</LibraryReferences>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DUTs\ST_ServiceCtrlBase.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ServiceStatusBase.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\GVL_Remote.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
     <Compile Include="PlcTask.TcTTO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\00_BaseUnit\FB_AxisControl.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService\E_GCSpinAxisJogErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService\ST_GCSpinAxisJogCtrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService\ST_GCSpinAxisJogParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService\ST_GCSpinAxisJogService.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService\ST_GCSpinAxisJogStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_Admin.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_Service.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\FB_GC.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisJogServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\20_Machine\DUTs\ST_Machine_Admin.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\20_Machine\DUTs\ST_Machine_Ctrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\20_Machine\DUTs\ST_Machine_Service.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\20_Machine\DUTs\ST_Machine_Status.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\20_Machine\FB_Machine.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\MAIN.TcPOU">
@@ -45,9 +100,15 @@
     <Compile Include="POUs\PackML_Base\FB_PackMLBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\PackML_Base\FB_PackMLModeSet.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\PackML_Base\GVLs\GVL_PackMLMode.TcGVL">
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\I_PackMLStateActionProvider.TcIO">
+      <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\PackML_Base\Utilities\F_PackMLCommandToString.TcPOU">
       <SubType>Code</SubType>
@@ -58,22 +119,30 @@
     <Compile Include="POUs\PackML_Base\Utilities\F_PackMLStateToString.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_ModeSetting\FB_PackMLModeSet.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DUTs" />
     <Folder Include="GVLs" />
+    <Folder Include="POUs\00_BaseUnit" />
+    <Folder Include="POUs\10_Module\11_GC" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService" />
+    <Folder Include="POUs\10_Module\11_GC\Services" />
+    <Folder Include="POUs\20_Machine" />
+    <Folder Include="POUs\10_Module" />
+    <Folder Include="POUs\20_Machine\DUTs" />
     <Folder Include="POUs\PackML_Base" />
     <Folder Include="POUs\PackML_Base\DUTs" />
     <Folder Include="POUs\PackML_Base\GVLs" />
     <Folder Include="POUs\PackML_Base\Utilities" />
-    <Folder Include="POUs\PackML_ModeSetting" />
     <Folder Include="VISUs" />
     <Folder Include="POUs" />
   </ItemGroup>
   <ItemGroup>
+    <PlaceholderReference Include="Tc2_MC2">
+      <DefaultResolution>Tc2_MC2, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_MC2</Namespace>
+    </PlaceholderReference>
     <PlaceholderReference Include="Tc2_Standard">
       <DefaultResolution>Tc2_Standard, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc2_Standard</Namespace>

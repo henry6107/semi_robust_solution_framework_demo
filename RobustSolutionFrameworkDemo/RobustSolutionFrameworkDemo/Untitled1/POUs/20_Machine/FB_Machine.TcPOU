@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Machine" Id="{69cb68d3-e5c6-471b-9f6c-4d1a2834d8e1}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Machine EXTENDS FB_PackMLModeSet
+VAR_INPUT
+	Ctrl : REFERENCE TO ST_Machine_Ctrl;
+	Status : REFERENCE TO ST_Machine_Status;
+	Service : REFERENCE TO ST_Machine_Service;
+	Admin : REFERENCE TO ST_Machine_Admin;
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	_Ctrl : ST_Machine_Ctrl;
+	_Service : ST_Machine_Service;
+	_Admin	: ST_Machine_Admin;
+	
+	// Module
+	_GC_Module : FB_GC;
+	
+	// Component
+	_GCSpinAxis : AXIS_REF;
+	_GCSpinAxis_BaseUnit : FB_AxisControl;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[M_AssignIO();
+A00_BaseUnit();
+A01_Module();
+A02_Service();
+
+stIn := _Ctrl.Machine_Ctrl;
+Status.Machine_Status := stOut;
+
+SUPER^();]]></ST>
+    </Implementation>
+    <Action Name="A00_BaseUnit" Id="{533e0514-77ae-4296-9814-352b13fbb7c4}">
+      <Implementation>
+        <ST><![CDATA[_GCSpinAxis_BaseUnit(Axis:= _GCSpinAxis);]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A01_Module" Id="{7783d0eb-9157-4572-a80b-92bd49224666}">
+      <Implementation>
+        <ST><![CDATA[_GC_Module(
+	stIn:= _Ctrl.GC_Ctrl,
+	stOut=> Status.GC_Status,
+	Service:= _Service.GC_Service, 
+	Admin:= _Admin.GC_Admin,
+	SpinAxis_BaseUnit:= _GCSpinAxis_BaseUnit);]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A02_Service" Id="{d47387d1-caed-4193-989f-250848f90265}">
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Action>
+    <Method Name="M_AssignIO" Id="{0f5c3a91-d4f1-4457-9e9e-742e974a9cfc}">
+      <Declaration><![CDATA[METHOD M_AssignIO : BOOL
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Ctrl := Ctrl;
+_Service := Service;
+_Admin := Admin;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
