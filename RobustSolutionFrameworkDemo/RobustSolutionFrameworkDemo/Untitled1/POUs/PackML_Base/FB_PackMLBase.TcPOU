@@ -1,0 +1,740 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_PackMLBase" Id="{bb7074bb-cd46-4555-9ada-1eb1c7832876}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_PackMLBase
+VAR_INPUT
+	stIn	: ST_PML_Base_In;
+	
+	bEnable				: BOOL := TRUE;
+	bExternalFault		: BOOL;
+END_VAR
+VAR_OUTPUT
+	stOut	: ST_PML_Base_Out;
+	
+	sStateErrorText		: STRING(255);
+	sModeErrorText		: STRING(255);
+	bTransitionActive	: BOOL;
+END_VAR
+VAR
+	_eLastCommand			: E_PackMLCommand := E_PackMLCommand.None;
+	_eCommandToProcess		: E_PackMLCommand := E_PackMLCommand.None;
+	_eQueuedCommand			: E_PackMLCommand := E_PackMLCommand.None;
+	_bQueuedCommandRequest	: BOOL;
+	_bCommandConsumed		: BOOL;
+	_bModeChangeConsumed	: BOOL;
+	_bStateFirstScan		: BOOL := TRUE;
+	_bStateFirstScanForHook	: BOOL;
+	_eHookResult			: E_PackMLHookResult;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Reset edge-style status before evaluating this PLC cycle.
+_eCommandToProcess		:= E_PackMLCommand.None;
+
+// Command and mode request feedback is latched for HMI/upper-layer handshakes
+// until the corresponding request input returns to FALSE.
+IF NOT stIn.bCommandChangeRequest THEN
+	stOut.bCommandAccepted	:= FALSE;
+	stOut.bCommandRejected	:= FALSE;
+	sStateErrorText			:= '';
+END_IF
+
+IF NOT stIn.bModeChangeRequest THEN
+	stOut.bModeChanged		:= FALSE;
+	stOut.bModeChangeRejected	:= FALSE;
+	sModeErrorText		:= '';
+END_IF
+
+// A disabled base FB holds the current state and suppresses transition activity.
+IF NOT bEnable THEN
+	bTransitionActive := FALSE;
+	RETURN;
+END_IF
+
+// Mode change requests are edge/latch based, matching command request behavior.
+// The caller must clear stIn.bModeChangeRequest before the same request can run again.
+IF NOT stIn.bModeChangeRequest THEN
+	_bModeChangeConsumed := FALSE;
+END_IF
+
+IF stIn.bModeChangeRequest AND NOT _bModeChangeConsumed THEN
+	_bModeChangeConsumed := TRUE;
+
+	IF NOT H_IsModeSupported(stIn.eMode) THEN
+		M_RejectModeChange('Requested mode is not supported.');
+	ELSIF stIn.eMode = stOut.eModeCurrent THEN
+		M_RejectModeChange('Requested mode is already active.');
+	ELSIF NOT M_IsModeChangeAllowedByState() THEN
+		M_RejectModeChange('Mode change is only allowed from Aborted, Stopped, Idle, or Complete.');
+	ELSIF NOT H_IsStateSupportedByMode(stIn.eMode, stOut.eStateCurrent) THEN
+		M_RejectModeChange('Requested mode does not support the current PackML state.');
+	ELSE
+		M_ChangeMode(stIn.eMode);
+	END_IF
+END_IF
+
+// Command requests are edge/latch based, matching mode-change request behavior.
+// The caller must clear stIn.bCommandChangeRequest before another command can run.
+IF NOT stIn.bCommandChangeRequest THEN
+	_bCommandConsumed	:= FALSE;
+	_eLastCommand		:= E_PackMLCommand.None;
+END_IF
+
+// External faults have priority over normal commands and force the abort path
+// only while the machine is not already Aborting or Aborted.
+IF bExternalFault AND M_IsAbortAllowedByState() THEN
+	_eCommandToProcess := E_PackMLCommand.Abort;
+ELSIF _bQueuedCommandRequest AND (_eQueuedCommand <> E_PackMLCommand.None) THEN
+	_eCommandToProcess		:= _eQueuedCommand;
+	_eQueuedCommand			:= E_PackMLCommand.None;
+	_bQueuedCommandRequest	:= FALSE;
+ELSIF stIn.bCommandChangeRequest AND (stIn.eCommand <> E_PackMLCommand.None) AND NOT _bCommandConsumed THEN
+	_eCommandToProcess	:= stIn.eCommand;
+	_eLastCommand		:= stIn.eCommand;
+	_bCommandConsumed	:= TRUE;
+END_IF
+
+// Mode policy hooks run before PackML state guards so a forbidden command reports
+// the mode reason instead of a state reason.
+IF (_eCommandToProcess <> E_PackMLCommand.None) AND NOT H_IsCommandAllowedByMode(_eCommandToProcess, stOut.eModeCurrent) THEN
+	M_RejectCommand(M_BuildCommandRejectedByModeText(_eCommandToProcess, stOut.eModeCurrent));
+	_eCommandToProcess := E_PackMLCommand.None;
+END_IF
+
+// Dispatch the accepted command through private PackML state guards.
+// Rejected commands never mutate the state and return a readable error text.
+CASE _eCommandToProcess OF
+	E_PackMLCommand.Clear:
+		IF M_IsClearAllowedByState() THEN
+			stOut.bCommandAccepted := TRUE;
+			M_ChangeState(E_PackMLState.Clearing);
+		ELSE
+			M_RejectCommand('Clear command is only valid from Aborted.');
+		END_IF
+
+	E_PackMLCommand.Reset:
+		IF M_IsResetAllowedByState() THEN
+			stOut.bCommandAccepted := TRUE;
+			M_ChangeState(E_PackMLState.Resetting);
+		ELSE
+			M_RejectCommand('Reset command is only valid from Stopped or Complete.');
+		END_IF
+
+	E_PackMLCommand.Start:
+		IF M_IsStartAllowedByState() THEN
+			stOut.bCommandAccepted := TRUE;
+			M_ChangeState(E_PackMLState.Starting);
+		ELSE
+			M_RejectCommand('Start command is only valid from Idle.');
+		END_IF
+
+	E_PackMLCommand.Stop:
+		IF M_IsStopAllowedByState() THEN
+			stOut.bCommandAccepted := TRUE;
+			M_ChangeState(E_PackMLState.Stopping);
+		ELSE
+			M_RejectCommand('Stop command is not valid from the current PackML state.');
+		END_IF
+
+	E_PackMLCommand.Hold:
+		IF M_IsHoldAllowedByState() THEN
+			stOut.bCommandAccepted := TRUE;
+			M_ChangeState(E_PackMLState.Holding);
+		ELSE
+			M_RejectCommand('Hold command is only valid from Execute.');
+		END_IF
+
+	E_PackMLCommand.Unhold:
+		IF M_IsUnholdAllowedByState() THEN
+			stOut.bCommandAccepted := TRUE;
+			M_ChangeState(E_PackMLState.Unholding);
+		ELSE
+			M_RejectCommand('Unhold command is only valid from Held.');
+		END_IF
+
+	E_PackMLCommand.Suspend:
+		IF M_IsSuspendAllowedByState() THEN
+			stOut.bCommandAccepted := TRUE;
+			M_ChangeState(E_PackMLState.Suspending);
+		ELSE
+			M_RejectCommand('Suspend command is only valid from Execute.');
+		END_IF
+
+	E_PackMLCommand.Unsuspend:
+		IF M_IsUnsuspendAllowedByState() THEN
+			stOut.bCommandAccepted := TRUE;
+			M_ChangeState(E_PackMLState.Unsuspending);
+		ELSE
+			M_RejectCommand('Unsuspend command is only valid from Suspended.');
+		END_IF
+
+	E_PackMLCommand.Abort:
+		IF M_IsAbortAllowedByState() THEN
+			stOut.bCommandAccepted := TRUE;
+			M_ChangeState(E_PackMLState.Aborting);
+		ELSE
+			M_RejectCommand('Abort command is not valid while already Aborting or Aborted.');
+		END_IF
+END_CASE
+
+// Run the current state's action hook, then advance transient states when their
+// hook reports Done. Stable states remain active until a command moves them.
+_bStateFirstScanForHook	:= _bStateFirstScan;
+_bStateFirstScan		:= FALSE;
+
+CASE stOut.eStateCurrent OF
+	E_PackMLState.Undefined:
+		_eHookResult := H_OnUndefined(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Stopped);
+		END_IF
+
+	E_PackMLState.Clearing:
+		_eHookResult := H_OnClearing(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Stopped);
+		END_IF
+
+	E_PackMLState.Stopped:
+		H_OnStopped(_bStateFirstScanForHook);
+
+	E_PackMLState.Starting:
+		_eHookResult := H_OnStarting(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Execute);
+		END_IF
+
+	E_PackMLState.Idle:
+		H_OnIdle(_bStateFirstScanForHook);
+
+	E_PackMLState.Suspended:
+		H_OnSuspended(_bStateFirstScanForHook);
+
+	E_PackMLState.Execute:
+		_eHookResult := H_OnExecute(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Completing);
+		END_IF
+
+	E_PackMLState.Stopping:
+		_eHookResult := H_OnStopping(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Stopped);
+		END_IF
+
+	E_PackMLState.Aborting:
+		_eHookResult := H_OnAborting(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Aborted);
+		END_IF
+
+	E_PackMLState.Aborted:
+		H_OnAborted(_bStateFirstScanForHook);
+
+	E_PackMLState.Holding:
+		_eHookResult := H_OnHolding(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Held);
+		END_IF
+
+	E_PackMLState.Held:
+		H_OnHeld(_bStateFirstScanForHook);
+
+	E_PackMLState.Unholding:
+		_eHookResult := H_OnUnholding(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Execute);
+		END_IF
+
+	E_PackMLState.Suspending:
+		_eHookResult := H_OnSuspending(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Suspended);
+		END_IF
+
+	E_PackMLState.Unsuspending:
+		_eHookResult := H_OnUnsuspending(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Execute);
+		END_IF
+
+	E_PackMLState.Resetting:
+		_eHookResult := H_OnResetting(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Idle);
+		END_IF
+
+	E_PackMLState.Completing:
+		_eHookResult := H_OnCompleting(_bStateFirstScanForHook);
+		IF _eHookResult = E_PackMLHookResult.Done THEN
+			M_ChangeState(E_PackMLState.Complete);
+		END_IF
+
+	E_PackMLState.Complete:
+		H_OnComplete(_bStateFirstScanForHook);
+END_CASE
+
+// Transition activity is true for transient states that normally need completion
+// confirmation from their state hook.
+bTransitionActive :=
+	(stOut.eStateCurrent = E_PackMLState.Undefined) OR
+	(stOut.eStateCurrent = E_PackMLState.Clearing) OR
+	(stOut.eStateCurrent = E_PackMLState.Starting) OR
+	(stOut.eStateCurrent = E_PackMLState.Stopping) OR
+	(stOut.eStateCurrent = E_PackMLState.Aborting) OR
+	(stOut.eStateCurrent = E_PackMLState.Holding) OR
+	(stOut.eStateCurrent = E_PackMLState.Unholding) OR
+	(stOut.eStateCurrent = E_PackMLState.Suspending) OR
+	(stOut.eStateCurrent = E_PackMLState.Unsuspending) OR
+	(stOut.eStateCurrent = E_PackMLState.Resetting) OR
+	(stOut.eStateCurrent = E_PackMLState.Completing);]]></ST>
+    </Implementation>
+    <Folder Name="Mode Setting Hook Method" Id="{1a61317c-104c-468f-a7dd-b9de174569fa}" />
+    <Folder Name="Private Method" Id="{73f7c23e-f6a4-41e4-9974-f3e4a4fbe4c4}" />
+    <Folder Name="State Action Hook Method" Id="{43ad9e14-386c-4f56-82a8-692beaf6ff62}" />
+    <Folder Name="Useful Hook Method" Id="{e69e062c-4d1c-43dd-8234-eff2b9ccc801}" />
+    <Method Name="H_IsCommandAllowedByMode" Id="{9a833552-ec23-421d-885d-93766f9e9ef6}" FolderPath="Mode Setting Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_IsCommandAllowedByMode : BOOL
+VAR_INPUT
+	eRequestedCommand	: E_PackMLCommand;
+	eActiveMode			: T_PackMLMode;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Modes are application-defined in library use; override to restrict commands per mode.
+H_IsCommandAllowedByMode := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_IsModeSupported" Id="{5a131af6-fe63-4452-b7b9-fbb87cf32720}" FolderPath="Mode Setting Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_IsModeSupported : BOOL
+VAR_INPUT
+	eRequestedMode	: T_PackMLMode;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Modes are application-defined in library use; override to reject unsupported modes.
+H_IsModeSupported := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_IsStateSupportedByMode" Id="{8ecb8812-d961-4d2e-a8cf-d988ced19232}" FolderPath="Mode Setting Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_IsStateSupportedByMode : BOOL
+VAR_INPUT
+	eRequestedMode	: T_PackMLMode;
+	eCurrentState	: E_PackMLState;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Modes are application-defined in library use; override to restrict mode/state pairs.
+H_IsStateSupportedByMode := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnAborted" Id="{4bb17b66-fb2e-4627-9258-890a485508f8}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnAborted
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnAborting" Id="{a13be449-422e-4d8b-8327-e77d3d480251}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnAborting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnAborting := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnClearing" Id="{3403ef10-749e-425d-81c7-aa09980fc7da}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnClearing : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnClearing := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnComplete" Id="{c6c044b2-0836-4192-a54d-4875856d12b0}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnComplete
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnCompleting" Id="{b3c87bff-3a95-4825-9f3e-aed9464089fa}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnCompleting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnCompleting := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnExecute" Id="{b44dc1df-23a6-4acf-aaac-94c4f43cef35}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Execute is stable by default; derived FBs decide when the process is done.
+H_OnExecute := Busy;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnHeld" Id="{44f5e96b-d14a-41e4-981a-73134384adb2}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnHeld
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnHolding" Id="{3c2f9be6-b71e-4397-8e36-22ce7a5cf40a}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnHolding : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnHolding := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnIdle" Id="{e8d1bb5c-d66f-4b90-80aa-5521f4b1e39c}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnIdle
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnModeChanged" Id="{5e0980df-e69c-424a-be57-a8bf711b5d04}" FolderPath="Useful Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnModeChanged
+VAR_INPUT
+	ePreviousMode	: T_PackMLMode;
+	eNewMode		: T_PackMLMode;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default mode-change hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnResetting" Id="{19822229-7b7e-42d6-b9ad-fdcdb660e283}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnResetting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnResetting := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStarting" Id="{d244760c-0e73-42e0-9524-ef70583c8446}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnStarting := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStateChanged" Id="{b39fd166-f67a-4543-bd9f-b74320073c49}" FolderPath="Useful Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStateChanged
+VAR_INPUT
+	ePreviousState	: E_PackMLState;
+	eNewState		: E_PackMLState;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default state-change hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopped" Id="{95c75646-2932-442e-99c7-630b54b18d98}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStopped
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopping" Id="{b44aa23e-e863-41e5-8d65-5b23b51b1809}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStopping : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnStopping := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnSuspended" Id="{af02e98b-4ca8-4346-9586-599f47a3f0c8}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspended
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnSuspending" Id="{7a0bfcb6-56b3-492b-86a5-8cc3ec32e492}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspending : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnSuspending := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnUndefined" Id="{348c6696-4691-4303-b7e8-15f37a1c30ff}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnUndefined : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// The base FB leaves Undefined immediately unless a derived FB delays startup.
+H_OnUndefined := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnUnholding" Id="{900cc882-799f-423d-876a-12412604b19e}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnUnholding : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnUnholding := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnUnsuspending" Id="{d4125dcf-e5e7-4271-a103-073060450909}" FolderPath="State Action Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnUnsuspending : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnUnsuspending := Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_BuildCommandRejectedByModeText" Id="{9bed73e9-8908-4db2-9191-2df23f4176bd}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_BuildCommandRejectedByModeText : STRING(255)
+VAR_INPUT
+	eRejectedCommand	: E_PackMLCommand;
+	eActiveMode			: T_PackMLMode;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Build the rejection text from display names so HMI text stays operator-friendly.
+M_BuildCommandRejectedByModeText := CONCAT(F_PackMLCommandToString(eRejectedCommand), ' command is not allowed in ');
+M_BuildCommandRejectedByModeText := CONCAT(M_BuildCommandRejectedByModeText, F_PackMLModeToString(eActiveMode));
+M_BuildCommandRejectedByModeText := CONCAT(M_BuildCommandRejectedByModeText, ' mode.');]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ChangeMode" Id="{480596f8-48a1-425b-a307-21512e84f091}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_ChangeMode
+VAR_INPUT
+	eNextMode	: T_PackMLMode;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Centralize mode mutation so previous-mode and edge outputs stay consistent.
+IF stOut.eModeCurrent <> eNextMode THEN
+	stOut.eModePrevious	:= stOut.eModeCurrent;
+	stOut.eModeCurrent	:= eNextMode;
+	stOut.bModeChanged	:= TRUE;
+	H_OnModeChanged(stOut.eModePrevious, stOut.eModeCurrent);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ChangeState" Id="{bf78a96d-9d4e-42b6-b159-e367e8ad7c2c}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_ChangeState
+VAR_INPUT
+	eNextState	: E_PackMLState;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Centralize state mutation so previous-state and edge outputs stay consistent.
+IF stOut.eStateCurrent <> eNextState THEN
+	stOut.eStatePrevious	:= stOut.eStateCurrent;
+	stOut.eStateCurrent			:= eNextState;
+	_bStateFirstScan			:= TRUE;
+	H_OnStateChanged(stOut.eStatePrevious, stOut.eStateCurrent);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsAbortAllowedByState" Id="{fa7a4de6-c9e7-4315-9d09-7067965a2941}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsAbortAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Abort is valid from every state except the terminal abort states.
+M_IsAbortAllowedByState := (stOut.eStateCurrent <> E_PackMLState.Aborting) AND (stOut.eStateCurrent <> E_PackMLState.Aborted);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsClearAllowedByState" Id="{332a91a0-3733-42b2-abec-4c14a54021cd}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsClearAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Clear leaves the safe Aborted state and starts the resettable stop path.
+M_IsClearAllowedByState := stOut.eStateCurrent = E_PackMLState.Aborted;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsCompleteAllowedByState" Id="{e29a4438-6687-4116-a4d4-577056243d8b}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsCompleteAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Complete is only meaningful while the unit is executing.
+M_IsCompleteAllowedByState := stOut.eStateCurrent = E_PackMLState.Execute;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsHoldAllowedByState" Id="{49bde5a5-35d4-4747-a469-fc23b21ffacd}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsHoldAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Hold pauses an active Execute flow.
+M_IsHoldAllowedByState := stOut.eStateCurrent = E_PackMLState.Execute;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsModeChangeAllowedByState" Id="{5a21c016-dfdc-4c29-86e7-52905f19cfbd}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsModeChangeAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Mode changes can only be attempted from safe stable states.
+// Target mode compatibility is checked separately after this safety gate.
+// Henry: Bypass "Held" & "Suspended" state due to consideration about state-related parameters inconsistent
+M_IsModeChangeAllowedByState :=
+	(stOut.eStateCurrent = E_PackMLState.Aborted) OR
+	(stOut.eStateCurrent = E_PackMLState.Stopped) OR
+	(stOut.eStateCurrent = E_PackMLState.Idle) OR
+	(stOut.eStateCurrent = E_PackMLState.Complete);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsResetAllowedByState" Id="{38b5684f-4df4-4061-acdd-f532c5411342}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsResetAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Reset prepares the unit from Stopped or Complete into Idle.
+M_IsResetAllowedByState := (stOut.eStateCurrent = E_PackMLState.Stopped) OR (stOut.eStateCurrent = E_PackMLState.Complete);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsStartAllowedByState" Id="{5a2e9cc0-9e0d-4da4-a55b-a165f1eeb9bf}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsStartAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Start begins production or operation only from Idle.
+M_IsStartAllowedByState := stOut.eStateCurrent = E_PackMLState.Idle;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsStopAllowedByState" Id="{f0da80f2-c0a2-4ca1-a63e-a5b90bf2f04c}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsStopAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Stop is accepted from normal operating, paused, and completing states.
+M_IsStopAllowedByState :=
+	(stOut.eStateCurrent = E_PackMLState.Starting) OR
+	(stOut.eStateCurrent = E_PackMLState.Idle) OR
+	(stOut.eStateCurrent = E_PackMLState.Execute) OR
+	(stOut.eStateCurrent = E_PackMLState.Completing) OR
+	(stOut.eStateCurrent = E_PackMLState.Complete) OR
+	(stOut.eStateCurrent = E_PackMLState.Holding) OR
+	(stOut.eStateCurrent = E_PackMLState.Held) OR
+	(stOut.eStateCurrent = E_PackMLState.Unholding) OR
+	(stOut.eStateCurrent = E_PackMLState.Suspending) OR
+	(stOut.eStateCurrent = E_PackMLState.Suspended) OR
+	(stOut.eStateCurrent = E_PackMLState.Unsuspending);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsSuspendAllowedByState" Id="{362e955c-d91e-4573-ac49-5e1f5561e9d1}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsSuspendAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Suspend pauses Execute because of an external process condition.
+M_IsSuspendAllowedByState := stOut.eStateCurrent = E_PackMLState.Execute;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsUnholdAllowedByState" Id="{90276ba7-ddef-4e56-8b6f-9f76fe99435a}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsUnholdAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Unhold resumes from the stable Held state.
+M_IsUnholdAllowedByState := stOut.eStateCurrent = E_PackMLState.Held;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsUnsuspendAllowedByState" Id="{c3563b72-aa8b-4b4c-9d01-38e261429a17}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsUnsuspendAllowedByState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Unsuspend resumes from the stable Suspended state.
+M_IsUnsuspendAllowedByState := stOut.eStateCurrent = E_PackMLState.Suspended;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RejectCommand" Id="{fd9fdbf3-d906-4767-8436-2bb609e1c84f}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_RejectCommand
+VAR_INPUT
+	sText	: STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Centralize rejected-command reporting so every guard failure has text.
+stOut.bCommandRejected	:= TRUE;
+sStateErrorText		:= sText;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RejectModeChange" Id="{424b9d75-e7ad-40d7-b41a-b08d033526d2}" FolderPath="Private Method\">
+      <Declaration><![CDATA[METHOD PRIVATE M_RejectModeChange
+VAR_INPUT
+	sText	: STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Keep mode-change errors separate from PackML command/state errors.
+stOut.bModeChangeRejected	:= TRUE;
+sModeErrorText		:= sText;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RequestCommand" Id="{acc2f90f-ee3a-48ba-968f-939630ff093a}">
+      <Declaration><![CDATA[// Used for requesting PackML command inside state machine itself 
+METHOD PROTECTED RequestCommand : BOOL
+VAR_INPUT
+	eTargetCmd	: E_PackMLCommand;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RequestCommand := FALSE;
+
+IF _bQueuedCommandRequest OR stIn.bModeChangeRequest THEN
+	RETURN;
+END_IF
+
+_eQueuedCommand			:= eTargetCmd;
+_bQueuedCommandRequest	:= TRUE;
+RequestCommand := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

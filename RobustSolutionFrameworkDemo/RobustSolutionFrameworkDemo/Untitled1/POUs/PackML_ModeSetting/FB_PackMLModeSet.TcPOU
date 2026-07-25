@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_PackMLModeSet" Id="{2a00905f-4fdd-4f31-8fd4-bdfe2f2d62cb}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_PackMLModeSet EXTENDS FB_PackMLBase
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[SUPER^();]]></ST>
+    </Implementation>
+    <Method Name="H_IsCommandAllowedByMode" Id="{67f1a57b-017a-4ff8-8cf2-2ab14ec67c33}">
+      <Declaration><![CDATA[METHOD PROTECTED H_IsCommandAllowedByMode : BOOL
+VAR_INPUT
+	eRequestedCommand	: E_PackMLCommand;
+	eActiveMode	: T_PackMLMode;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE eActiveMode OF
+	GVL_PackMLMode.Manual:
+		// Supported commands in manual mode
+		CASE eRequestedCommand OF
+			E_PackMLCommand.Reset,
+			E_PackMLCommand.Start,
+			E_PackMLCommand.Stop,
+			E_PackMLCommand.Abort,
+			E_PackMLCommand.Clear:
+				H_IsCommandAllowedByMode := TRUE;
+			ELSE
+				H_IsCommandAllowedByMode := FALSE;
+		END_CASE
+	
+	GVL_PackMLMode.Production:
+		// Support all commands in production mode
+		H_IsCommandAllowedByMode := TRUE;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_IsModeSupported" Id="{ecf3eeca-f06c-4eb7-9f6f-76634f2a8741}">
+      <Declaration><![CDATA[METHOD PROTECTED H_IsModeSupported : BOOL
+VAR_INPUT
+	eRequestedMode	: T_PackMLMode;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE eRequestedMode OF
+	GVL_PackMLMode.Manual,
+	GVL_PackMLMode.Production:
+		H_IsModeSupported := TRUE;
+
+	ELSE
+		H_IsModeSupported := FALSE;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_IsStateSupportedByMode" Id="{6fdfc098-4a00-44f7-8160-73a889368957}">
+      <Declaration><![CDATA[METHOD PROTECTED H_IsStateSupportedByMode : BOOL
+VAR_INPUT
+	eRequestedMode	: T_PackMLMode;
+	eCurrentState	: E_PackMLState;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE eRequestedMode OF
+	
+	GVL_PackMLMode.Manual:
+		// Support states in manual mode
+		CASE eCurrentState OF
+			E_PackMLState.Idle,
+			E_PackMLState.Starting,
+			E_PackMLState.Execute,
+			E_PackMLState.Aborting,
+			E_PackMLState.Aborted,
+			E_PackMLState.Clearing,
+			E_PackMLState.Stopped,
+			E_PackMLState.Resetting:
+			H_IsStateSupportedByMode := TRUE;
+			
+			ELSE
+				H_IsStateSupportedByMode := FALSE;
+		END_CASE
+		
+	
+	GVL_PackMLMode.Production:
+		// Support all state in production mode
+		H_IsStateSupportedByMode := TRUE;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

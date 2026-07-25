@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_PackMLModeToString" Id="{569bb1b9-4cee-498d-84a9-2e5f5e793c57}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_PackMLModeToString : STRING(80)
+VAR_INPUT
+	eMode	: T_PackMLMode;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE eMode OF
+	GVL_PackMLMode.Unknown:
+		F_PackMLModeToString := 'Unknown';
+	GVL_PackMLMode.Production:
+		F_PackMLModeToString := 'Production';
+	GVL_PackMLMode.Manual:
+		F_PackMLModeToString := 'Manual';
+ELSE
+	F_PackMLModeToString := CONCAT('Mode ', UINT_TO_STRING(eMode));
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

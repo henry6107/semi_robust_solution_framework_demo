@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_PackMLCommandToString" Id="{45a71860-8d72-4e53-882b-dfaa99cf7ec5}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_PackMLCommandToString : STRING(80)
+VAR_INPUT
+	eCommand	: E_PackMLCommand;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE eCommand OF
+	E_PackMLCommand.None:
+		F_PackMLCommandToString := 'None';
+	E_PackMLCommand.Reset:
+		F_PackMLCommandToString := 'Reset';
+	E_PackMLCommand.Start:
+		F_PackMLCommandToString := 'Start';
+	E_PackMLCommand.Stop:
+		F_PackMLCommandToString := 'Stop';
+	E_PackMLCommand.Hold:
+		F_PackMLCommandToString := 'Hold';
+	E_PackMLCommand.Unhold:
+		F_PackMLCommandToString := 'Unhold';
+	E_PackMLCommand.Suspend:
+		F_PackMLCommandToString := 'Suspend';
+	E_PackMLCommand.Unsuspend:
+		F_PackMLCommandToString := 'Unsuspend';
+	E_PackMLCommand.Abort:
+		F_PackMLCommandToString := 'Abort';
+	E_PackMLCommand.Clear:
+		F_PackMLCommandToString := 'Clear';
+ELSE
+	F_PackMLCommandToString := 'Unknown';
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
