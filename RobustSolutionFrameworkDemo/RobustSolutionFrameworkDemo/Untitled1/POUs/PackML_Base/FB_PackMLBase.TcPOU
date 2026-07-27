@@ -186,7 +186,7 @@ CASE stOut.eStateCurrent OF
 	E_PackMLState.Undefined:
 		_eHookResult := H_OnUndefined(_bStateFirstScanForHook);
 		IF _eHookResult = E_PackMLHookResult.Done THEN
-			M_ChangeState(E_PackMLState.Stopped);
+			M_ChangeState(E_PackMLState.Aborted);
 		END_IF
 
 	E_PackMLState.Clearing:

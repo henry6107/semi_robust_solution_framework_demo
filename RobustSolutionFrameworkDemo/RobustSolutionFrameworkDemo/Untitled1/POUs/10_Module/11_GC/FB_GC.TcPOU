@@ -15,6 +15,7 @@ VAR_OUTPUT
 END_VAR
 
 VAR
+	// 有需要特殊操作的需求，所以建立一個ST_GC_Service變數，讓程式內部可以過一手處理
 	_Service : ST_GC_Service;
 	
 	_SpinAxisJogService : FB_GCSpinAxisJogServices;
@@ -22,6 +23,9 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[A00_Service();
+
+// Update status data
+Service.SpinAxisJogService.Status := _Service.SpinAxisJogService.Status;
 
 SUPER^();]]></ST>
     </Implementation>
@@ -59,8 +63,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnClearing := E_PackMLHookResult.Done;]]></ST>
+        <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnComplete" Id="{9ab7169f-1450-41d3-b3d7-d608e72d68f0}" FolderPath="StateAction\">
@@ -94,7 +97,8 @@ END_VAR
         <ST><![CDATA[// Execute is stable by default; derived FBs decide when the process is done.
 H_OnExecute := E_PackMLHookResult.Busy;
 
-_Service := Service;]]></ST>
+// Mapping control data
+_Service.SpinAxisJogService.Ctrl := Service.SpinAxisJogService.Ctrl;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnHeld" Id="{93f6b454-4398-4439-9237-4d01e13b7ccc}" FolderPath="StateAction\">
@@ -125,7 +129,8 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{f6ec54bd-ad3d-49c4-9547-ff474beb3546}" FolderPath="StateAction\">
@@ -135,7 +140,19 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+        <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Busy;
+
+// Request clear cmd to module
+_Service.SpinAxisJogService.Ctrl.Reset := TRUE;
+
+// Wait cmd finished
+IF _Service.SpinAxisJogService.Status.State <> E_PackMLState.Idle THEN
+	RETURN;
+END_IF
+
+// Reset trigger
+_Service.SpinAxisJogService.Ctrl.Reset := FALSE;
+
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>

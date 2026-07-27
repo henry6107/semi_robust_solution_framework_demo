@@ -11,9 +11,8 @@ END_VAR
 VAR_OUTPUT
 END_VAR
 VAR
+	// 有需要特殊操作的需求，所以建立一個ST_Machine_Ctrl變數，讓程式內部可以過一手處理
 	_Ctrl : ST_Machine_Ctrl;
-	_Service : ST_Machine_Service;
-	_Admin	: ST_Machine_Admin;
 	
 	// Module
 	_GC_Module : FB_GC;
@@ -24,16 +23,16 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_AssignIO();
-A00_BaseUnit();
+      <ST><![CDATA[A00_BaseUnit();
 A01_Module();
 A02_Service();
 
-stIn := _Ctrl.Machine_Ctrl;
+stIn := Ctrl.Machine_Ctrl;
 Status.Machine_Status := stOut;
 
 SUPER^();]]></ST>
     </Implementation>
+    <Folder Name="StateAction" Id="{57086c26-49e8-43ea-ac33-5ee12ecb4bb8}" />
     <Action Name="A00_BaseUnit" Id="{533e0514-77ae-4296-9814-352b13fbb7c4}">
       <Implementation>
         <ST><![CDATA[_GCSpinAxis_BaseUnit(Axis:= _GCSpinAxis);]]></ST>
@@ -44,8 +43,8 @@ SUPER^();]]></ST>
         <ST><![CDATA[_GC_Module(
 	stIn:= _Ctrl.GC_Ctrl,
 	stOut=> Status.GC_Status,
-	Service:= _Service.GC_Service, 
-	Admin:= _Admin.GC_Admin,
+	Service:= Service.GC_Service, 
+	Admin:= Admin.GC_Admin,
 	SpinAxis_BaseUnit:= _GCSpinAxis_BaseUnit);]]></ST>
       </Implementation>
     </Action>
@@ -54,15 +53,240 @@ SUPER^();]]></ST>
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Action>
-    <Method Name="M_AssignIO" Id="{0f5c3a91-d4f1-4457-9e9e-742e974a9cfc}">
-      <Declaration><![CDATA[METHOD M_AssignIO : BOOL
+    <Method Name="H_OnAborted" Id="{bd79a8ca-15a3-495d-af86-8cf4e332d0fb}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnAborted
 VAR_INPUT
+	bFirstScan	: BOOL;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_Ctrl := Ctrl;
-_Service := Service;
-_Admin := Admin;]]></ST>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnAborting" Id="{4e9e7257-ac81-4d6a-b06c-875a46d3aeda}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnAborting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnAborting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnClearing" Id="{ef766ee3-a18d-4061-baee-56f7699f269a}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnClearing : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Busy;
+
+// Request clear cmd to module
+_Ctrl.GC_Ctrl.eCommand := E_PackMLCommand.Clear;
+_Ctrl.GC_Ctrl.bCommandChangeRequest := TRUE;
+
+// Wait cmd finished
+IF Status.GC_Status.eStateCurrent <> E_PackMLState.Stopped THEN
+	RETURN;
+END_IF
+
+// Reset trigger
+_Ctrl.GC_Ctrl.bCommandChangeRequest := FALSE;
+
+H_OnClearing := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnComplete" Id="{949bd30c-afc9-40a2-9bfb-1a4634511be6}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnComplete
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnCompleting" Id="{536f19c8-acd6-4ec7-bd8a-57bcb619e80b}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnCompleting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnExecute" Id="{39f3ffcd-5b95-492a-b8ce-7b05523745c8}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Execute is stable by default; derived FBs decide when the process is done.
+H_OnExecute := E_PackMLHookResult.Busy;
+
+// Enable external data to the module
+_Ctrl := Ctrl;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnHeld" Id="{ed585925-8230-4f18-ae73-e65352813968}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnHeld
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnHolding" Id="{50bc87bb-6b52-4776-9efe-c910873765ac}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnHolding : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnHolding := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnIdle" Id="{b12d6ddb-204c-4021-befa-89c32097d41e}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnIdle
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Map machine mode control for module
+_Ctrl.GC_Ctrl.eMode := Ctrl.Machine_Ctrl.eMode;
+_Ctrl.GC_Ctrl.bModeChangeRequest := Ctrl.Machine_Ctrl.bModeChangeRequest;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnResetting" Id="{a7cef153-447e-4a2f-a6f1-6845f4771bc5}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnResetting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Busy;
+
+// Request reset cmd to module
+_Ctrl.GC_Ctrl.eCommand := E_PackMLCommand.Reset;
+_Ctrl.GC_Ctrl.bCommandChangeRequest := TRUE;
+
+// Wait cmd finished
+IF Status.GC_Status.eStateCurrent <> E_PackMLState.Idle THEN
+	RETURN;
+END_IF
+
+// Reset trigger
+_Ctrl.GC_Ctrl.bCommandChangeRequest := FALSE;
+
+H_OnResetting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStarting" Id="{7d1ed84a-ead9-44bc-af34-3760dae842d1}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
+
+// Request start cmd to module
+_Ctrl.GC_Ctrl.eCommand := E_PackMLCommand.Start;
+_Ctrl.GC_Ctrl.bCommandChangeRequest := TRUE;
+
+// Wait cmd finished
+IF Status.GC_Status.eStateCurrent <> E_PackMLState.Execute THEN
+	RETURN;
+END_IF
+
+// Reset trigger
+_Ctrl.GC_Ctrl.bCommandChangeRequest := FALSE;
+
+H_OnStarting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopped" Id="{05a80b30-9f60-4874-890c-799e2efd61a5}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStopped
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopping" Id="{d23e861a-3a87-40aa-862f-a915644dca9e}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStopping : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnStopping := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnSuspended" Id="{aa5c0919-6974-415b-a2db-ffa99ee2762f}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspended
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnSuspending" Id="{3200234e-a553-4f3c-bc75-92cf26e888e2}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspending : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnSuspending := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnUndefined" Id="{08e9913b-2a49-4c7e-b8a2-d927cb21a022}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnUndefined : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// The base FB leaves Undefined immediately unless a derived FB delays startup.
+H_OnUndefined := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnUnholding" Id="{cbede64b-9435-44f0-abab-869bb8d69c21}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnUnholding : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnUnholding := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnUnsuspending" Id="{8b32c1c3-32f5-4fb7-8a4e-d83362ec0079}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnUnsuspending : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
   </POU>
