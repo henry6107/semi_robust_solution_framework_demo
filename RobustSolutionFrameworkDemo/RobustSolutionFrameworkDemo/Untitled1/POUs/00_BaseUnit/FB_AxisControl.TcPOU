@@ -121,9 +121,17 @@ _MCMoveVel.Deceleration := Deceleration;]]></ST>
 VAR_INPUT
 	Execute : BOOL;
 END_VAR
+
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_MCReset.Execute := Execute;]]></ST>
+        <ST><![CDATA[_MCReset.Execute := Execute;
+
+Done := _MCReset.Done;
+Error := _MCReset.Error;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_Stop" Id="{2df51e0d-c316-436a-9fe7-294a4bc52bdf}">
@@ -132,10 +140,19 @@ VAR_INPUT
 	Execute : BOOL;
 	Deceleration : LREAL;
 END_VAR
-]]></Declaration>
+
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_MCStop.Execute := Execute;
-_MCStop.Deceleration := Deceleration;]]></ST>
+_MCStop.Deceleration := Deceleration;
+
+Done := _MCStop.Done;
+Error := _MCStop.Error;
+
+]]></ST>
       </Implementation>
     </Method>
   </POU>

@@ -72,16 +72,31 @@ RequestCommand(E_PackMLCommand.Clear);]]></ST>
 VAR_INPUT
 	bFirstScan	: BOOL;
 END_VAR
-]]></Declaration>
+
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Axis_BaseUnit.M_MoveAbs(
-	Execute:= FALSE,
+        <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
+
+// Close moveAbs method
+Axis_BaseUnit.M_MoveAbs(
+	Execute := FALSE,
 	Position:= Service.Ctrl.Param.Position, 
 	Velocity:= Service.Ctrl.Param.Velocity, 
 	Acceleration:= Service.Ctrl.Param.Acceleration, 
 	Deceleration:= Service.Ctrl.Param.Deceleration);
+	
+Axis_BaseUnit.M_Reset(
+	Execute := TRUE,
+	Done=> bDone, Error=> bError);
 
-H_OnAborting := E_PackMLHookResult.Done;]]></ST>
+IF bDone THEN
+	Axis_BaseUnit.M_Reset(Execute := FALSE);
+	H_OnAborting := E_PackMLHookResult.Done;
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnClearing" Id="{3b1ee54f-5c4f-4404-9263-3595f2bc3f99}" FolderPath="StateAction\">
@@ -314,16 +329,47 @@ Service.Status.Aborted := TRUE;
 VAR_INPUT
 	bFirstScan	: BOOL;
 END_VAR
+
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Axis_BaseUnit.M_MoveAbs(
+        <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Busy;
+
+// Close moveAbs method
+Axis_BaseUnit.M_MoveAbs(
 	Execute := FALSE,
 	Position:= Service.Ctrl.Param.Position, 
 	Velocity:= Service.Ctrl.Param.Velocity, 
 	Acceleration:= Service.Ctrl.Param.Acceleration, 
 	Deceleration:= Service.Ctrl.Param.Deceleration);
+	
+Axis_BaseUnit.M_Stop(
+	Execute := TRUE, 
+	Deceleration:= Service.Ctrl.Param.Deceleration,
+	Done=> bDone, Error=> bError);
 
-H_OnStopping := E_PackMLHookResult.Done;]]></ST>
+IF bDone THEN
+	Axis_BaseUnit.M_Stop(
+		Execute := FALSE, 
+		Deceleration:= Service.Ctrl.Param.Deceleration);	
+	H_OnStopping := E_PackMLHookResult.Done;
+	
+ELSIF bError THEN
+	// Throw up error
+	Service.Status.Error := TRUE;
+	Service.Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.Error_While_Stop_Axis;
+	
+	Axis_BaseUnit.M_Stop(
+		Execute := FALSE, 
+		Deceleration:= Service.Ctrl.Param.Deceleration);
+		
+	RequestCommand(E_PackMLCommand.Abort);
+END_IF
+
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnSuspended" Id="{7dade604-8430-4011-87ab-2b1b201f105e}" FolderPath="StateAction\">

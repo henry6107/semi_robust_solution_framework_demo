@@ -9,7 +9,8 @@ TYPE E_GCSpinAxisMoveAbsErrorCode :
 	Axis_Not_Servo_On_During_Starting,
 	Axis_Is_Busy_During_Starting,
 	Invalid_Param,
-	MoveAbs_Error_During_Execute
+	MoveAbs_Error_During_Execute,
+	Error_While_Stop_Axis
 )UDINT;
 END_TYPE
 ]]></Declaration>
