@@ -83,13 +83,21 @@ VAR_INPUT
 	Acceleration : LREAL;
 	Deceleration : LREAL;
 END_VAR
+
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[_MCMoveAbs.Execute := Execute;
 _MCMoveAbs.Position := Position;
 _MCMoveAbs.Velocity := Velocity;
 _MCMoveAbs.Acceleration := Acceleration;
-_MCMoveAbs.Deceleration := Deceleration;]]></ST>
+_MCMoveAbs.Deceleration := Deceleration;
+
+Done := _MCMoveAbs.Done;
+Error := _MCMoveAbs.Error;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_MoveVel" Id="{2b358657-cee5-4620-ae42-419450a93b24}">

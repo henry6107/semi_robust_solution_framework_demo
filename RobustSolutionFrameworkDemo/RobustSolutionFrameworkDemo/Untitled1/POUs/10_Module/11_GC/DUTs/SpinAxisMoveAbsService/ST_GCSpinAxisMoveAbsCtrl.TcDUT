@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_GCSpinAxisMoveAbsCtrl" Id="{0c065255-f41b-4be1-8f09-09c505ae4e15}">
+    <Declaration><![CDATA[TYPE ST_GCSpinAxisMoveAbsCtrl EXTENDS ST_ServiceCtrlBase:
+STRUCT
+	Param : ST_GCSpinAxisMoveAbsParam;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

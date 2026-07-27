@@ -19,6 +19,7 @@ VAR
 	_Service : ST_GC_Service;
 	
 	_SpinAxisJogService : FB_GCSpinAxisJogServices;
+	_SpinAxisMoveAbsService : FB_GCSPinAxisMoveAbsServices;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -26,13 +27,14 @@ END_VAR
 
 // Update status data
 Service.SpinAxisJogService.Status := _Service.SpinAxisJogService.Status;
-
+Service.SpinAxisMoveAbsService.Status := _Service.SpinAxisMoveAbsService.Status;
 SUPER^();]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{92cfe23b-b998-4d76-8aa2-c8089e78aa61}" />
     <Action Name="A00_Service" Id="{c62275db-aa76-4b4d-95ad-2ecb5851f919}">
       <Implementation>
-        <ST><![CDATA[_SpinAxisJogService(Service:= _Service.SpinAxisJogService, Axis_BaseUnit:= SpinAxis_BaseUnit);]]></ST>
+        <ST><![CDATA[_SpinAxisJogService(Service:= _Service.SpinAxisJogService, Axis_BaseUnit:= SpinAxis_BaseUnit);
+_SpinAxisMoveAbsService(Service:= _Service.SpinAxisMoveAbsService, Axis_BaseUnit:= SpinAxis_BaseUnit);]]></ST>
       </Implementation>
     </Action>
     <Method Name="H_OnAborted" Id="{de8d6f56-427f-41df-b4d5-ddd289e1aed8}" FolderPath="StateAction\">
@@ -98,7 +100,8 @@ END_VAR
 H_OnExecute := E_PackMLHookResult.Busy;
 
 // Mapping control data
-_Service.SpinAxisJogService.Ctrl := Service.SpinAxisJogService.Ctrl;]]></ST>
+_Service.SpinAxisJogService.Ctrl := Service.SpinAxisJogService.Ctrl;
+_Service.SpinAxisMoveAbsService.Ctrl := Service.SpinAxisMoveAbsService.Ctrl;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnHeld" Id="{93f6b454-4398-4439-9237-4d01e13b7ccc}" FolderPath="StateAction\">
@@ -142,7 +145,8 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Notice current mode to each service
-_SpinAxisJogService.ModuleMode := eNewMode;]]></ST>
+_SpinAxisJogService.ModuleMode := eNewMode;
+_SpinAxisMoveAbsService.ModuleMode := eNewMode;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{f6ec54bd-ad3d-49c4-9547-ff474beb3546}" FolderPath="StateAction\">
@@ -154,16 +158,19 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Busy;
 
-// Request clear cmd to module
+// Request clear cmd to services
 _Service.SpinAxisJogService.Ctrl.Reset := TRUE;
+_Service.SpinAxisMoveAbsService.Ctrl.Reset := TRUE;
 
 // Wait cmd finished
-IF _Service.SpinAxisJogService.Status.State <> E_PackMLState.Idle THEN
+IF _Service.SpinAxisJogService.Status.State <> E_PackMLState.Idle
+	AND _Service.SpinAxisMoveAbsService.Status.State <> E_PackMLState.Idle THEN
 	RETURN;
 END_IF
 
 // Reset trigger
 _Service.SpinAxisJogService.Ctrl.Reset := FALSE;
+_Service.SpinAxisMoveAbsService.Ctrl.Reset := FALSE;
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
