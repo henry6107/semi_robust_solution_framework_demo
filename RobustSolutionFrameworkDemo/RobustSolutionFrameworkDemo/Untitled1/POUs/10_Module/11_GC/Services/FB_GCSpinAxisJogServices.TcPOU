@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GCSpinAxisJogServices" Id="{a61ac5cd-09b6-4f2d-bc54-d014db7401a2}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisJogServices EXTENDS FB_PackMLBase
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisJogServices EXTENDS FB_PackMLBase IMPLEMENTS I_ModuleServiceProperty
 VAR_INPUT
 	Service : REFERENCE TO ST_GCSpinAxisJogService;
 	Axis_BaseUnit : REFERENCE TO FB_AxisControl;
@@ -15,6 +15,8 @@ VAR
 	_ResetOneShot	: R_TRIG;
 	_StopOneShot	: R_TRIG;
 	_AbortOneShot	: R_TRIG;
+	
+	_ModuleMode		: T_PackMLMode;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -284,6 +286,19 @@ IF Axis_BaseUnit.AxisStatus.HasJob THEN
 	RETURN;
 END_IF
 
+// Check is param valid
+IF (Service.Ctrl.Param.JogBackwards AND Service.Ctrl.Param.JogForward) OR
+	(NOT Service.Ctrl.Param.JogBackwards AND NOT Service.Ctrl.Param.JogForward) OR
+	Service.Ctrl.Param.Velocity = 0 THEN
+	// Throw up error
+	Service.Status.Error:= TRUE;
+	Service.Status.ErrorId:= E_GCSpinAxisJogErrorCode.Invalid_Param;
+	
+	// Request abort command
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
 H_OnStarting := E_PackMLHookResult.Done;
 
 
@@ -377,5 +392,25 @@ END_VAR
 H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
+    <Property Name="ModuleMode" Id="{909f5537-5629-4c46-9ccb-61a85ea831a5}">
+      <Declaration><![CDATA[PROPERTY ModuleMode : T_PackMLMode
+]]></Declaration>
+      <Get Name="Get" Id="{e6b1fa22-a987-4664-8101-e14dca9a3d5a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ModuleMode := _ModuleMode;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{4cdc4139-6e05-406a-b203-d0a353b0e373}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_ModuleMode := ModuleMode;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
   </POU>
 </TcPlcObject>

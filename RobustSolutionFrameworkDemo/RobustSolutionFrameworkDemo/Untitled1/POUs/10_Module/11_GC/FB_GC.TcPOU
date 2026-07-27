@@ -133,6 +133,18 @@ END_VAR
 ]]></ST>
       </Implementation>
     </Method>
+    <Method Name="H_OnModeChanged" Id="{9d68a966-aafb-43f3-857c-b18fd457d61a}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnModeChanged
+VAR_INPUT
+	ePreviousMode	: T_PackMLMode;
+	eNewMode	: T_PackMLMode;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Notice current mode to each service
+_SpinAxisJogService.ModuleMode := eNewMode;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="H_OnResetting" Id="{f6ec54bd-ad3d-49c4-9547-ff474beb3546}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnResetting : E_PackMLHookResult
 VAR_INPUT

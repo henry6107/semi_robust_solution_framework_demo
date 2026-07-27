@@ -34,7 +34,7 @@ END_VAR
 				H_IsCommandAllowedByMode := FALSE;
 		END_CASE
 	
-	GVL_PackMLMode.Production:
+	GVL_PackMLMode.Production,
 	GVL_PackMLMode.Unknown:
 		// Support all commands in production mode
 		H_IsCommandAllowedByMode := TRUE;

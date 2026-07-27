@@ -8,6 +8,7 @@ TYPE E_GCSpinAxisJogErrorCode :
 	None := 0,
 	Axis_Not_Servo_On_During_Starting,
 	Axis_Is_Busy_During_Starting,
+	Invalid_Param,
 	Jog_Error_During_Execute
 )UDINT;
 END_TYPE

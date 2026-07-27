@@ -107,7 +107,7 @@
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
     </Compile>
-    <Compile Include="POUs\PackML_Base\I_PackMLStateActionProvider.TcIO">
+    <Compile Include="POUs\PackML_Base\I_ModuleServiceProperty.TcIO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\PackML_Base\Utilities\F_PackMLCommandToString.TcPOU">

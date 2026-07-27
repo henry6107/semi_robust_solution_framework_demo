@@ -25,7 +25,7 @@ END_VAR
     <Implementation>
       <ST><![CDATA[A00_BaseUnit();
 A01_Module();
-A02_Service();
+A02_CompoundService();
 
 stIn := Ctrl.Machine_Ctrl;
 Status.Machine_Status := stOut;
@@ -48,7 +48,7 @@ SUPER^();]]></ST>
 	SpinAxis_BaseUnit:= _GCSpinAxis_BaseUnit);]]></ST>
       </Implementation>
     </Action>
-    <Action Name="A02_Service" Id="{d47387d1-caed-4193-989f-250848f90265}">
+    <Action Name="A02_CompoundService" Id="{d47387d1-caed-4193-989f-250848f90265}">
       <Implementation>
         <ST><![CDATA[]]></ST>
       </Implementation>
@@ -60,7 +60,9 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+        <ST><![CDATA[// Map machine mode control for module
+_Ctrl.GC_Ctrl.eMode := Ctrl.Machine_Ctrl.eMode;
+_Ctrl.GC_Ctrl.bModeChangeRequest := Ctrl.Machine_Ctrl.bModeChangeRequest;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnAborting" Id="{4e9e7257-ac81-4d6a-b06c-875a46d3aeda}" FolderPath="StateAction\">
@@ -221,7 +223,9 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+        <ST><![CDATA[// Map machine mode control for module
+_Ctrl.GC_Ctrl.eMode := Ctrl.Machine_Ctrl.eMode;
+_Ctrl.GC_Ctrl.bModeChangeRequest := Ctrl.Machine_Ctrl.bModeChangeRequest;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnStopping" Id="{d23e861a-3a87-40aa-862f-a915644dca9e}" FolderPath="StateAction\">
