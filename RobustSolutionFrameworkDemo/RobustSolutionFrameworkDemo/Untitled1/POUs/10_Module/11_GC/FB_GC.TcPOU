@@ -164,7 +164,7 @@ _Service.SpinAxisMoveAbsService.Ctrl.Reset := TRUE;
 
 // Wait cmd finished
 IF _Service.SpinAxisJogService.Status.State <> E_PackMLState.Idle
-	AND _Service.SpinAxisMoveAbsService.Status.State <> E_PackMLState.Idle THEN
+	OR _Service.SpinAxisMoveAbsService.Status.State <> E_PackMLState.Idle THEN
 	RETURN;
 END_IF
 
