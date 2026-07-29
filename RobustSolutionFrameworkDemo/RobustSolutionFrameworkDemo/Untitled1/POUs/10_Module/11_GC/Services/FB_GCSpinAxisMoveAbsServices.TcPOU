@@ -1,9 +1,10 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GCSpinAxisMoveAbsServices" Id="{9c4945bc-98e0-4f80-811d-303c8e7f09ff}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_PackMLBase IMPLEMENTS I_ModuleServiceProperty
 VAR_INPUT
-	Service : REFERENCE TO ST_GCSpinAxisMoveAbsService;
+	Ctrl : REFERENCE TO ST_GCSpinAxisMoveAbsCtrl;
+	Status : REFERENCE TO ST_GCSpinAxisMoveAbsStatus;
 	Axis_BaseUnit : REFERENCE TO FB_AxisControl;
 END_VAR
 
@@ -21,7 +22,7 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[// Update service state
-Service.Status.State := stOut.eStateCurrent;
+Status.State := stOut.eStateCurrent;
 
 A00_TrigCommand();
 
@@ -31,22 +32,22 @@ SUPER^();
     <Folder Name="StateAction" Id="{ca59d4b8-ca7f-493a-9fc5-3adf146e1d0b}" />
     <Action Name="A00_TrigCommand" Id="{9792efc0-afc9-422a-8228-3e5ea321d219}">
       <Implementation>
-        <ST><![CDATA[_StartOneShot(CLK:= Service.Ctrl.Start);
+        <ST><![CDATA[_StartOneShot(CLK:= Ctrl.Start);
 IF _StartOneShot.Q THEN
 	RequestCommand(E_PackMLCommand.Start);
 END_IF
 
-_ResetOneShot(CLK:= Service.Ctrl.Reset);
+_ResetOneShot(CLK:= Ctrl.Reset);
 IF _ResetOneShot.Q THEN
 	RequestCommand(E_PackMLCommand.Reset);
 END_IF
 
-_StopOneShot(CLK:= Service.Ctrl.Stop);
+_StopOneShot(CLK:= Ctrl.Stop);
 IF _StopOneShot.Q THEN
 	RequestCommand(E_PackMLCommand.Stop);
 END_IF
 
-_AbortOneShot(CLK:= Service.Ctrl.Abort);
+_AbortOneShot(CLK:= Ctrl.Abort);
 IF _AbortOneShot.Q THEN
 	RequestCommand(E_PackMLCommand.Abort);
 END_IF]]></ST>
@@ -60,9 +61,9 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
-Service.Status.Busy := FALSE;
-Service.Status.Done := FALSE;
-Service.Status.Aborted := TRUE;
+Status.Busy := FALSE;
+Status.Done := FALSE;
+Status.Aborted := TRUE;
 
 RequestCommand(E_PackMLCommand.Clear);]]></ST>
       </Implementation>
@@ -83,10 +84,10 @@ END_VAR]]></Declaration>
 // Close moveAbs method
 Axis_BaseUnit.M_MoveAbs(
 	Execute := FALSE,
-	Position:= Service.Ctrl.Param.Position, 
-	Velocity:= Service.Ctrl.Param.Velocity, 
-	Acceleration:= Service.Ctrl.Param.Acceleration, 
-	Deceleration:= Service.Ctrl.Param.Deceleration);
+	Position:= Ctrl.Param.Position,
+	Velocity:= Ctrl.Param.Velocity,
+	Acceleration:= Ctrl.Param.Acceleration,
+	Deceleration:= Ctrl.Param.Deceleration);
 	
 Axis_BaseUnit.M_Reset(
 	Execute := TRUE,
@@ -124,13 +125,13 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Service.Status.Busy := FALSE;
-Service.Status.Done := TRUE;
-Service.Status.Error := FALSE;
-Service.Status.Aborted := FALSE;
-Service.Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
+        <ST><![CDATA[Status.Busy := FALSE;
+Status.Done := TRUE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
 
-IF NOT Service.Ctrl.Start THEN
+IF NOT Ctrl.Start THEN
 	RequestCommand(E_PackMLCommand.Reset);
 END_IF]]></ST>
       </Implementation>
@@ -142,18 +143,18 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Service.Status.Busy := FALSE;
-Service.Status.Done := TRUE;
-Service.Status.Error := FALSE;
-Service.Status.Aborted := FALSE;
-Service.Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
+        <ST><![CDATA[Status.Busy := FALSE;
+Status.Done := TRUE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
 
 Axis_BaseUnit.M_MoveAbs(
 	Execute:= FALSE,
-	Position:= Service.Ctrl.Param.Position, 
-	Velocity:= Service.Ctrl.Param.Velocity, 
-	Acceleration:= Service.Ctrl.Param.Acceleration, 
-	Deceleration:= Service.Ctrl.Param.Deceleration);
+	Position:= Ctrl.Param.Position,
+	Velocity:= Ctrl.Param.Velocity,
+	Acceleration:= Ctrl.Param.Acceleration,
+	Deceleration:= Ctrl.Param.Deceleration);
 
 H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -172,31 +173,31 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
 
-Service.Status.Busy := TRUE;
-Service.Status.Done := FALSE;
-Service.Status.Error := FALSE;
-Service.Status.Aborted := FALSE;
-Service.Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
+Status.Busy := TRUE;
+Status.Done := FALSE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
 
 Axis_BaseUnit.M_MoveAbs(
 	Execute:= TRUE,
-	Position:= Service.Ctrl.Param.Position, 
-	Velocity:= Service.Ctrl.Param.Velocity, 
-	Acceleration:= Service.Ctrl.Param.Acceleration, 
-	Deceleration:= Service.Ctrl.Param.Deceleration,
+	Position:= Ctrl.Param.Position,
+	Velocity:= Ctrl.Param.Velocity,
+	Acceleration:= Ctrl.Param.Acceleration,
+	Deceleration:= Ctrl.Param.Deceleration,
 	Done=> bDone, Error=> bError);
 
 
 IF bDone THEN
-	Service.Status.Busy := FALSE;
-	Service.Status.Done := TRUE;
+	Status.Busy := FALSE;
+	Status.Done := TRUE;
 	H_OnExecute := E_PackMLHookResult.Done;
 	RETURN;
 END_IF
 
 IF bError THEN
-		Service.Status.Error := TRUE;
-		Service.Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.MoveAbs_Error_During_Execute;
+		Status.Error := TRUE;
+		Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.MoveAbs_Error_During_Execute;
 		
 		RequestCommand(E_PackMLCommand.Stop);
 END_IF
@@ -232,11 +233,11 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
-Service.Status.Busy := FALSE;
-Service.Status.Done := FALSE;
-Service.Status.Error := FALSE;
-Service.Status.Aborted := FALSE;
-Service.Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;]]></ST>
+Status.Busy := FALSE;
+Status.Done := FALSE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{9fac3a5f-72e3-4249-a638-a9be1f5d5fde}" FolderPath="StateAction\">
@@ -246,11 +247,11 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Service.Status.Busy := FALSE;
-Service.Status.Done := FALSE;
-Service.Status.Error := FALSE;
-Service.Status.Aborted := FALSE;
-Service.Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
+        <ST><![CDATA[Status.Busy := FALSE;
+Status.Done := FALSE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -264,18 +265,18 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
 
-Service.Status.Busy := TRUE;
-Service.Status.Done := FALSE;
-Service.Status.Error := FALSE;
-Service.Status.Aborted := FALSE;
-Service.Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
+Status.Busy := TRUE;
+Status.Done := FALSE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
 
 // Check is servo on
 IF Axis_BaseUnit.AxisStatus.Disabled THEN
 	
 	// Throw up error
-	Service.Status.Error:= TRUE;
-	Service.Status.ErrorId:= E_GCSpinAxisMoveAbsErrorCode.Axis_Not_Servo_On_During_Starting;
+	Status.Error:= TRUE;
+	Status.ErrorId:= E_GCSpinAxisMoveAbsErrorCode.Axis_Not_Servo_On_During_Starting;
 	
 	// Request abort command
 	RequestCommand(E_PackMLCommand.Abort);
@@ -285,8 +286,8 @@ END_IF
 // Check is axis not busy
 IF Axis_BaseUnit.AxisStatus.HasJob THEN
 	// Throw up error
-	Service.Status.Error:= TRUE;
-	Service.Status.ErrorId:= E_GCSpinAxisMoveAbsErrorCode.Axis_Is_Busy_During_Starting;
+	Status.Error:= TRUE;
+	Status.ErrorId:= E_GCSpinAxisMoveAbsErrorCode.Axis_Is_Busy_During_Starting;
 	
 	// Request abort command
 	RequestCommand(E_PackMLCommand.Stop);
@@ -294,10 +295,10 @@ IF Axis_BaseUnit.AxisStatus.HasJob THEN
 END_IF
 
 // Check is param valid
-IF Service.Ctrl.Param.Velocity <= 0 THEN
+IF Ctrl.Param.Velocity <= 0 THEN
 	// Throw up error
-	Service.Status.Error:= TRUE;
-	Service.Status.ErrorId:= E_GCSpinAxisMoveAbsErrorCode.Invalid_Param;
+	Status.Error:= TRUE;
+	Status.ErrorId:= E_GCSpinAxisMoveAbsErrorCode.Invalid_Param;
 	
 	// Request abort command
 	RequestCommand(E_PackMLCommand.Stop);
@@ -318,9 +319,9 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
-Service.Status.Busy := FALSE;
-Service.Status.Done := FALSE;
-Service.Status.Aborted := TRUE;
+Status.Busy := FALSE;
+Status.Done := FALSE;
+Status.Aborted := TRUE;
 ]]></ST>
       </Implementation>
     </Method>
@@ -341,30 +342,30 @@ END_VAR
 // Close moveAbs method
 Axis_BaseUnit.M_MoveAbs(
 	Execute := FALSE,
-	Position:= Service.Ctrl.Param.Position, 
-	Velocity:= Service.Ctrl.Param.Velocity, 
-	Acceleration:= Service.Ctrl.Param.Acceleration, 
-	Deceleration:= Service.Ctrl.Param.Deceleration);
+	Position:= Ctrl.Param.Position,
+	Velocity:= Ctrl.Param.Velocity,
+	Acceleration:= Ctrl.Param.Acceleration,
+	Deceleration:= Ctrl.Param.Deceleration);
 	
 Axis_BaseUnit.M_Stop(
 	Execute := TRUE, 
-	Deceleration:= Service.Ctrl.Param.Deceleration,
+	Deceleration:= Ctrl.Param.Deceleration,
 	Done=> bDone, Error=> bError);
 
 IF bDone THEN
 	Axis_BaseUnit.M_Stop(
 		Execute := FALSE, 
-		Deceleration:= Service.Ctrl.Param.Deceleration);	
+		Deceleration:= Ctrl.Param.Deceleration);
 	H_OnStopping := E_PackMLHookResult.Done;
 	
 ELSIF bError THEN
 	// Throw up error
-	Service.Status.Error := TRUE;
-	Service.Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.Error_While_Stop_Axis;
+	Status.Error := TRUE;
+	Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.Error_While_Stop_Axis;
 	
 	Axis_BaseUnit.M_Stop(
 		Execute := FALSE, 
-		Deceleration:= Service.Ctrl.Param.Deceleration);
+		Deceleration:= Ctrl.Param.Deceleration);
 		
 	RequestCommand(E_PackMLCommand.Abort);
 END_IF

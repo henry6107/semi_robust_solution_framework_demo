@@ -3,7 +3,8 @@
   <POU Name="FB_GC" Id="{d2b222b5-592d-46be-8a8e-fa50af509b93}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_GC EXTENDS FB_PackMLModeSet
 VAR_INPUT
-	Service : REFERENCE TO ST_GC_Service;
+	ServiceCtrl : REFERENCE TO ST_GC_ServiceCtrl;
+	ServiceStatus : REFERENCE TO ST_GC_ServiceStatus;
 	Admin : REFERENCE TO ST_GC_Admin;
 	
 	// Base unit used in GC chamber
@@ -15,8 +16,8 @@ VAR_OUTPUT
 END_VAR
 
 VAR
-	// 有需要特殊操作的需求，所以建立一個ST_GC_Service變數，讓程式內部可以過一手處理
-	_Service : ST_GC_Service;
+	// 有需要特殊操作的需求，所以建立一個 ST_GC_ServiceCtrl 變數，讓程式內部可以過一手處理
+	_ServiceCtrl : ST_GC_ServiceCtrl;
 	
 	_SpinAxisJogService : FB_GCSpinAxisJogServices;
 	_SpinAxisMoveAbsService : FB_GCSPinAxisMoveAbsServices;
@@ -24,17 +25,19 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[A00_Service();
-
-// Update status data
-Service.SpinAxisJogService.Status := _Service.SpinAxisJogService.Status;
-Service.SpinAxisMoveAbsService.Status := _Service.SpinAxisMoveAbsService.Status;
 SUPER^();]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{92cfe23b-b998-4d76-8aa2-c8089e78aa61}" />
     <Action Name="A00_Service" Id="{c62275db-aa76-4b4d-95ad-2ecb5851f919}">
       <Implementation>
-        <ST><![CDATA[_SpinAxisJogService(Service:= _Service.SpinAxisJogService, Axis_BaseUnit:= SpinAxis_BaseUnit);
-_SpinAxisMoveAbsService(Service:= _Service.SpinAxisMoveAbsService, Axis_BaseUnit:= SpinAxis_BaseUnit);]]></ST>
+        <ST><![CDATA[_SpinAxisJogService(
+	Ctrl:= _ServiceCtrl.SpinAxisJog,
+	Status:= ServiceStatus.SpinAxisJog,
+	Axis_BaseUnit:= SpinAxis_BaseUnit);
+_SpinAxisMoveAbsService(
+	Ctrl:= _ServiceCtrl.SpinAxisMoveAbs,
+	Status:= ServiceStatus.SpinAxisMoveAbs,
+	Axis_BaseUnit:= SpinAxis_BaseUnit);]]></ST>
       </Implementation>
     </Action>
     <Method Name="H_OnAborted" Id="{de8d6f56-427f-41df-b4d5-ddd289e1aed8}" FolderPath="StateAction\">
@@ -100,8 +103,7 @@ END_VAR
 H_OnExecute := E_PackMLHookResult.Busy;
 
 // Mapping control data
-_Service.SpinAxisJogService.Ctrl := Service.SpinAxisJogService.Ctrl;
-_Service.SpinAxisMoveAbsService.Ctrl := Service.SpinAxisMoveAbsService.Ctrl;]]></ST>
+_ServiceCtrl := ServiceCtrl;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnHeld" Id="{93f6b454-4398-4439-9237-4d01e13b7ccc}" FolderPath="StateAction\">
@@ -159,18 +161,18 @@ END_VAR
         <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Busy;
 
 // Request clear cmd to services
-_Service.SpinAxisJogService.Ctrl.Reset := TRUE;
-_Service.SpinAxisMoveAbsService.Ctrl.Reset := TRUE;
+_ServiceCtrl.SpinAxisJog.Reset := TRUE;
+_ServiceCtrl.SpinAxisMoveAbs.Reset := TRUE;
 
 // Wait cmd finished
-IF _Service.SpinAxisJogService.Status.State <> E_PackMLState.Idle
-	OR _Service.SpinAxisMoveAbsService.Status.State <> E_PackMLState.Idle THEN
+IF ServiceStatus.SpinAxisJog.State <> E_PackMLState.Idle
+	OR ServiceStatus.SpinAxisMoveAbs.State <> E_PackMLState.Idle THEN
 	RETURN;
 END_IF
 
 // Reset trigger
-_Service.SpinAxisJogService.Ctrl.Reset := FALSE;
-_Service.SpinAxisMoveAbsService.Ctrl.Reset := FALSE;
+_ServiceCtrl.SpinAxisJog.Reset := FALSE;
+_ServiceCtrl.SpinAxisMoveAbs.Reset := FALSE;
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>

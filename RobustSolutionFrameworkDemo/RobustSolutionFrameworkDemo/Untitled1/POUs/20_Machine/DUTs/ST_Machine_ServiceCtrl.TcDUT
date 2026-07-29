@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_Machine_ServiceCtrl" Id="{124eb11f-dc59-4a08-bc99-7509580f0540}">
+    <Declaration><![CDATA[TYPE ST_Machine_ServiceCtrl :
+STRUCT
+	GC : ST_GC_ServiceCtrl;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
