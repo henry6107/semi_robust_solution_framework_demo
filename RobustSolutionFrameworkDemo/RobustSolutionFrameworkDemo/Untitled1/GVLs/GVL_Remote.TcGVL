@@ -5,7 +5,8 @@
 VAR_GLOBAL
 	Ctrl : ST_Machine_Ctrl;
 	Status : ST_Machine_Status;
-	Service : ST_Machine_Service;
+	ServiceCtrl : ST_Machine_ServiceCtrl;
+	ServiceStatus : ST_Machine_ServiceStatus;
 	Admin : ST_Machine_Admin;
 END_VAR]]></Declaration>
   </GVL>

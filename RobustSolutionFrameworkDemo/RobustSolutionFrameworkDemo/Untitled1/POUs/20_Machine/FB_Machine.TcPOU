@@ -5,7 +5,8 @@
 VAR_INPUT
 	Ctrl : REFERENCE TO ST_Machine_Ctrl;
 	Status : REFERENCE TO ST_Machine_Status;
-	Service : REFERENCE TO ST_Machine_Service;
+	ServiceCtrl : REFERENCE TO ST_Machine_ServiceCtrl;
+	ServiceStatus : REFERENCE TO ST_Machine_ServiceStatus;
 	Admin : REFERENCE TO ST_Machine_Admin;
 END_VAR
 VAR_OUTPUT
@@ -43,7 +44,8 @@ SUPER^();]]></ST>
         <ST><![CDATA[_GC_Module(
 	stIn:= _Ctrl.GC_Ctrl,
 	stOut=> Status.GC_Status,
-	Service:= Service.GC_Service, 
+	ServiceCtrl:= ServiceCtrl.GC,
+	ServiceStatus:= ServiceStatus.GC,
 	Admin:= Admin.GC_Admin,
 	SpinAxis_BaseUnit:= _GCSpinAxis_BaseUnit);]]></ST>
       </Implementation>

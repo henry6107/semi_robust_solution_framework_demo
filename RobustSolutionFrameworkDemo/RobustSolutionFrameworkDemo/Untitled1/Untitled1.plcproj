@@ -43,9 +43,6 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService\ST_GCSpinAxisJogParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService\ST_GCSpinAxisJogService.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService\ST_GCSpinAxisJogStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -58,16 +55,16 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveAbsService\ST_GCSpinAxisMoveAbsParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveAbsService\ST_GCSpinAxisMoveAbsService.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveAbsService\ST_GCSpinAxisMoveAbsStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_Admin.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_Service.TcDUT">
+    <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_ServiceCtrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_ServiceStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\FB_GC.TcPOU">
@@ -85,7 +82,10 @@
     <Compile Include="POUs\20_Machine\DUTs\ST_Machine_Ctrl.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\20_Machine\DUTs\ST_Machine_Service.TcDUT">
+    <Compile Include="POUs\20_Machine\DUTs\ST_Machine_ServiceCtrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\20_Machine\DUTs\ST_Machine_ServiceStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\20_Machine\DUTs\ST_Machine_Status.TcDUT">

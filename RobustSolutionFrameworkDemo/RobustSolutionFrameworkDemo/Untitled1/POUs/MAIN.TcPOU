@@ -10,7 +10,8 @@ END_VAR
       <ST><![CDATA[Machine(
 	Ctrl:= GVL_Remote.Ctrl, 
 	Status:= GVL_Remote.Status, 
-	Service:= GVL_Remote.Service, 
+	ServiceCtrl:= GVL_Remote.ServiceCtrl,
+	ServiceStatus:= GVL_Remote.ServiceStatus,
 	Admin:= GVL_Remote.Admin);]]></ST>
     </Implementation>
   </POU>
