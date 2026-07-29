@@ -134,7 +134,11 @@ END_VAR
 H_OnExecute := E_PackMLHookResult.Busy;
 
 // Enable external data to the module
-_Ctrl := Ctrl;]]></ST>
+IF Admin.GC_Admin.bLocalControl THEN
+	_Ctrl.GC_Ctrl := Ctrl.GC_Ctrl;
+ELSE
+	_Ctrl.GC_Ctrl := Ctrl.Machine_Ctrl;
+END_IF]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnHeld" Id="{ed585925-8230-4f18-ae73-e65352813968}" FolderPath="StateAction\">
