@@ -58,6 +58,18 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveAbsService\ST_GCSpinAxisMoveAbsStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveVelService\E_GCSpinAxisMoveVelErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelCtrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_Admin.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -74,6 +86,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveAbsServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveVelServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\20_Machine\DUTs\ST_Machine_Admin.TcDUT">
@@ -146,6 +161,7 @@
     <Folder Include="POUs\10_Module\11_GC\DUTs" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveAbsService" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\SpinAxisMoveVelService" />
     <Folder Include="POUs\10_Module\11_GC\Services" />
     <Folder Include="POUs\20_Machine" />
     <Folder Include="POUs\10_Module" />

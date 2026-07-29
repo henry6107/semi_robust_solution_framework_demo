@@ -1,10 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="ST_GC_ServiceStatus" Id="{f27be8ff-16cd-4df7-a4df-6e0527b043a3}">
     <Declaration><![CDATA[TYPE ST_GC_ServiceStatus :
 STRUCT
 	SpinAxisJog : ST_GCSpinAxisJogStatus;
 	SpinAxisMoveAbs : ST_GCSpinAxisMoveAbsStatus;
+	SpinAxisMoveVel : ST_GCSpinAxisMoveVelStatus;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

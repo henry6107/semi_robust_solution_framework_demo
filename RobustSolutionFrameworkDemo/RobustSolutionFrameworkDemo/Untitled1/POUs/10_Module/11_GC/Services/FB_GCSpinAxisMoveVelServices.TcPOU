@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="FB_GCSpinAxisJogServices" Id="{a61ac5cd-09b6-4f2d-bc54-d014db7401a2}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisJogServices EXTENDS FB_PackMLBase IMPLEMENTS I_ModuleServiceProperty
+  <POU Name="FB_GCSpinAxisMoveVelServices" Id="{2d3a48e0-0a65-435f-812d-3e25cfaffe3c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveVelServices EXTENDS FB_PackMLBase IMPLEMENTS I_ModuleServiceProperty
 VAR_INPUT
-	Ctrl : REFERENCE TO ST_GCSpinAxisJogCtrl;
-	Status : REFERENCE TO ST_GCSpinAxisJogStatus;
+	Ctrl : REFERENCE TO ST_GCSpinAxisMoveVelCtrl;
+	Status : REFERENCE TO ST_GCSpinAxisMoveVelStatus;
 	Axis_BaseUnit : REFERENCE TO FB_AxisControl;
 END_VAR
 
@@ -23,14 +23,14 @@ END_VAR
     <Implementation>
       <ST><![CDATA[// Update service state
 Status.State := stOut.eStateCurrent;
-
+Status.ActVel := Axis_BaseUnit.Axis.NcToPlc.ActVelo;
 A00_TrigCommand();
 
 SUPER^();
 ]]></ST>
     </Implementation>
-    <Folder Name="StateAction" Id="{30486db3-fa54-4a70-b426-5f8ba9d0504f}" />
-    <Action Name="A00_TrigCommand" Id="{d9012b4d-3f7d-455a-a3d6-1f5152c45f28}">
+    <Folder Name="StateAction" Id="{49ed7549-95d2-4542-8c09-83ad057d2672}" />
+    <Action Name="A00_TrigCommand" Id="{9dc898aa-4aa1-4e35-9ef5-cd946bc1cd50}">
       <Implementation>
         <ST><![CDATA[_StartOneShot(CLK:= Ctrl.Start);
 IF _StartOneShot.Q THEN
@@ -53,7 +53,7 @@ IF _AbortOneShot.Q THEN
 END_IF]]></ST>
       </Implementation>
     </Action>
-    <Method Name="H_OnAborted" Id="{b48428e2-059a-4878-a27b-576d41f2ba26}" FolderPath="StateAction\">
+    <Method Name="H_OnAborted" Id="{328f5265-3f48-4442-8390-1fd00d156006}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnAborted
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -68,26 +68,36 @@ Status.Aborted := TRUE;
 RequestCommand(E_PackMLCommand.Clear);]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnAborting" Id="{df4c7f2d-8a88-4d35-a321-0716e918b536}" FolderPath="StateAction\">
+    <Method Name="H_OnAborting" Id="{8ef4724f-e418-45d4-b245-336c28b5f1de}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnAborting : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
 END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[Axis_BaseUnit.M_Jog(
-	JogForward:= FALSE, 
-	JogBackwards:= FALSE, 
-	Mode:= Ctrl.Param.Mode,
-	Position:= Ctrl.Param.Position,
-	Velocity:= Ctrl.Param.Velocity,
-	Acceleration:= Ctrl.Param.Acceleration,
-	Deceleration:= Ctrl.Param.Deceleration);
 
-H_OnAborting := E_PackMLHookResult.Done;]]></ST>
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
+
+// Close moveAbs method
+Axis_BaseUnit.M_MoveVel(
+	Execute := FALSE,
+	Ctrl.Param);
+	
+Axis_BaseUnit.M_Reset(
+	Execute := TRUE,
+	Done=> bDone, Error=> bError);
+
+IF bDone THEN
+	Axis_BaseUnit.M_Reset(Execute := FALSE);
+	H_OnAborting := E_PackMLHookResult.Done;
+END_IF
+]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnClearing" Id="{9a60118e-19f9-4bca-893b-e890bf0b19c9}" FolderPath="StateAction\">
+    <Method Name="H_OnClearing" Id="{e065280f-e16e-4d87-85cf-24b54094afe6}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnClearing : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -105,7 +115,7 @@ END_VAR
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnComplete" Id="{fd680a59-d09e-4091-ac1f-b02ebd6a48e6}" FolderPath="StateAction\">
+    <Method Name="H_OnComplete" Id="{6d77d87d-d9c6-4390-a07a-5b4202d501b8}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnComplete
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -116,14 +126,14 @@ END_VAR
 Status.Done := TRUE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ErrorId := E_GCSpinAxisJogErrorCode.None;
+Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.None;
 
 IF NOT Ctrl.Start THEN
 	RequestCommand(E_PackMLCommand.Reset);
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnCompleting" Id="{61491643-adf6-4106-831a-f4dfe9e14738}" FolderPath="StateAction\">
+    <Method Name="H_OnCompleting" Id="{3864e1ba-9360-45a8-9d26-f1e180c8fbe5}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnCompleting : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -134,21 +144,16 @@ END_VAR
 Status.Done := TRUE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ErrorId := E_GCSpinAxisJogErrorCode.None;
+Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.None;
 
-Axis_BaseUnit.M_Jog(
-	JogForward:= FALSE, 
-	JogBackwards:= FALSE, 
-	Mode:= Ctrl.Param.Mode,
-	Position:= Ctrl.Param.Position,
-	Velocity:= Ctrl.Param.Velocity,
-	Acceleration:= Ctrl.Param.Acceleration,
-	Deceleration:= Ctrl.Param.Deceleration);
+Axis_BaseUnit.M_MoveVel(
+	Execute:= FALSE,
+	Param := Ctrl.Param);
 
 H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnExecute" Id="{2dba6e2e-7918-46c6-a0b6-50da9e5cf338}" FolderPath="StateAction\">
+    <Method Name="H_OnExecute" Id="{d5c34347-be90-4f5e-8be4-57798b5c5bb2}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -166,38 +171,31 @@ Status.Busy := TRUE;
 Status.Done := FALSE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ErrorId := E_GCSpinAxisJogErrorCode.None;
+Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.None;
 
-Axis_BaseUnit.M_Jog(
-	JogForward:= Ctrl.Param.JogForward,
-	JogBackwards:= Ctrl.Param.JogBackwards,
-	Mode:= Ctrl.Param.Mode,
-	Position:= Ctrl.Param.Position,
-	Velocity:= Ctrl.Param.Velocity,
-	Acceleration:= Ctrl.Param.Acceleration,
-	Deceleration:= Ctrl.Param.Deceleration,
-	Done=> bDone, Error=> bError);
+Axis_BaseUnit.M_MoveVel(
+	Execute:= TRUE,
+	Param:= Ctrl.Param,
+	InVelocity=> bDone, Error=> bError);
 
 
-IF Ctrl.Param.Mode = E_JogMode.MC_JOGMODE_INCHING THEN
-	IF bDone THEN
-		Status.Busy := FALSE;
-		Status.Done := TRUE;
-		H_OnExecute := E_PackMLHookResult.Done;
-		RETURN;
-	END_IF
+IF bDone THEN
+	Status.Busy := FALSE;
+	Status.Done := TRUE;
+	H_OnExecute := E_PackMLHookResult.Done;
+	RETURN;
 END_IF
 
 IF bError THEN
 		Status.Error := TRUE;
-		Status.ErrorId := E_GCSpinAxisJogErrorCode.Jog_Error_During_Execute;
+		Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.MoveVel_Error_During_Execute;
 		
 		RequestCommand(E_PackMLCommand.Stop);
 END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnHeld" Id="{fc1df435-3bb5-4a7c-8ab6-c741096bcbf0}" FolderPath="StateAction\">
+    <Method Name="H_OnHeld" Id="{290e557c-077d-4d3a-a2bb-06d511e35f5d}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnHeld
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -207,7 +205,7 @@ END_VAR
         <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnHolding" Id="{ece160eb-a5c7-4980-a6c1-7b10ad25762b}" FolderPath="StateAction\">
+    <Method Name="H_OnHolding" Id="{fa63c046-0d26-4f2c-83a5-fda321bd6ee0}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnHolding : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -218,7 +216,7 @@ END_VAR
 H_OnHolding := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnIdle" Id="{801e1204-bf1d-4d12-b7fd-e2791384226a}" FolderPath="StateAction\">
+    <Method Name="H_OnIdle" Id="{59828899-47c9-4777-90f1-23e06ffd978a}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnIdle
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -230,10 +228,10 @@ Status.Busy := FALSE;
 Status.Done := FALSE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ErrorId := E_GCSpinAxisJogErrorCode.None;]]></ST>
+Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.None;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnResetting" Id="{cd0cb289-d0f8-442c-af15-52d2005bf619}" FolderPath="StateAction\">
+    <Method Name="H_OnResetting" Id="{0680bc64-d1f9-407b-b6ca-83882b900618}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnResetting : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -244,12 +242,12 @@ END_VAR
 Status.Done := FALSE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ErrorId := E_GCSpinAxisJogErrorCode.None;
+Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.None;
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnStarting" Id="{bcd7c333-82d2-481d-9c52-d49b2030a18e}" FolderPath="StateAction\">
+    <Method Name="H_OnStarting" Id="{ce6c9548-1f79-4b75-96e2-343a2f8f84cb}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -262,14 +260,14 @@ Status.Busy := TRUE;
 Status.Done := FALSE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ErrorId := E_GCSpinAxisJogErrorCode.None;
+Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.None;
 
 // Check is servo on
 IF Axis_BaseUnit.Axis.Status.Disabled THEN
 	
 	// Throw up error
 	Status.Error:= TRUE;
-	Status.ErrorId:= E_GCSpinAxisJogErrorCode.Axis_Not_Servo_On_During_Starting;
+	Status.ErrorId:= E_GCSpinAxisMoveVelErrorCode.Axis_Not_Servo_On_During_Starting;
 	
 	// Request abort command
 	RequestCommand(E_PackMLCommand.Abort);
@@ -280,7 +278,7 @@ END_IF
 IF Axis_BaseUnit.Axis.Status.HasJob THEN
 	// Throw up error
 	Status.Error:= TRUE;
-	Status.ErrorId:= E_GCSpinAxisJogErrorCode.Axis_Is_Busy_During_Starting;
+	Status.ErrorId:= E_GCSpinAxisMoveVelErrorCode.Axis_Is_Busy_During_Starting;
 	
 	// Request abort command
 	RequestCommand(E_PackMLCommand.Stop);
@@ -288,12 +286,10 @@ IF Axis_BaseUnit.Axis.Status.HasJob THEN
 END_IF
 
 // Check is param valid
-IF (Ctrl.Param.JogBackwards AND Ctrl.Param.JogForward) OR
-	(NOT Ctrl.Param.JogBackwards AND NOT Ctrl.Param.JogForward) OR
-	Ctrl.Param.Velocity = 0 THEN
+IF Ctrl.Param.Velocity <= 0 THEN
 	// Throw up error
 	Status.Error:= TRUE;
-	Status.ErrorId:= E_GCSpinAxisJogErrorCode.Invalid_Param;
+	Status.ErrorId:= E_GCSpinAxisMoveVelErrorCode.Invalid_Param;
 	
 	// Request abort command
 	RequestCommand(E_PackMLCommand.Stop);
@@ -306,7 +302,7 @@ H_OnStarting := E_PackMLHookResult.Done;
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnStopped" Id="{7643e72d-21d0-42a9-a466-1828d294ec10}" FolderPath="StateAction\">
+    <Method Name="H_OnStopped" Id="{768434f7-cc85-4fdb-a507-f054649262b4}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnStopped
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -320,26 +316,52 @@ Status.Aborted := TRUE;
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnStopping" Id="{7e40e9e4-ecf0-49b7-86b3-13897394333e}" FolderPath="StateAction\">
+    <Method Name="H_OnStopping" Id="{b2816703-e998-4497-a19c-1d20e18f1f4c}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnStopping : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
 END_VAR
+
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Axis_BaseUnit.M_Jog(
-	JogForward:= FALSE, 
-	JogBackwards:= FALSE, 
-	Mode:= Ctrl.Param.Mode,
-	Position:= Ctrl.Param.Position,
-	Velocity:= Ctrl.Param.Velocity,
-	Acceleration:= Ctrl.Param.Acceleration,
-	Deceleration:= Ctrl.Param.Deceleration);
+        <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Busy;
 
-H_OnStopping := E_PackMLHookResult.Done;]]></ST>
+// Close moveAbs method
+Axis_BaseUnit.M_MoveVel(
+	Execute := FALSE,
+	Param:= Ctrl.Param);
+	
+Axis_BaseUnit.M_Stop(
+	Execute := TRUE, 
+	Deceleration:= Ctrl.Param.Deceleration,
+	Done=> bDone, Error=> bError);
+
+IF bDone THEN
+	Axis_BaseUnit.M_Stop(
+		Execute := FALSE, 
+		Deceleration:= Ctrl.Param.Deceleration);
+	H_OnStopping := E_PackMLHookResult.Done;
+	
+ELSIF bError THEN
+	// Throw up error
+	Status.Error := TRUE;
+	Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.Error_While_Stop_Axis;
+	
+	Axis_BaseUnit.M_Stop(
+		Execute := FALSE, 
+		Deceleration:= Ctrl.Param.Deceleration);
+		
+	RequestCommand(E_PackMLCommand.Abort);
+END_IF
+
+]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnSuspended" Id="{e85e43db-649a-4658-a8a4-46ee44393ec1}" FolderPath="StateAction\">
+    <Method Name="H_OnSuspended" Id="{3237239b-48f7-46dc-b2a0-07f7727d1af4}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnSuspended
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -349,7 +371,7 @@ END_VAR
         <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnSuspending" Id="{e203e9d4-d997-4a54-8a42-be70e0403d06}" FolderPath="StateAction\">
+    <Method Name="H_OnSuspending" Id="{21d2483c-a2c4-4efb-8137-575165e782fc}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnSuspending : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -360,7 +382,7 @@ END_VAR
 H_OnSuspending := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnUndefined" Id="{f7603c5c-6fc0-49e6-83fe-7aacac7ddd39}" FolderPath="StateAction\">
+    <Method Name="H_OnUndefined" Id="{355660e6-63b3-47e1-98ff-81122ad86689}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnUndefined : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -371,7 +393,7 @@ END_VAR
 H_OnUndefined := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnUnholding" Id="{273aa969-3e22-4ea9-8cb4-3dea54c7fc6d}" FolderPath="StateAction\">
+    <Method Name="H_OnUnholding" Id="{4d791b75-be71-409c-890a-fcf31649efc0}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnUnholding : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -382,7 +404,7 @@ END_VAR
 H_OnUnholding := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnUnsuspending" Id="{901ae4a7-eddd-4729-903d-3db2ee99da23}" FolderPath="StateAction\">
+    <Method Name="H_OnUnsuspending" Id="{cd52fade-963d-45ca-a66e-acbc7e8b9c95}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnUnsuspending : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
@@ -393,10 +415,10 @@ END_VAR
 H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
-    <Property Name="ModuleMode" Id="{909f5537-5629-4c46-9ccb-61a85ea831a5}">
+    <Property Name="ModuleMode" Id="{a9425580-6a91-4e42-bb9a-1d2b8b615b56}">
       <Declaration><![CDATA[PROPERTY ModuleMode : T_PackMLMode
 ]]></Declaration>
-      <Get Name="Get" Id="{e6b1fa22-a987-4664-8101-e14dca9a3d5a}">
+      <Get Name="Get" Id="{0de7170a-9734-4b0e-9e84-a47c05cd839f}">
         <Declaration><![CDATA[VAR
 END_VAR
 ]]></Declaration>
@@ -404,7 +426,7 @@ END_VAR
           <ST><![CDATA[ModuleMode := _ModuleMode;]]></ST>
         </Implementation>
       </Get>
-      <Set Name="Set" Id="{4cdc4139-6e05-406a-b203-d0a353b0e373}">
+      <Set Name="Set" Id="{e5fffbf5-7c0f-49bc-8dd6-0eb3c9bcbadf}">
         <Declaration><![CDATA[VAR
 END_VAR
 ]]></Declaration>

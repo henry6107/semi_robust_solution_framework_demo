@@ -24,12 +24,19 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[A00_BaseUnit();
+      <ST><![CDATA[stIn := Ctrl.Machine_Ctrl;
+Status.Machine_Status := stOut;
+
+// Select control source
+IF Admin.GC_Admin.bLocalControl THEN
+	_Ctrl.GC_Ctrl := Ctrl.GC_Ctrl;
+ELSE
+	_Ctrl.GC_Ctrl := Ctrl.Machine_Ctrl;
+END_IF
+
+A00_BaseUnit();
 A01_Module();
 A02_CompoundService();
-
-stIn := Ctrl.Machine_Ctrl;
-Status.Machine_Status := stOut;
 
 SUPER^();]]></ST>
     </Implementation>
@@ -62,9 +69,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Map machine mode control for module
-_Ctrl.GC_Ctrl.eMode := Ctrl.Machine_Ctrl.eMode;
-_Ctrl.GC_Ctrl.bModeChangeRequest := Ctrl.Machine_Ctrl.bModeChangeRequest;]]></ST>
+        <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnAborting" Id="{4e9e7257-ac81-4d6a-b06c-875a46d3aeda}" FolderPath="StateAction\">
@@ -87,17 +92,10 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Busy;
 
-// Request clear cmd to module
-_Ctrl.GC_Ctrl.eCommand := E_PackMLCommand.Clear;
-_Ctrl.GC_Ctrl.bCommandChangeRequest := TRUE;
-
 // Wait cmd finished
 IF Status.GC_Status.eStateCurrent <> E_PackMLState.Stopped THEN
 	RETURN;
 END_IF
-
-// Reset trigger
-_Ctrl.GC_Ctrl.bCommandChangeRequest := FALSE;
 
 H_OnClearing := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -133,12 +131,7 @@ END_VAR
         <ST><![CDATA[// Execute is stable by default; derived FBs decide when the process is done.
 H_OnExecute := E_PackMLHookResult.Busy;
 
-// Enable external data to the module
-IF Admin.GC_Admin.bLocalControl THEN
-	_Ctrl.GC_Ctrl := Ctrl.GC_Ctrl;
-ELSE
-	_Ctrl.GC_Ctrl := Ctrl.Machine_Ctrl;
-END_IF]]></ST>
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnHeld" Id="{ed585925-8230-4f18-ae73-e65352813968}" FolderPath="StateAction\">
@@ -169,9 +162,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Map machine mode control for module
-_Ctrl.GC_Ctrl.eMode := Ctrl.Machine_Ctrl.eMode;
-_Ctrl.GC_Ctrl.bModeChangeRequest := Ctrl.Machine_Ctrl.bModeChangeRequest;]]></ST>
+        <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{a7cef153-447e-4a2f-a6f1-6845f4771bc5}" FolderPath="StateAction\">
@@ -183,17 +174,10 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Busy;
 
-// Request reset cmd to module
-_Ctrl.GC_Ctrl.eCommand := E_PackMLCommand.Reset;
-_Ctrl.GC_Ctrl.bCommandChangeRequest := TRUE;
-
 // Wait cmd finished
 IF Status.GC_Status.eStateCurrent <> E_PackMLState.Idle THEN
 	RETURN;
 END_IF
-
-// Reset trigger
-_Ctrl.GC_Ctrl.bCommandChangeRequest := FALSE;
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -207,17 +191,10 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
 
-// Request start cmd to module
-_Ctrl.GC_Ctrl.eCommand := E_PackMLCommand.Start;
-_Ctrl.GC_Ctrl.bCommandChangeRequest := TRUE;
-
 // Wait cmd finished
 IF Status.GC_Status.eStateCurrent <> E_PackMLState.Execute THEN
 	RETURN;
 END_IF
-
-// Reset trigger
-_Ctrl.GC_Ctrl.bCommandChangeRequest := FALSE;
 
 H_OnStarting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -229,9 +206,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Map machine mode control for module
-_Ctrl.GC_Ctrl.eMode := Ctrl.Machine_Ctrl.eMode;
-_Ctrl.GC_Ctrl.bModeChangeRequest := Ctrl.Machine_Ctrl.bModeChangeRequest;]]></ST>
+        <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnStopping" Id="{d23e861a-3a87-40aa-862f-a915644dca9e}" FolderPath="StateAction\">
@@ -241,8 +216,15 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnStopping := E_PackMLHookResult.Done;]]></ST>
+        <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Busy;
+
+// Wait cmd finished
+IF Status.GC_Status.eStateCurrent <> E_PackMLState.Stopped THEN
+	RETURN;
+END_IF
+
+H_OnStopping := E_PackMLHookResult.Done;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnSuspended" Id="{aa5c0919-6974-415b-a2db-ffa99ee2762f}" FolderPath="StateAction\">

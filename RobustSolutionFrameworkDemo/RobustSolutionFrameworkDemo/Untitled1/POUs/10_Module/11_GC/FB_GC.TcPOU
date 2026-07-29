@@ -18,9 +18,9 @@ END_VAR
 VAR
 	// 有需要特殊操作的需求，所以建立一個 ST_GC_ServiceCtrl 變數，讓程式內部可以過一手處理
 	_ServiceCtrl : ST_GC_ServiceCtrl;
-	
 	_SpinAxisJogService : FB_GCSpinAxisJogServices;
-	_SpinAxisMoveAbsService : FB_GCSPinAxisMoveAbsServices;
+	_SpinAxisMoveAbsService : FB_GCSpinAxisMoveAbsServices;
+	_SpinAxisMoveVelService : FB_GCSpinAxisMoveVelServices;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -37,7 +37,12 @@ SUPER^();]]></ST>
 _SpinAxisMoveAbsService(
 	Ctrl:= _ServiceCtrl.SpinAxisMoveAbs,
 	Status:= ServiceStatus.SpinAxisMoveAbs,
-	Axis_BaseUnit:= SpinAxis_BaseUnit);]]></ST>
+	Axis_BaseUnit:= SpinAxis_BaseUnit);
+_SpinAxisMoveVelService(
+	Ctrl:= _ServiceCtrl.SpinAxisMoveVel,
+	Status:= ServiceStatus.SpinAxisMoveVel,
+	Axis_BaseUnit:= SpinAxis_BaseUnit);	
+]]></ST>
       </Implementation>
     </Action>
     <Method Name="H_OnAborted" Id="{de8d6f56-427f-41df-b4d5-ddd289e1aed8}" FolderPath="StateAction\">
@@ -148,7 +153,8 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Notice current mode to each service
 _SpinAxisJogService.ModuleMode := eNewMode;
-_SpinAxisMoveAbsService.ModuleMode := eNewMode;]]></ST>
+_SpinAxisMoveAbsService.ModuleMode := eNewMode;
+_SpinAxisMoveVelService.ModuleMode := eNewMode;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{f6ec54bd-ad3d-49c4-9547-ff474beb3546}" FolderPath="StateAction\">
@@ -160,19 +166,22 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Busy;
 
-// Request clear cmd to services
+// Request reset cmd to services
 _ServiceCtrl.SpinAxisJog.Reset := TRUE;
 _ServiceCtrl.SpinAxisMoveAbs.Reset := TRUE;
+_ServiceCtrl.SpinAxisMoveVel.Reset := TRUE;
 
 // Wait cmd finished
 IF ServiceStatus.SpinAxisJog.State <> E_PackMLState.Idle
-	OR ServiceStatus.SpinAxisMoveAbs.State <> E_PackMLState.Idle THEN
+	OR ServiceStatus.SpinAxisMoveAbs.State <> E_PackMLState.Idle
+	OR ServiceStatus.SpinAxisMoveVel.State <> E_PackMLState.Idle THEN
 	RETURN;
 END_IF
 
 // Reset trigger
 _ServiceCtrl.SpinAxisJog.Reset := FALSE;
 _ServiceCtrl.SpinAxisMoveAbs.Reset := FALSE;
+_ServiceCtrl.SpinAxisMoveVel.Reset := FALSE;
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>

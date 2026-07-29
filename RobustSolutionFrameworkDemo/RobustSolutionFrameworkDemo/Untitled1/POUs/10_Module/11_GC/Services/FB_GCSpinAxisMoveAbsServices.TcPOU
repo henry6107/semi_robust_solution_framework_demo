@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GCSpinAxisMoveAbsServices" Id="{9c4945bc-98e0-4f80-811d-303c8e7f09ff}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_PackMLBase IMPLEMENTS I_ModuleServiceProperty
@@ -272,7 +272,7 @@ Status.Aborted := FALSE;
 Status.ErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
 
 // Check is servo on
-IF Axis_BaseUnit.AxisStatus.Disabled THEN
+IF Axis_BaseUnit.Axis.Status.Disabled THEN
 	
 	// Throw up error
 	Status.Error:= TRUE;
@@ -284,7 +284,7 @@ IF Axis_BaseUnit.AxisStatus.Disabled THEN
 END_IF
 
 // Check is axis not busy
-IF Axis_BaseUnit.AxisStatus.HasJob THEN
+IF Axis_BaseUnit.Axis.Status.HasJob THEN
 	// Throw up error
 	Status.Error:= TRUE;
 	Status.ErrorId:= E_GCSpinAxisMoveAbsErrorCode.Axis_Is_Busy_During_Starting;

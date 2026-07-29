@@ -7,7 +7,6 @@ VAR_INPUT
 END_VAR
 
 VAR_OUTPUT
-	AxisStatus : ST_AxisStatus;
 	ErrorText : STRING;
 END_VAR
 
@@ -40,8 +39,7 @@ _MCMoveAbs(Axis:= Axis);
 _MCMoveVel(Axis:= Axis);
 _MCJog(Axis:= Axis);
 
-Axis.ReadStatus();
-AxisStatus := Axis.Status; ]]></ST>
+Axis.ReadStatus();]]></ST>
     </Implementation>
     <Method Name="M_Jog" Id="{dc88b92a-725e-4df4-aa19-7fa274329a3a}">
       <Declaration><![CDATA[METHOD M_Jog
@@ -104,16 +102,27 @@ Error := _MCMoveAbs.Error;]]></ST>
       <Declaration><![CDATA[METHOD M_MoveVel : BOOL
 VAR_INPUT
 	Execute : BOOL;
-	Velocity : LREAL;
-	Acceleration : LREAL;
-	Deceleration : LREAL;
+	Param : ST_GCSpinAxisMoveVelParam;
 END_VAR
-]]></Declaration>
+
+VAR_OUTPUT
+	InVelocity : BOOL;
+	Error : BOOL;
+END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_MCMoveVel.Execute := Execute;
-_MCMoveVel.Velocity := Velocity;
-_MCMoveVel.Acceleration := Acceleration;
-_MCMoveVel.Deceleration := Deceleration;]]></ST>
+IF Param.IsPositiveDirection THEN
+	_MCMoveVel.Direction := MC_Direction.MC_Positive_Direction;
+ELSE
+	_MCMoveVel.Direction := MC_Direction.MC_Negative_Direction;
+END_IF
+
+_MCMoveVel.Velocity := Param.Velocity;
+_MCMoveVel.Acceleration := Param.Acceleration;
+_MCMoveVel.Deceleration := Param.Deceleration;
+
+InVelocity := _MCMoveVel.InVelocity;
+Error := _MCMoveVel.Error;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_Reset" Id="{73fb1eb2-f7fa-423b-ae99-c942ced73b28}">
