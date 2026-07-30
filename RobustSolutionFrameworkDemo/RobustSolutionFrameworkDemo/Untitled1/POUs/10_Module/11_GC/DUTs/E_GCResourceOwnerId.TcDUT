@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_GCResourceOwnerId" Id="{c093ca56-3521-4ff1-9f31-1d625a170479}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE E_GCResourceOwnerId :
+(
+	// Each value identifies one Service instance within the GC Module.
+	None := 0,
+	SpinAxisJog := 1,
+	SpinAxisMoveAbs := 2,
+	SpinAxisMoveVel := 3
+) UDINT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

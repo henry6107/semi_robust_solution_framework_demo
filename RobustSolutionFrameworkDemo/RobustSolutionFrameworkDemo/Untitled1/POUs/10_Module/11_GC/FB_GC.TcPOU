@@ -33,15 +33,21 @@ SUPER^();]]></ST>
         <ST><![CDATA[_SpinAxisJogService(
 	Ctrl:= _ServiceCtrl.SpinAxisJog,
 	Status:= ServiceStatus.SpinAxisJog,
-	Axis_BaseUnit:= SpinAxis_BaseUnit);
+	Axis_BaseUnit:= SpinAxis_BaseUnit,
+	// Owner IDs are assigned by the Module so each Service instance is unique.
+	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisJog);
+
 _SpinAxisMoveAbsService(
 	Ctrl:= _ServiceCtrl.SpinAxisMoveAbs,
 	Status:= ServiceStatus.SpinAxisMoveAbs,
-	Axis_BaseUnit:= SpinAxis_BaseUnit);
+	Axis_BaseUnit:= SpinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveAbs);
+
 _SpinAxisMoveVelService(
 	Ctrl:= _ServiceCtrl.SpinAxisMoveVel,
 	Status:= ServiceStatus.SpinAxisMoveVel,
-	Axis_BaseUnit:= SpinAxis_BaseUnit);	
+	Axis_BaseUnit:= SpinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVel);
 ]]></ST>
       </Implementation>
     </Action>

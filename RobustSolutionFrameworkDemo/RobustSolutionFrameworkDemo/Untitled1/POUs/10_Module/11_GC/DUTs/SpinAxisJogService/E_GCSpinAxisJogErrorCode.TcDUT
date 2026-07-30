@@ -9,7 +9,9 @@ TYPE E_GCSpinAxisJogErrorCode :
 	Axis_Not_Servo_On_During_Starting,
 	Axis_Is_Busy_During_Starting,
 	Invalid_Param,
-	Jog_Error_During_Execute
+	Jog_Error_During_Execute,
+	// The BaseUnit was already owned by another Service.
+	Resource_Acquire_Failed_During_Starting
 )UDINT;
 END_TYPE
 ]]></Declaration>

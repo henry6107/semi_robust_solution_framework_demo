@@ -6,6 +6,9 @@ VAR_INPUT
 	Ctrl : REFERENCE TO ST_GCSpinAxisJogCtrl;
 	Status : REFERENCE TO ST_GCSpinAxisJogStatus;
 	Axis_BaseUnit : REFERENCE TO FB_AxisControl;
+
+	// The Module assigns a unique ID to this Service instance.
+	ResourceOwnerId : T_ResourceOwnerId;
 END_VAR
 
 VAR_OUTPUT
@@ -60,7 +63,9 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
+        <ST><![CDATA[// Release defensively in case an unexpected transition skipped cleanup.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
 Status.Busy := FALSE;
 Status.Done := FALSE;
 Status.Aborted := TRUE;
@@ -75,7 +80,15 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Axis_BaseUnit.M_Jog(
+        <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Done;
+
+// A Service that never acquired the Resource must not affect its Owner.
+IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId) THEN
+	RETURN;
+END_IF
+
+Axis_BaseUnit.M_Jog(
+	OwnerId:= ResourceOwnerId,
 	JogForward:= FALSE, 
 	JogBackwards:= FALSE, 
 	Mode:= Ctrl.Param.Mode,
@@ -84,7 +97,8 @@ END_VAR
 	Acceleration:= Ctrl.Param.Acceleration,
 	Deceleration:= Ctrl.Param.Deceleration);
 
-H_OnAborting := E_PackMLHookResult.Done;]]></ST>
+// Jog has no asynchronous abort phase once both direction commands are false.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnClearing" Id="{9a60118e-19f9-4bca-893b-e890bf0b19c9}" FolderPath="StateAction\">
@@ -112,7 +126,10 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.Busy := FALSE;
+        <ST><![CDATA[// Completing normally releases first; this is an idempotent safety net.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
+Status.Busy := FALSE;
 Status.Done := TRUE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
@@ -137,6 +154,7 @@ Status.Aborted := FALSE;
 Status.ErrorId := E_GCSpinAxisJogErrorCode.None;
 
 Axis_BaseUnit.M_Jog(
+	OwnerId:= ResourceOwnerId,
 	JogForward:= FALSE, 
 	JogBackwards:= FALSE, 
 	Mode:= Ctrl.Param.Mode,
@@ -145,6 +163,8 @@ Axis_BaseUnit.M_Jog(
 	Acceleration:= Ctrl.Param.Acceleration,
 	Deceleration:= Ctrl.Param.Deceleration);
 
+// Release only after the active Jog request has been withdrawn.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
@@ -169,6 +189,7 @@ Status.Aborted := FALSE;
 Status.ErrorId := E_GCSpinAxisJogErrorCode.None;
 
 Axis_BaseUnit.M_Jog(
+	OwnerId:= ResourceOwnerId,
 	JogForward:= Ctrl.Param.JogForward,
 	JogBackwards:= Ctrl.Param.JogBackwards,
 	Mode:= Ctrl.Param.Mode,
@@ -225,7 +246,9 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
+        <ST><![CDATA[// Idle Services must not retain a Resource from an earlier operation.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
 Status.Busy := FALSE;
 Status.Done := FALSE;
 Status.Error := FALSE;
@@ -264,45 +287,40 @@ Status.Error := FALSE;
 Status.Aborted := FALSE;
 Status.ErrorId := E_GCSpinAxisJogErrorCode.None;
 
-// Check is servo on
-IF Axis_BaseUnit.Axis.Status.Disabled THEN
-	
-	// Throw up error
+// Validate Service-owned data before reserving the shared BaseUnit.
+IF (Ctrl.Param.JogBackwards AND Ctrl.Param.JogForward) OR
+	(NOT Ctrl.Param.JogBackwards AND NOT Ctrl.Param.JogForward) OR
+	Ctrl.Param.Velocity = 0 THEN
 	Status.Error:= TRUE;
-	Status.ErrorId:= E_GCSpinAxisJogErrorCode.Axis_Not_Servo_On_During_Starting;
-	
-	// Request abort command
-	RequestCommand(E_PackMLCommand.Abort);
-	RETURN;
-END_IF
-
-// Check is axis not busy
-IF Axis_BaseUnit.Axis.Status.HasJob THEN
-	// Throw up error
-	Status.Error:= TRUE;
-	Status.ErrorId:= E_GCSpinAxisJogErrorCode.Axis_Is_Busy_During_Starting;
-	
-	// Request abort command
+	Status.ErrorId:= E_GCSpinAxisJogErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
-// Check is param valid
-IF (Ctrl.Param.JogBackwards AND Ctrl.Param.JogForward) OR
-	(NOT Ctrl.Param.JogBackwards AND NOT Ctrl.Param.JogForward) OR
-	Ctrl.Param.Velocity = 0 THEN
-	// Throw up error
+// Resource contention is a failed Start, not a wait condition.
+IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
+	Status.Error := TRUE;
+	Status.ErrorId := E_GCSpinAxisJogErrorCode.Resource_Acquire_Failed_During_Starting;
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+// Physical checks occur only after this Service owns the BaseUnit.
+IF Axis_BaseUnit.AxisIsDisabled THEN
 	Status.Error:= TRUE;
-	Status.ErrorId:= E_GCSpinAxisJogErrorCode.Invalid_Param;
-	
-	// Request abort command
+	Status.ErrorId:= E_GCSpinAxisJogErrorCode.Axis_Not_Servo_On_During_Starting;
+	RequestCommand(E_PackMLCommand.Abort);
+	RETURN;
+END_IF
+
+IF Axis_BaseUnit.AxisHasJob THEN
+	Status.Error:= TRUE;
+	Status.ErrorId:= E_GCSpinAxisJogErrorCode.Axis_Is_Busy_During_Starting;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 H_OnStarting := E_PackMLHookResult.Done;
-
-
 ]]></ST>
       </Implementation>
     </Method>
@@ -313,7 +331,9 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
+        <ST><![CDATA[// Release defensively after every Stop path.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
 Status.Busy := FALSE;
 Status.Done := FALSE;
 Status.Aborted := TRUE;
@@ -327,7 +347,15 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Axis_BaseUnit.M_Jog(
+        <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Done;
+
+// Resource acquisition failures enter Stopping without owning the Axis.
+IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId) THEN
+	RETURN;
+END_IF
+
+Axis_BaseUnit.M_Jog(
+	OwnerId:= ResourceOwnerId,
 	JogForward:= FALSE, 
 	JogBackwards:= FALSE, 
 	Mode:= Ctrl.Param.Mode,
@@ -336,7 +364,8 @@ END_VAR
 	Acceleration:= Ctrl.Param.Acceleration,
 	Deceleration:= Ctrl.Param.Deceleration);
 
-H_OnStopping := E_PackMLHookResult.Done;]]></ST>
+// Jog is stopped once both direction commands have been withdrawn.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnSuspended" Id="{e85e43db-649a-4658-a8a4-46ee44393ec1}" FolderPath="StateAction\">

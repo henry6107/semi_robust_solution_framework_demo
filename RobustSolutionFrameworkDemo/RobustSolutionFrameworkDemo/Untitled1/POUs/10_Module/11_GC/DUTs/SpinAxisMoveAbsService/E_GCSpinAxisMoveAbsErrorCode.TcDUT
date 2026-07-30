@@ -10,7 +10,9 @@ TYPE E_GCSpinAxisMoveAbsErrorCode :
 	Axis_Is_Busy_During_Starting,
 	Invalid_Param,
 	MoveAbs_Error_During_Execute,
-	Error_While_Stop_Axis
+	Error_While_Stop_Axis,
+	// The BaseUnit was already owned by another Service.
+	Resource_Acquire_Failed_During_Starting
 )UDINT;
 END_TYPE
 ]]></Declaration>

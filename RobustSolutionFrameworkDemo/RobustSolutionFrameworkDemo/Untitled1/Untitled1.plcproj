@@ -34,6 +34,15 @@
     <Compile Include="POUs\00_BaseUnit\FB_AxisControl.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\00_BaseUnit\FB_BaseUnit.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\00_BaseUnit\T_ResourceOwnerId.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCResourceOwnerId.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\SpinAxisJogService\E_GCSpinAxisJogErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>

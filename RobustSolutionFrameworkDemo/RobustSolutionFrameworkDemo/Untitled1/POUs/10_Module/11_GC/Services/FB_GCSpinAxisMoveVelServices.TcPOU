@@ -6,6 +6,8 @@ VAR_INPUT
 	Ctrl : REFERENCE TO ST_GCSpinAxisMoveVelCtrl;
 	Status : REFERENCE TO ST_GCSpinAxisMoveVelStatus;
 	Axis_BaseUnit : REFERENCE TO FB_AxisControl;
+	// The Module assigns a unique ID to this Service instance.
+	ResourceOwnerId : T_ResourceOwnerId;
 END_VAR
 
 VAR_OUTPUT
@@ -23,7 +25,7 @@ END_VAR
     <Implementation>
       <ST><![CDATA[// Update service state
 Status.State := stOut.eStateCurrent;
-Status.ActVel := Axis_BaseUnit.Axis.NcToPlc.ActVelo;
+Status.ActVel := Axis_BaseUnit.AxisActualVelocity;
 A00_TrigCommand();
 
 SUPER^();
@@ -60,7 +62,9 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
+        <ST><![CDATA[// Release defensively in case an unexpected transition skipped cleanup.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
 Status.Busy := FALSE;
 Status.Done := FALSE;
 Status.Aborted := TRUE;
@@ -81,17 +85,29 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
 
-// Close moveAbs method
+// A Service that never acquired the Resource must not reset its Owner's Axis.
+IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId) THEN
+	H_OnAborting := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+
+// Withdraw MoveVelocity before resetting the Axis.
 Axis_BaseUnit.M_MoveVel(
+	OwnerId := ResourceOwnerId,
 	Execute := FALSE,
 	Ctrl.Param);
 	
 Axis_BaseUnit.M_Reset(
+	OwnerId := ResourceOwnerId,
 	Execute := TRUE,
 	Done=> bDone, Error=> bError);
 
 IF bDone THEN
-	Axis_BaseUnit.M_Reset(Execute := FALSE);
+	Axis_BaseUnit.M_Reset(
+		OwnerId := ResourceOwnerId,
+		Execute := FALSE);
+	// Keep ownership until the asynchronous Reset has completed.
+	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 	H_OnAborting := E_PackMLHookResult.Done;
 END_IF
 ]]></ST>
@@ -122,7 +138,10 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.Busy := FALSE;
+        <ST><![CDATA[// Completing normally releases first; this is an idempotent safety net.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
+Status.Busy := FALSE;
 Status.Done := TRUE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
@@ -147,9 +166,12 @@ Status.Aborted := FALSE;
 Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.None;
 
 Axis_BaseUnit.M_MoveVel(
+	OwnerId:= ResourceOwnerId,
 	Execute:= FALSE,
 	Param := Ctrl.Param);
 
+// Release only after the active MoveVelocity request has been withdrawn.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
@@ -174,6 +196,7 @@ Status.Aborted := FALSE;
 Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.None;
 
 Axis_BaseUnit.M_MoveVel(
+	OwnerId:= ResourceOwnerId,
 	Execute:= TRUE,
 	Param:= Ctrl.Param,
 	InVelocity=> bDone, Error=> bError);
@@ -223,7 +246,9 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
+        <ST><![CDATA[// Idle Services must not retain a Resource from an earlier operation.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
 Status.Busy := FALSE;
 Status.Done := FALSE;
 Status.Error := FALSE;
@@ -262,43 +287,38 @@ Status.Error := FALSE;
 Status.Aborted := FALSE;
 Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.None;
 
-// Check is servo on
-IF Axis_BaseUnit.Axis.Status.Disabled THEN
-	
-	// Throw up error
+// Validate Service-owned data before reserving the shared BaseUnit.
+IF Ctrl.Param.Velocity <= 0 THEN
 	Status.Error:= TRUE;
-	Status.ErrorId:= E_GCSpinAxisMoveVelErrorCode.Axis_Not_Servo_On_During_Starting;
-	
-	// Request abort command
-	RequestCommand(E_PackMLCommand.Abort);
-	RETURN;
-END_IF
-
-// Check is axis not busy
-IF Axis_BaseUnit.Axis.Status.HasJob THEN
-	// Throw up error
-	Status.Error:= TRUE;
-	Status.ErrorId:= E_GCSpinAxisMoveVelErrorCode.Axis_Is_Busy_During_Starting;
-	
-	// Request abort command
+	Status.ErrorId:= E_GCSpinAxisMoveVelErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
-// Check is param valid
-IF Ctrl.Param.Velocity <= 0 THEN
-	// Throw up error
+// Resource contention is a failed Start, not a wait condition.
+IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
+	Status.Error := TRUE;
+	Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.Resource_Acquire_Failed_During_Starting;
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+// Physical checks occur only after this Service owns the BaseUnit.
+IF Axis_BaseUnit.AxisIsDisabled THEN
 	Status.Error:= TRUE;
-	Status.ErrorId:= E_GCSpinAxisMoveVelErrorCode.Invalid_Param;
-	
-	// Request abort command
+	Status.ErrorId:= E_GCSpinAxisMoveVelErrorCode.Axis_Not_Servo_On_During_Starting;
+	RequestCommand(E_PackMLCommand.Abort);
+	RETURN;
+END_IF
+
+IF Axis_BaseUnit.AxisHasJob THEN
+	Status.Error:= TRUE;
+	Status.ErrorId:= E_GCSpinAxisMoveVelErrorCode.Axis_Is_Busy_During_Starting;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 H_OnStarting := E_PackMLHookResult.Done;
-
-
 ]]></ST>
       </Implementation>
     </Method>
@@ -309,7 +329,9 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.
+        <ST><![CDATA[// Release defensively after every Stop path.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
 Status.Busy := FALSE;
 Status.Done := FALSE;
 Status.Aborted := TRUE;
@@ -330,20 +352,31 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Busy;
 
-// Close moveAbs method
+// Resource acquisition failures enter Stopping without owning the Axis.
+IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId) THEN
+	H_OnStopping := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+
+// Withdraw MoveVelocity before issuing the physical Stop.
 Axis_BaseUnit.M_MoveVel(
+	OwnerId := ResourceOwnerId,
 	Execute := FALSE,
 	Param:= Ctrl.Param);
 	
 Axis_BaseUnit.M_Stop(
+	OwnerId := ResourceOwnerId,
 	Execute := TRUE, 
 	Deceleration:= Ctrl.Param.Deceleration,
 	Done=> bDone, Error=> bError);
 
 IF bDone THEN
 	Axis_BaseUnit.M_Stop(
+		OwnerId := ResourceOwnerId,
 		Execute := FALSE, 
 		Deceleration:= Ctrl.Param.Deceleration);
+	// Ownership is released only after the asynchronous Stop has completed.
+	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 	H_OnStopping := E_PackMLHookResult.Done;
 	
 ELSIF bError THEN
@@ -352,6 +385,7 @@ ELSIF bError THEN
 	Status.ErrorId := E_GCSpinAxisMoveVelErrorCode.Error_While_Stop_Axis;
 	
 	Axis_BaseUnit.M_Stop(
+		OwnerId := ResourceOwnerId,
 		Execute := FALSE, 
 		Deceleration:= Ctrl.Param.Deceleration);
 		
