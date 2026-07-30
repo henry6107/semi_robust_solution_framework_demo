@@ -8,11 +8,11 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[CASE eMode OF
-	GVL_PackMLMode.Unknown:
+	E_PackMLMode.Unknown:
 		F_PackMLModeToString := 'Unknown';
-	GVL_PackMLMode.Production:
+	E_PackMLMode.Production:
 		F_PackMLModeToString := 'Production';
-	GVL_PackMLMode.Manual:
+	E_PackMLMode.Manual:
 		F_PackMLModeToString := 'Manual';
 ELSE
 	F_PackMLModeToString := CONCAT('Mode ', UINT_TO_STRING(eMode));

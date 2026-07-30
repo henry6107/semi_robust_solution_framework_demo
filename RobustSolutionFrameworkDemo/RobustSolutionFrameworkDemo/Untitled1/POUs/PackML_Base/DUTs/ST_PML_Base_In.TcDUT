@@ -5,7 +5,7 @@
 STRUCT
 	eCommand				: E_PackMLCommand := E_PackMLCommand.None;
 	bCommandChangeRequest	: BOOL;
-	eMode					: T_PackMLMode := GVL_PackMLMode.Unknown;
+	eMode					: T_PackMLMode := E_PackMLMode.Unknown;
 	bModeChangeRequest	: BOOL;
 END_STRUCT
 END_TYPE

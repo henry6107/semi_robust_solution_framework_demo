@@ -5,8 +5,8 @@
 STRUCT
 	eStateCurrent		: E_PackMLState := E_PackMLState.Undefined;
 	eStatePrevious		: E_PackMLState := E_PackMLState.Undefined;
-	eModeCurrent		: T_PackMLMode := GVL_PackMLMode.Unknown;
-	eModePrevious		: T_PackMLMode := GVL_PackMLMode.Unknown;
+	eModeCurrent		: T_PackMLMode := E_PackMLMode.Unknown;
+	eModePrevious		: T_PackMLMode := E_PackMLMode.Unknown;
 
 	bCommandAccepted	: BOOL;
 	bCommandRejected	: BOOL;

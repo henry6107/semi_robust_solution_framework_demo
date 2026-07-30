@@ -21,7 +21,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[CASE eActiveMode OF
-	GVL_PackMLMode.Manual:
+	E_PackMLMode.Manual:
 		// Supported commands in manual mode
 		CASE eRequestedCommand OF
 			E_PackMLCommand.Reset,
@@ -34,8 +34,8 @@ END_VAR
 				H_IsCommandAllowedByMode := FALSE;
 		END_CASE
 	
-	GVL_PackMLMode.Production,
-	GVL_PackMLMode.Unknown:
+	E_PackMLMode.Production,
+	E_PackMLMode.Unknown:
 		// Support all commands in production mode
 		H_IsCommandAllowedByMode := TRUE;
 END_CASE]]></ST>
@@ -49,8 +49,8 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[CASE eRequestedMode OF
-	GVL_PackMLMode.Manual,
-	GVL_PackMLMode.Production:
+	E_PackMLMode.Manual,
+	E_PackMLMode.Production:
 		H_IsModeSupported := TRUE;
 
 	ELSE
@@ -68,7 +68,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[CASE eRequestedMode OF
 	
-	GVL_PackMLMode.Manual:
+	E_PackMLMode.Manual:
 		// Support states in manual mode
 		CASE eCurrentState OF
 			E_PackMLState.Idle,
@@ -86,8 +86,8 @@ END_VAR
 		END_CASE
 		
 	
-	GVL_PackMLMode.Production,
-	GVL_PackMLMode.Unknown:
+	E_PackMLMode.Production,
+	E_PackMLMode.Unknown:
 		// Support all state in production mode
 		H_IsStateSupportedByMode := TRUE;
 END_CASE]]></ST>
