@@ -18,9 +18,6 @@
     <LibraryReferences>{aad4cebc-a342-45e7-bdf7-a255f00dc573}</LibraryReferences>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="DUTs\ST_ServiceCtrlBase.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="DUTs\ST_ServiceStatusBase.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -92,13 +89,7 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\E_GCSpinAxisMoveVelErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelCtrl.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceCtrl.TcDUT">
@@ -111,9 +102,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\FB_GC_Module.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\FB_PackMLModule.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisJogCWServices.TcPOU">
