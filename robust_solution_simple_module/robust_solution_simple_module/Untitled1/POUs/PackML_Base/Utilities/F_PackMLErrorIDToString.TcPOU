@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_PackMLErrorIDToString" Id="{4dd02144-1ae7-4b04-9870-ec442915be61}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_PackMLErrorIDToString : STRING(255)
+VAR_INPUT
+	eErrorID	: E_PackMLErrorID;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE eErrorID OF
+	E_PackMLErrorID.NoError:
+		F_PackMLErrorIDToString := '';
+	E_PackMLErrorID.CommandNotAllowedInActiveMode:
+		F_PackMLErrorIDToString := 'Command is not allowed in the active mode.';
+	E_PackMLErrorID.ClearNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Clear command is only valid from Aborted.';
+	E_PackMLErrorID.ResetNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Reset command is only valid from Stopped or Complete.';
+	E_PackMLErrorID.StartNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Start command is only valid from Idle.';
+	E_PackMLErrorID.StopNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Stop command is not valid from the current PackML state.';
+	E_PackMLErrorID.HoldNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Hold command is only valid from Execute.';
+	E_PackMLErrorID.UnholdNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Unhold command is only valid from Held.';
+	E_PackMLErrorID.SuspendNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Suspend command is only valid from Execute.';
+	E_PackMLErrorID.UnsuspendNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Unsuspend command is only valid from Suspended.';
+	E_PackMLErrorID.AbortNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Abort command is not valid while already Aborting or Aborted.';
+	E_PackMLErrorID.ModeNotSupported:
+		F_PackMLErrorIDToString := 'Requested mode is not supported.';
+	E_PackMLErrorID.ModeAlreadyActive:
+		F_PackMLErrorIDToString := 'Requested mode is already active.';
+	E_PackMLErrorID.ModeChangeNotAllowedFromCurrentState:
+		F_PackMLErrorIDToString := 'Mode change is only allowed from Aborted, Stopped, Idle, or Complete.';
+	E_PackMLErrorID.ModeDoesNotSupportCurrentState:
+		F_PackMLErrorIDToString := 'Requested mode does not support the current PackML state.';
+ELSE
+	F_PackMLErrorIDToString := 'Unknown PackML error ID.';
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

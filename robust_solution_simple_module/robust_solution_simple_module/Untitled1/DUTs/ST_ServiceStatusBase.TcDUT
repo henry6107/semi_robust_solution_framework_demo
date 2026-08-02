@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_ServiceStatusBase" Id="{696bda33-0a33-48b0-8ccd-362e4a358520}">
+    <Declaration><![CDATA[TYPE ST_ServiceStatusBase :
+STRUCT
+	Ack : BOOL;
+	Busy : BOOL;
+	Done : BOOL;
+	Error : BOOL;
+	Aborted : BOOL;
+	CtrlErrorId : UDINT;
+	ServiceErrorId : UDINT;
+	State : E_PackMLState;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

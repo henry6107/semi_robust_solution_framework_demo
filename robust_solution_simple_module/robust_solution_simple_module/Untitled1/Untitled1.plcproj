@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <FileVersion>1.0.0.0</FileVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{d1f70db5-3536-488a-83e6-e4c0d6ddbd8b}</ProjectGuid>
+    <SubObjectsSortedByName>True</SubObjectsSortedByName>
+    <DownloadApplicationInfo>true</DownloadApplicationInfo>
+    <WriteProductVersion>true</WriteProductVersion>
+    <GenerateTpy>false</GenerateTpy>
+    <Name>Untitled1</Name>
+    <ProgramVersion>3.1.4026.24</ProgramVersion>
+    <Application>{5934102d-adbe-412a-baf3-cfbf27e02dd1}</Application>
+    <TypeSystem>{ab5e9837-e2a1-40be-9935-baeb77ce95a0}</TypeSystem>
+    <Implicit_Task_Info>{50ee1385-3e75-4128-84ab-36b7e0b2c3fd}</Implicit_Task_Info>
+    <Implicit_KindOfTask>{b7aa054f-b51a-4b61-b7f4-06d94131e1de}</Implicit_KindOfTask>
+    <Implicit_Jitter_Distribution>{ce02874f-cb3f-4a67-9d0d-6b1e575b647c}</Implicit_Jitter_Distribution>
+    <LibraryReferences>{aad4cebc-a342-45e7-bdf7-a255f00dc573}</LibraryReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="DUTs\ST_ServiceCtrlBase.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ServiceStatusBase.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\GVL_CSharp.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="GVLs\GVL_GUI.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="PlcTask.TcTTO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\00_BaseUnit\FB_Axis_BaseUnit.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\00_BaseUnit\FB_BaseUnit.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\00_BaseUnit\T_ResourceOwnerId.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCResourceOwnerId.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Signal_In.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Signal_Out.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Terminal_In.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Terminal_Out.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\U_GC_HW_In.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\U_GC_HW_Out.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_ALID.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_DVID.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_ECID.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_SVID.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService\E_GCSpinAxisJogErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService\ST_GCSpinAxisJogParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService\E_GCSpinAxisMoveAbsErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService\ST_GCSpinAxisMoveAbsParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\E_GCSpinAxisMoveVelErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelCtrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceCtrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_Ctrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\FB_GC_Module.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\FB_PackMLModule.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisJogCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveAbsServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveVelCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\MAIN.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLCommand.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLErrorID.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLHookResult.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLMode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLState.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\DUTs\ST_PML_Base_In.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\DUTs\ST_PML_Base_Out.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\DUTs\T_PackMLMode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\FB_PackMLBase.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\FB_PackMLModeSet.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\Utilities\F_PackMLCommandToString.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\Utilities\F_PackMLErrorIDToString.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\Utilities\F_PackMLModeToString.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\PackML_Base\Utilities\F_PackMLStateToString.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="DUTs" />
+    <Folder Include="GVLs" />
+    <Folder Include="POUs\00_BaseUnit" />
+    <Folder Include="POUs\10_Module" />
+    <Folder Include="POUs\10_Module\11_GC" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\Hardware" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\SecsGem" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\Service" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService" />
+    <Folder Include="POUs\10_Module\11_GC\Services" />
+    <Folder Include="POUs\PackML_Base" />
+    <Folder Include="POUs\PackML_Base\DUTs" />
+    <Folder Include="POUs\PackML_Base\Utilities" />
+    <Folder Include="VISUs" />
+    <Folder Include="POUs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PlaceholderReference Include="Tc2_MC2">
+      <DefaultResolution>Tc2_MC2, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_MC2</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Standard">
+      <DefaultResolution>Tc2_Standard, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Standard</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_System">
+      <DefaultResolution>Tc2_System, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_System</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_Module">
+      <DefaultResolution>Tc3_Module, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_Module</Namespace>
+      <SystemLibrary>true</SystemLibrary>
+    </PlaceholderReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Untitled1.tmc">
+      <SubType>Content</SubType>
+    </None>
+  </ItemGroup>
+  <ProjectExtensions>
+    <PlcProjectOptions>
+      <XmlArchive>
+  <Data>
+    <o xml:space="preserve" t="OptionKey">
+      <v n="Name">"&lt;ProjectRoot&gt;"</v>
+      <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+        <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
+        <o>
+          <v n="Name">"{192FAD59-8248-4824-A8DE-9177C94C195A}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{29BD8D0C-3586-4548-BB48-497B9A01693F}</v>
+        <o>
+          <v n="Name">"{29BD8D0C-3586-4548-BB48-497B9A01693F}"</v>
+          <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+            <v>NamingConventions</v>
+            <o>
+              <v n="Name">"NamingConventions"</v>
+              <d n="SubKeys" t="Hashtable" />
+              <d n="Values" t="Hashtable" />
+            </o>
+            <v>Rules</v>
+            <o>
+              <v n="Name">"Rules"</v>
+              <d n="SubKeys" t="Hashtable" />
+              <d n="Values" t="Hashtable" />
+            </o>
+          </d>
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{40450F57-0AA3-4216-96F3-5444ECB29763}</v>
+        <o>
+          <v n="Name">"{40450F57-0AA3-4216-96F3-5444ECB29763}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{8A0FB252-96EB-4DCC-A5B4-B4804D05E2D6}</v>
+        <o>
+          <v n="Name">"{8A0FB252-96EB-4DCC-A5B4-B4804D05E2D6}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+            <v>WriteLineIDs</v>
+            <v>False</v>
+          </d>
+        </o>
+        <v>{8F99A816-E488-41E4-9FA3-846536012284}</v>
+        <o>
+          <v n="Name">"{8F99A816-E488-41E4-9FA3-846536012284}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="String">
+            <v>DisabledWarningIds</v>
+            <v>410,5410</v>
+          </d>
+        </o>
+        <v>{eeeeeeee-3909-4298-8022-501ac3238667}</v>
+        <o>
+          <v n="Name">"{eeeeeeee-3909-4298-8022-501ac3238667}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{F66C7017-BDD8-4114-926C-81D6D687E35F}</v>
+        <o>
+          <v n="Name">"{F66C7017-BDD8-4114-926C-81D6D687E35F}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+            <v>CalcActiveTransOnly</v>
+            <v>True</v>
+          </d>
+        </o>
+      </d>
+      <d n="Values" t="Hashtable" />
+    </o>
+  </Data>
+  <TypeList>
+    <Type n="Boolean">System.Boolean</Type>
+    <Type n="Hashtable">System.Collections.Hashtable</Type>
+    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+    <Type n="String">System.String</Type>
+  </TypeList>
+</XmlArchive>
+    </PlcProjectOptions>
+  </ProjectExtensions>
+</Project>

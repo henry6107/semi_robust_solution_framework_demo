@@ -1,0 +1,238 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Axis_BaseUnit" Id="{28a42f80-195a-4223-a1bf-e623b7d6079c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Axis_BaseUnit EXTENDS FB_BaseUnit
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+
+VAR
+	_Axis		: AXIS_REF;
+	_MCMoveAbs	: MC_MoveAbsolute;
+	_MCReset	: MC_Reset;
+	_MCStop		: MC_Stop;
+	_MCMoveVel	: MC_MoveVelocity;
+	_MCPower	: MC_Power;
+	_MCJog		: MC_Jog;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[_MCPower(Axis:= _Axis,
+			Enable:= TRUE,
+			Enable_Positive:= TRUE,
+			Enable_Negative:= TRUE,
+			Override:= 100);
+			
+_MCReset(Axis:= _Axis);
+_MCStop(Axis:= _Axis);
+_MCMoveAbs(Axis:= _Axis);
+_MCMoveVel(Axis:= _Axis);
+_MCJog(Axis:= _Axis);
+
+_Axis.ReadStatus();]]></ST>
+    </Implementation>
+    <Property Name="AxisActualVelocity" Id="{777cc680-8953-4809-acb4-3307920aad6a}">
+      <Declaration><![CDATA[PROPERTY PUBLIC AxisActualVelocity : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{6b9ebc4e-1a8b-44c2-b05b-897b536b184f}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[// Expose motion feedback without exposing AXIS_REF to Services.
+AxisActualVelocity := _Axis.NcToPlc.ActVelo;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AxisHasJob" Id="{309289ed-139a-40cf-bb0b-b305e6a96468}">
+      <Declaration><![CDATA[PROPERTY PUBLIC AxisHasJob : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{6e6f9de3-535f-4e83-8a40-0db1c9ce0dbc}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[// Expose motion feedback without exposing AXIS_REF to Services.
+AxisHasJob := _Axis.Status.HasJob;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AxisIsDisabled" Id="{24be025b-4296-4b69-8f78-3579130a7e1b}">
+      <Declaration><![CDATA[PROPERTY PUBLIC AxisIsDisabled : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{108a228b-e076-4883-9069-662ffabb72c6}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[// Treat an invalid Axis reference as unavailable to callers.
+AxisIsDisabled := _Axis.Status.Disabled;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="M_Jog" Id="{dc88b92a-725e-4df4-aa19-7fa274329a3a}">
+      <Declaration><![CDATA[METHOD M_Jog : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+	JogForward : BOOL;
+	JogBackwards : BOOL;
+	Mode : E_JogMode;
+	Position : LREAL;
+	Velocity : LREAL;
+	Acceleration : LREAL;
+	Deceleration : LREAL;
+END_VAR
+
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+	ErrorId : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Ignore commands from Services that do not own this BaseUnit.
+M_Jog := FALSE;
+Done := FALSE;
+Error := FALSE;
+ErrorId := 0;
+IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
+	RETURN;
+END_IF
+
+_MCJog.JogForward := JogForward;
+_MCJog.JogBackwards := JogBackwards;
+_MCJog.Mode := Mode;
+_MCJog.Position := Position;
+_MCJog.Velocity := Velocity;
+_MCJog.Acceleration := Acceleration;
+_MCJog.Deceleration := Deceleration;
+
+Done := _MCJog.Done;
+Error := _MCJog.Error;
+ErrorId := _MCJog.ErrorId;
+M_Jog := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_MoveAbs" Id="{12c6fae0-35a4-42f7-a077-cdf0cbcaba8d}">
+      <Declaration><![CDATA[METHOD M_MoveAbs : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+	Execute : BOOL;
+	Position : LREAL;
+	Velocity : LREAL;
+	Acceleration : LREAL;
+	Deceleration : LREAL;
+END_VAR
+
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Ignore commands from Services that do not own this BaseUnit.
+M_MoveAbs := FALSE;
+Done := FALSE;
+Error := FALSE;
+IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
+	RETURN;
+END_IF
+
+_MCMoveAbs.Execute := Execute;
+_MCMoveAbs.Position := Position;
+_MCMoveAbs.Velocity := Velocity;
+_MCMoveAbs.Acceleration := Acceleration;
+_MCMoveAbs.Deceleration := Deceleration;
+
+Done := _MCMoveAbs.Done;
+Error := _MCMoveAbs.Error;
+M_MoveAbs := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_MoveVel" Id="{2b358657-cee5-4620-ae42-419450a93b24}">
+      <Declaration><![CDATA[METHOD M_MoveVel : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+	Execute : BOOL;
+	Direction : MC_Direction;
+	Velocity : LREAL;
+	Acceleration : LREAL;
+	Deceleration : LREAL;
+END_VAR
+
+VAR_OUTPUT
+	InVelocity : BOOL;
+	Error : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Ignore commands from Services that do not own this BaseUnit.
+M_MoveVel := FALSE;
+InVelocity := FALSE;
+Error := FALSE;
+IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
+	RETURN;
+END_IF
+
+_MCMoveVel.Execute := Execute;
+_MCMoveVel.Direction := Direction;
+_MCMoveVel.Velocity := Velocity;
+_MCMoveVel.Acceleration := Acceleration;
+_MCMoveVel.Deceleration := Deceleration;
+
+InVelocity := _MCMoveVel.InVelocity;
+Error := _MCMoveVel.Error;
+M_MoveVel := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Reset" Id="{73fb1eb2-f7fa-423b-ae99-c942ced73b28}">
+      <Declaration><![CDATA[METHOD M_Reset : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+	Execute : BOOL;
+END_VAR
+
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Ignore commands from Services that do not own this BaseUnit.
+M_Reset := FALSE;
+Done := FALSE;
+Error := FALSE;
+IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
+	RETURN;
+END_IF
+
+_MCReset.Execute := Execute;
+
+Done := _MCReset.Done;
+Error := _MCReset.Error;
+M_Reset := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Stop" Id="{2df51e0d-c316-436a-9fe7-294a4bc52bdf}">
+      <Declaration><![CDATA[METHOD M_Stop : BOOL
+VAR_INPUT
+	Execute : BOOL;
+	Deceleration : LREAL;
+END_VAR
+
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_MCStop.Execute := Execute;
+_MCStop.Deceleration := Deceleration;
+
+Done := _MCStop.Done;
+Error := _MCStop.Error;
+M_Stop := TRUE;
+
+]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

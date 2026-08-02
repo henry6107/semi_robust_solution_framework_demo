@@ -1,0 +1,427 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_GCSpinAxisMoveAbsServices" Id="{9c4945bc-98e0-4f80-811d-303c8e7f09ff}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_PackMLBase
+VAR_INPUT
+	Param : ST_GCSpinAxisMoveAbsParam;
+	Axis_BaseUnit : REFERENCE TO FB_Axis_BaseUnit;
+	
+	// The Module assigns a unique ID to this Service instance.
+	ResourceOwnerId : T_ResourceOwnerId;
+END_VAR
+
+VAR_OUTPUT
+	Status : ST_ServiceStatusBase;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Update data
+Status.Ack := PackMLIn.bCommandChangeRequest;	// Acknowledge to upper controller that command received
+Status.State := PackMLOut.eStateCurrent;
+Status.CtrlErrorId := PackMLOut.eStateErrorID;
+
+SUPER^();
+]]></ST>
+    </Implementation>
+    <Folder Name="StateAction" Id="{ca59d4b8-ca7f-493a-9fc5-3adf146e1d0b}" />
+    <Method Name="H_OnAborted" Id="{f72a1e29-fdd1-40db-aea3-ecaada210cf6}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnAborted
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Release defensively in case an unexpected transition skipped cleanup.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
+Status.Busy := FALSE;
+Status.Done := FALSE;
+Status.Aborted := TRUE;
+
+RequestCommand(E_PackMLCommand.Clear);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnAborting" Id="{7f59724d-ad68-477a-b362-0b33ca5b585d}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnAborting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
+
+// A Service that never acquired the Resource must not reset its Owner's Axis.
+IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId) THEN
+	H_OnAborting := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+
+// Withdraw MoveAbsolute before resetting the Axis.
+Axis_BaseUnit.M_MoveAbs(
+	OwnerId := ResourceOwnerId,
+	Execute := FALSE,
+	Position:= Param.Position,
+	Velocity:= Param.Velocity,
+	Acceleration:= Param.Acceleration,
+	Deceleration:= Param.Deceleration);
+	
+Axis_BaseUnit.M_Reset(
+	OwnerId := ResourceOwnerId,
+	Execute := TRUE,
+	Done=> bDone, Error=> bError);
+
+IF bDone THEN
+	Axis_BaseUnit.M_Reset(
+		OwnerId := ResourceOwnerId,
+		Execute := FALSE);
+	// Keep ownership until the asynchronous Reset has completed.
+	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+	H_OnAborting := E_PackMLHookResult.Done;
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnClearing" Id="{3b1ee54f-5c4f-4404-9263-3595f2bc3f99}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnClearing : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+
+VAR
+	bServoOn : BOOL;
+	bError : BOOL;
+	nErrorId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Done;
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnComplete" Id="{2d44b278-e69c-4811-9a23-23e170a50c7f}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnComplete
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Completing normally releases first; this is an idempotent safety net.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
+Status.Busy := FALSE;
+Status.Done := TRUE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ServiceErrorId := E_GCSpinAxisMoveAbsErrorCode.None;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnCompleting" Id="{fad53e77-c59e-413e-b31d-29b3c546dd6e}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnCompleting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Status.Busy := FALSE;
+Status.Done := TRUE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ServiceErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
+
+Axis_BaseUnit.M_MoveAbs(
+	OwnerId:= ResourceOwnerId,
+	Execute:= FALSE,
+	Position:= Param.Position,
+	Velocity:= Param.Velocity,
+	Acceleration:= Param.Acceleration,
+	Deceleration:= Param.Deceleration);
+
+// Release only after the active MoveAbsolute request has been withdrawn.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnExecute" Id="{da1a2d06-c284-45ac-a7c9-cf4e582fa1d7}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
+
+Status.Busy := TRUE;
+Status.Done := FALSE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ServiceErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
+
+Axis_BaseUnit.M_MoveAbs(
+	OwnerId:= ResourceOwnerId,
+	Execute:= TRUE,
+	Position:= Param.Position,
+	Velocity:= Param.Velocity,
+	Acceleration:= Param.Acceleration,
+	Deceleration:= Param.Deceleration,
+	Done=> bDone, Error=> bError);
+
+
+IF bDone THEN
+	Status.Busy := FALSE;
+	Status.Done := TRUE;
+	H_OnExecute := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+
+IF bError THEN
+		Status.Error := TRUE;
+		Status.ServiceErrorId := E_GCSpinAxisMoveAbsErrorCode.MoveAbs_Error_During_Execute;
+		
+		RequestCommand(E_PackMLCommand.Stop);
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnHeld" Id="{fed28373-8313-4a6e-ba4e-a5a918a6338e}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnHeld
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnHolding" Id="{c2d80b5f-562d-4ddd-beae-7b5311cee51f}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnHolding : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnHolding := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnIdle" Id="{9b034644-43a6-4302-885f-63ea77975240}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnIdle
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Idle Services must not retain a Resource from an earlier operation.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
+Status.Busy := FALSE;
+Status.Done := FALSE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ServiceErrorId := E_GCSpinAxisMoveAbsErrorCode.None;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnResetting" Id="{9fac3a5f-72e3-4249-a638-a9be1f5d5fde}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnResetting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Status.Busy := FALSE;
+Status.Done := FALSE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ServiceErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
+
+H_OnResetting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStarting" Id="{bc14a29c-b9ee-4657-bbc7-049b9824eea0}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
+
+Status.Busy := TRUE;
+Status.Done := FALSE;
+Status.Error := FALSE;
+Status.Aborted := FALSE;
+Status.ServiceErrorId := E_GCSpinAxisMoveAbsErrorCode.None;
+
+// Validate Service-owned data before reserving the shared BaseUnit.
+IF Param.Velocity <= 0 THEN
+	Status.Error:= TRUE;
+	Status.ServiceErrorId:= E_GCSpinAxisMoveAbsErrorCode.Invalid_Param;
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+// Resource contention is a failed Start, not a wait condition.
+IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
+	Status.Error := TRUE;
+	Status.ServiceErrorId := E_GCSpinAxisMoveAbsErrorCode.Resource_Acquire_Failed_During_Starting;
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+// Physical checks occur only after this Service owns the BaseUnit.
+IF Axis_BaseUnit.AxisIsDisabled THEN
+	Status.Error:= TRUE;
+	Status.ServiceErrorId:= E_GCSpinAxisMoveAbsErrorCode.Axis_Not_Servo_On_During_Starting;
+	RequestCommand(E_PackMLCommand.Abort);
+	RETURN;
+END_IF
+
+IF Axis_BaseUnit.AxisHasJob THEN
+	Status.Error:= TRUE;
+	Status.ServiceErrorId:= E_GCSpinAxisMoveAbsErrorCode.Axis_Is_Busy_During_Starting;
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+H_OnStarting := E_PackMLHookResult.Done;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopped" Id="{076c8329-4ff7-4786-8660-e7efe4f43425}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStopped
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Release defensively after every Stop path.
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
+Status.Busy := FALSE;
+Status.Done := FALSE;
+Status.Aborted := TRUE;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopping" Id="{4dbbd58a-3e06-43d4-b6e2-59cf43df931d}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStopping : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Busy;
+
+// Resource acquisition failures enter Stopping without owning the Axis.
+IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId) THEN
+	H_OnStopping := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+
+// Withdraw MoveAbsolute before issuing the physical Stop.
+Axis_BaseUnit.M_MoveAbs(
+	OwnerId := ResourceOwnerId,
+	Execute := FALSE,
+	Position:= Param.Position,
+	Velocity:= Param.Velocity,
+	Acceleration:= Param.Acceleration,
+	Deceleration:= Param.Deceleration);
+	
+Axis_BaseUnit.M_Stop(
+	Execute := TRUE, 
+	Deceleration:= Param.Deceleration,
+	Done=> bDone, Error=> bError);
+
+IF bDone THEN
+	Axis_BaseUnit.M_Stop(
+		Execute := FALSE, 
+		Deceleration:= Param.Deceleration);
+	// Ownership is released only after the asynchronous Stop has completed.
+	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+	H_OnStopping := E_PackMLHookResult.Done;
+	
+ELSIF bError THEN
+	// Throw up error
+	Status.Error := TRUE;
+	Status.ServiceErrorId := E_GCSpinAxisMoveAbsErrorCode.Error_While_Stop_Axis;
+	
+	Axis_BaseUnit.M_Stop(
+		Execute := FALSE, 
+		Deceleration:= Param.Deceleration);
+		
+	RequestCommand(E_PackMLCommand.Abort);
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnSuspended" Id="{7dade604-8430-4011-87ab-2b1b201f105e}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspended
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnSuspending" Id="{8de3116f-fefa-4891-8b0b-4ed40cff869a}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspending : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnSuspending := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnUndefined" Id="{7aa2563d-539e-421c-b8d3-e3e9ce4414c9}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnUndefined : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// The base FB leaves Undefined immediately unless a derived FB delays startup.
+H_OnUndefined := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnUnholding" Id="{ced1dad7-b691-4241-81b6-486150fc797e}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnUnholding : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnUnholding := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnUnsuspending" Id="{f8684835-9c37-4e44-bb95-bd58a8c50763}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnUnsuspending : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

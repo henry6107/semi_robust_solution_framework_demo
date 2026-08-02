@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_GC_Signal_In" Id="{01a04f04-4882-4cc0-9760-4299fa29ec69}">
+    <Declaration><![CDATA[TYPE ST_GC_Signal_In :
+STRUCT
+	_1_Input : BIT;
+	_2_Input : BIT;
+	_3_Input : BIT;
+	_4_Input : BIT;
+	_5_Input : BIT;
+	_6_Input : BIT;
+	_7_Input : BIT;
+	_8_Input : BIT;
+	_9_Input : BIT;
+	_10_Input : BIT;
+	_11_Input : BIT;
+	_12_Input : BIT;
+	_13_Input : BIT;
+	_14_Input : BIT;
+	_15_Input : BIT;
+	_16_Input : BIT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

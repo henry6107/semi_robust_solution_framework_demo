@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="U_GC_HW_In" Id="{d5aa164a-1b22-4264-97ef-fb8860fc26fc}">
+    <Declaration><![CDATA[TYPE U_GC_HW_In :
+UNION
+	Terminal AT%I* : ST_GC_Terminal_In;
+	Signal : ST_GC_Signal_In;
+END_UNION
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

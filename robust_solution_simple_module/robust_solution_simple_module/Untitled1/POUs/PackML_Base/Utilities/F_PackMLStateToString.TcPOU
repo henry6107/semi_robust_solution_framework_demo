@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_PackMLStateToString" Id="{325c4116-5b72-4b78-b3db-269649a40ca0}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_PackMLStateToString : STRING(80)
+VAR_INPUT
+	eState	: E_PackMLState;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE eState OF
+	E_PackMLState.Undefined:
+		F_PackMLStateToString := 'Undefined';
+	E_PackMLState.Clearing:
+		F_PackMLStateToString := 'Clearing';
+	E_PackMLState.Stopped:
+		F_PackMLStateToString := 'Stopped';
+	E_PackMLState.Starting:
+		F_PackMLStateToString := 'Starting';
+	E_PackMLState.Idle:
+		F_PackMLStateToString := 'Idle';
+	E_PackMLState.Suspended:
+		F_PackMLStateToString := 'Suspended';
+	E_PackMLState.Execute:
+		F_PackMLStateToString := 'Execute';
+	E_PackMLState.Stopping:
+		F_PackMLStateToString := 'Stopping';
+	E_PackMLState.Aborting:
+		F_PackMLStateToString := 'Aborting';
+	E_PackMLState.Aborted:
+		F_PackMLStateToString := 'Aborted';
+	E_PackMLState.Holding:
+		F_PackMLStateToString := 'Holding';
+	E_PackMLState.Held:
+		F_PackMLStateToString := 'Held';
+	E_PackMLState.Unholding:
+		F_PackMLStateToString := 'Unholding';
+	E_PackMLState.Suspending:
+		F_PackMLStateToString := 'Suspending';
+	E_PackMLState.Unsuspending:
+		F_PackMLStateToString := 'Unsuspending';
+	E_PackMLState.Resetting:
+		F_PackMLStateToString := 'Resetting';
+	E_PackMLState.Completing:
+		F_PackMLStateToString := 'Completing';
+	E_PackMLState.Complete:
+		F_PackMLStateToString := 'Complete';
+ELSE
+	F_PackMLStateToString := 'Unknown';
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

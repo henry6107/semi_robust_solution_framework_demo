@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_GCSpinAxisMoveVelErrorCode" Id="{b2505e9d-ac0c-4097-80d0-fe707619ac47}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE E_GCSpinAxisMoveVelErrorCode :
+(
+	None := 0,
+	Axis_Not_Servo_On_During_Starting,
+	Axis_Is_Busy_During_Starting,
+	Invalid_Param,
+	MoveVel_Error_During_Execute,
+	Error_While_Stop_Axis,
+	// The BaseUnit was already owned by another Service.
+	Resource_Acquire_Failed_During_Starting
+)UDINT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

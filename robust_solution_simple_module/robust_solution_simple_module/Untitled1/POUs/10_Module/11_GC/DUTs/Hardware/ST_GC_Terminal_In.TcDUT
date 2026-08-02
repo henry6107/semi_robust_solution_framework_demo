@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_GC_Terminal_In" Id="{8d0a0294-8ce3-4743-a7d2-894faea67a43}">
+    <Declaration><![CDATA[TYPE ST_GC_Terminal_In :
+STRUCT
+	Term4_EL1889 : EL1889_I_0C25AE38;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_GC_Ctrl" Id="{5bc49452-96f1-4f35-9aa8-ce0a3acfe375}">
+    <Declaration><![CDATA[TYPE ST_GC_Ctrl :
+STRUCT
+	ModuleCtrl : ST_PML_Base_In;
+	ServiceCtrl : ST_GC_ServiceCtrl;
+	ECID : ST_GC_ECID;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

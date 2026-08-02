@@ -1,0 +1,86 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_BaseUnit" Id="{f4702b47-ca2c-49e4-bf41-fa6124c0142b}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_BaseUnit
+VAR
+	// Owner ID zero means that no Service currently owns this BaseUnit.
+	_ResourceOwnerId : T_ResourceOwnerId;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="M_AcquireResource" Id="{cdbf4753-4286-4f58-8516-80dd542d86d2}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_AcquireResource : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Reject zero because it represents the unowned state.
+M_AcquireResource := FALSE;
+IF OwnerId = 0 THEN
+	RETURN;
+END_IF
+
+// Re-acquiring with the current Owner ID is intentionally idempotent.
+IF (_ResourceOwnerId = 0) OR (_ResourceOwnerId = OwnerId) THEN
+	_ResourceOwnerId := OwnerId;
+	M_AcquireResource := TRUE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsResourceOwner" Id="{8401a888-1361-4392-8830-38d11946572d}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_IsResourceOwner : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Zero can never identify a valid Resource Owner.
+M_IsResourceOwner := (OwnerId <> 0) AND (_ResourceOwnerId = OwnerId);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ReleaseResource" Id="{16d09c57-8934-4d9d-88e3-8d43c058994d}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_ReleaseResource : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Only the current Owner may release the Resource.
+M_ReleaseResource := FALSE;
+IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
+	RETURN;
+END_IF
+
+_ResourceOwnerId := 0;
+M_ReleaseResource := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ResourceIsAcquired" Id="{f5b55c57-27a4-4fc0-896e-8ed3ee28765f}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL ResourceIsAcquired : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{e5ed7dea-a104-41a6-8134-c1442b588d98}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ResourceIsAcquired := _ResourceOwnerId <> 0;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ResourceOwnerId" Id="{7fb00a7d-6329-4361-873e-1ef67de1777d}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL ResourceOwnerId : T_ResourceOwnerId
+]]></Declaration>
+      <Get Name="Get" Id="{3f67c5dc-572d-499f-bb86-cf0ab802adbc}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ResourceOwnerId := _ResourceOwnerId;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>
