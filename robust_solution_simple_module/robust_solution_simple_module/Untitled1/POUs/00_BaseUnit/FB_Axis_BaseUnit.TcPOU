@@ -13,6 +13,9 @@ VAR
 	_MCReset	: MC_Reset;
 	_MCStop		: MC_Stop;
 	_MCMoveVel	: MC_MoveVelocity;
+	_MCMoveVel_2 : MC_MoveVelocity;
+	_VelSwitchTrig : F_TRIG;
+	_bVelSwitch : BOOL;
 	_MCPower	: MC_Power;
 	_MCJog		: MC_Jog;
 END_VAR
@@ -28,6 +31,7 @@ _MCReset(Axis:= _Axis);
 _MCStop(Axis:= _Axis);
 _MCMoveAbs(Axis:= _Axis);
 _MCMoveVel(Axis:= _Axis);
+_MCMoveVel_2(Axis:= _Axis);
 _MCJog(Axis:= _Axis);
 
 _Axis.ReadStatus();]]></ST>
@@ -173,14 +177,37 @@ IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
 	RETURN;
 END_IF
 
-_MCMoveVel.Execute := Execute;
-_MCMoveVel.Direction := Direction;
-_MCMoveVel.Velocity := Velocity;
-_MCMoveVel.Acceleration := Acceleration;
-_MCMoveVel.Deceleration := Deceleration;
+// Clear input
+IF Execute = FALSE THEN
+	_MCMoveVel.Execute := FALSE;
+	_MCMoveVel_2.Execute := FALSE;
+END_IF
 
-InVelocity := _MCMoveVel.InVelocity;
-Error := _MCMoveVel.Error;
+// Switch MoveVelocity when falling trig
+_VelSwitchTrig(CLK:= Execute, Q=> );
+IF _VelSwitchTrig.Q THEN
+	_bVelSwitch := NOT _bVelSwitch;
+END_IF
+
+IF _bVelSwitch THEN
+	_MCMoveVel.Execute := Execute;
+	_MCMoveVel.Direction := Direction;
+	_MCMoveVel.Velocity := Velocity;
+	_MCMoveVel.Acceleration := Acceleration;
+	_MCMoveVel.Deceleration := Deceleration;
+	InVelocity := _MCMoveVel.InVelocity;
+	Error := _MCMoveVel.Error;
+ELSE
+	_MCMoveVel_2.Execute := Execute;
+	_MCMoveVel_2.Direction := Direction;
+	_MCMoveVel_2.Velocity := Velocity;
+	_MCMoveVel_2.Acceleration := Acceleration;
+	_MCMoveVel_2.Deceleration := Deceleration;
+	InVelocity := _MCMoveVel_2.InVelocity;
+	Error := _MCMoveVel_2.Error;
+	
+END_IF
+
 M_MoveVel := TRUE;]]></ST>
       </Implementation>
     </Method>
