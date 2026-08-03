@@ -13,6 +13,11 @@ END_VAR
 VAR_OUTPUT
 	Status : ST_ServiceStatusBase;
 END_VAR
+
+VAR
+	_CommandedVelocity : LREAL;
+	_VelocityRetriggerPending : BOOL;
+END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[// Update data
@@ -33,6 +38,9 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Release defensively in case an unexpected transition skipped cleanup.
 Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
+_CommandedVelocity := 0;
+_VelocityRetriggerPending := FALSE;
 
 Status.Busy := FALSE;
 Status.Done := FALSE;
@@ -151,7 +159,6 @@ VAR_INPUT
 END_VAR
 
 VAR
-	bDone : BOOL;
 	bError : BOOL;
 END_VAR
 ]]></Declaration>
@@ -164,27 +171,57 @@ Status.Error := FALSE;
 Status.Aborted := FALSE;
 Status.ServiceErrorId := E_GCSpinAxisMoveVelErrorCode.None;
 
-Axis_BaseUnit.M_MoveVel(
-	OwnerId := ResourceOwnerId,
-	Execute := TRUE,
-	Direction := MC_Direction.MC_Positive_Direction,
-	Velocity := Param.Velocity,
-	Acceleration := Param.Acceleration,
-	Deceleration := Param.Deceleration,
-	InVelocity=> bDone, Error=> bError);
-
-IF bDone THEN
-	Status.Busy := FALSE;
-	Status.Done := TRUE;
-	H_OnExecute := E_PackMLHookResult.Done;
+// Parameters can change while Execute is active, so validate them every scan.
+IF (Param.Velocity <= 0) OR (Param.Acceleration < 0) OR (Param.Deceleration < 0) THEN
+	Status.Error := TRUE;
+	Status.ServiceErrorId := E_GCSpinAxisMoveVelErrorCode.Invalid_Param;
+	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
+// Tc2_MC2 applies new motion parameters on a rising edge of Execute. Keep the
+// axis moving while pulsing Execute low for one scan, then retrigger with the
+// latest valid velocity and the current acceleration/deceleration values.
+IF _VelocityRetriggerPending THEN
+	Axis_BaseUnit.M_MoveVel(
+		OwnerId := ResourceOwnerId,
+		Execute := TRUE,
+		Direction := MC_Direction.MC_Positive_Direction,
+		Velocity := Param.Velocity,
+		Acceleration := Param.Acceleration,
+		Deceleration := Param.Deceleration,
+		Error=> bError);
+
+	_CommandedVelocity := Param.Velocity;
+	_VelocityRetriggerPending := FALSE;
+
+ELSIF Param.Velocity <> _CommandedVelocity THEN
+	Axis_BaseUnit.M_MoveVel(
+		OwnerId := ResourceOwnerId,
+		Execute := FALSE,
+		Direction := MC_Direction.MC_Positive_Direction,
+		Velocity := Param.Velocity,
+		Acceleration := Param.Acceleration,
+		Deceleration := Param.Deceleration,
+		Error=> bError);
+
+	_VelocityRetriggerPending := TRUE;
+
+ELSE
+	Axis_BaseUnit.M_MoveVel(
+		OwnerId := ResourceOwnerId,
+		Execute := TRUE,
+		Direction := MC_Direction.MC_Positive_Direction,
+		Velocity := Param.Velocity,
+		Acceleration := Param.Acceleration,
+		Deceleration := Param.Deceleration,
+		Error=> bError);
+END_IF
+
 IF bError THEN
-		Status.Error := TRUE;
-		Status.ServiceErrorId := E_GCSpinAxisMoveVelErrorCode.MoveVel_Error_During_Execute;
-		
-		RequestCommand(E_PackMLCommand.Stop);
+	Status.Error := TRUE;
+	Status.ServiceErrorId := E_GCSpinAxisMoveVelErrorCode.MoveVel_Error_During_Execute;
+	RequestCommand(E_PackMLCommand.Stop);
 END_IF
 ]]></ST>
       </Implementation>
@@ -219,6 +256,9 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Idle Services must not retain a Resource from an earlier operation.
 Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
+_CommandedVelocity := 0;
+_VelocityRetriggerPending := FALSE;
 
 Status.Busy := FALSE;
 Status.Done := FALSE;
@@ -303,6 +343,9 @@ IF Axis_BaseUnit.AxisHasJob THEN
 	RETURN;
 END_IF
 
+_CommandedVelocity := Param.Velocity;
+_VelocityRetriggerPending := FALSE;
+
 H_OnStarting := E_PackMLHookResult.Done;
 ]]></ST>
       </Implementation>
@@ -316,6 +359,9 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Release defensively after every Stop path.
 Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+
+_CommandedVelocity := 0;
+_VelocityRetriggerPending := FALSE;
 
 Status.Busy := FALSE;
 Status.Done := FALSE;
