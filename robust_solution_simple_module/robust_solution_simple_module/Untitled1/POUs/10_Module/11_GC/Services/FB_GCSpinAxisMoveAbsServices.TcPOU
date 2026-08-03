@@ -267,6 +267,20 @@ IF Param.Velocity <= 0 THEN
 	RETURN;
 END_IF
 
+IF Param.Acceleration < 0 THEN
+	Status.Error:= TRUE;
+	Status.ServiceErrorId:= E_GCSpinAxisMoveAbsErrorCode.Invalid_Param;
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+IF Param.Deceleration < 0 THEN
+	Status.Error:= TRUE;
+	Status.ServiceErrorId:= E_GCSpinAxisMoveAbsErrorCode.Invalid_Param;
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
 // Resource contention is a failed Start, not a wait condition.
 IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
 	Status.Error := TRUE;
