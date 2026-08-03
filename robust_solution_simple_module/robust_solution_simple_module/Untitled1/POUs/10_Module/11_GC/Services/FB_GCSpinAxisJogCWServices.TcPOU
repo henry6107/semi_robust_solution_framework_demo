@@ -36,9 +36,7 @@ Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 
 Status.Busy := FALSE;
 Status.Done := FALSE;
-Status.Aborted := TRUE;
-
-RequestCommand(E_PackMLCommand.Clear);]]></ST>
+Status.Aborted := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnAborting" Id="{df4c7f2d-8a88-4d35-a321-0716e918b536}" FolderPath="StateAction\">

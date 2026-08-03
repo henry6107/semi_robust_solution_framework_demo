@@ -118,7 +118,15 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+        <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
+
+// Wait cmd finished
+FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
+	IF ServiceStatus.ByIndex[_nIdx].State <> E_PackMLState.Aborted THEN
+		RETURN;
+	END_IF
+END_FOR
+
 H_OnAborting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
@@ -129,7 +137,16 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Done;]]></ST>
+        <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Busy;
+
+// Wait cmd finished
+FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
+	IF ServiceStatus.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
+		RETURN;
+	END_IF
+END_FOR
+
+H_OnClearing := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnComplete" Id="{9ab7169f-1450-41d3-b3d7-d608e72d68f0}" FolderPath="StateAction\">
@@ -245,7 +262,15 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
+        <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Busy;
+
+// Wait cmd finished
+FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
+	IF ServiceStatus.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
+		RETURN;
+	END_IF
+END_FOR
+
 H_OnStopping := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
