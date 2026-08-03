@@ -46,19 +46,9 @@ SUPER^();]]></ST>
     </Action>
     <Action Name="A01_ServiceParam" Id="{8b66dd3f-2093-4de6-963d-8da3bda49bf6}">
       <Implementation>
-        <ST><![CDATA[_SpinAxisMoveAbsService.Param.Position := ECID.SpinAxis_Position;
-_SpinAxisMoveAbsService.Param.Velocity := ECID.SpinAxis_Velocity;
-_SpinAxisMoveAbsService.Param.Acceleration := ECID.SpinAxis_Acceleration;
-_SpinAxisMoveAbsService.Param.Deceleration := ECID.SpinAxis_Deceleration;
-
-_SpinAxisJogCWService.Param.Position := ECID.SpinAxis_Position;
-_SpinAxisJogCWService.Param.Velocity := ECID.SpinAxis_Velocity;
-_SpinAxisJogCWService.Param.Acceleration := ECID.SpinAxis_Acceleration;
-_SpinAxisJogCWService.Param.Deceleration := ECID.SpinAxis_Deceleration;
-
-_SpinAxisMoveVelCWService.Param.Velocity := ECID.SpinAxis_Velocity;
-_SpinAxisMoveVelCWService.Param.Acceleration := ECID.SpinAxis_Acceleration;
-_SpinAxisMoveVelCWService.Param.Deceleration := ECID.SpinAxis_Deceleration;]]></ST>
+        <ST><![CDATA[_SpinAxisMoveAbsService.Param := ECID.SpinAxisMoveAbs;
+_SpinAxisJogCWService.Param := ECID.SpinAxisJogCW;
+_SpinAxisMoveVelCWService.Param := ECID.SpinAxisMoveVelCW;]]></ST>
       </Implementation>
     </Action>
     <Action Name="A02_ServiceControlResource" Id="{2f460f0f-4f51-4597-948c-8705f2c24753}">
