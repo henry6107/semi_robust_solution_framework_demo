@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="U_GC_ServiceStatusView" Id="{a524a128-3a19-4b56-86da-a61829236df1}">
+    <Declaration><![CDATA[TYPE U_GC_ServiceStatusView :
+UNION
+	ByName : ST_GC_ServiceStatus;
+	ByIndex : ARRAY[1..GVL_GC_Config.cServiceCount] OF ST_ServiceStatusBase;
+END_UNION
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

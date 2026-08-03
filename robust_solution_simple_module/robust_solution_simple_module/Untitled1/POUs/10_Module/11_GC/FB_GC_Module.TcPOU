@@ -14,7 +14,7 @@ VAR_INPUT
 END_VAR
 
 VAR_OUTPUT
-	ServiceStatus : ST_GC_ServiceStatus;
+	ServiceStatus : U_GC_ServiceStatusView;
 	ALID : ST_GC_ALID;
 	DVID : ST_GC_DVID;
 	SVID : ST_GC_SVID;
@@ -22,7 +22,9 @@ END_VAR
 
 VAR
 	// 有需要特殊操作的需求，所以建立一個 ST_GC_ServiceCtrl 變數，讓程式內部可以過一手處理
-	_ServiceCtrl : ST_GC_ServiceCtrl;
+	_ServiceCtrl : U_GC_ServiceCtrlView;
+	
+	_nIdx : UINT;
 	_SpinAxisJogCWService : FB_GCSpinAxisJogCWServices;
 	_SpinAxisMoveAbsService : FB_GCSpinAxisMoveAbsServices;
 	_SpinAxisMoveVelCWService : FB_GCSpinAxisMoveVelCWServices;
@@ -65,34 +67,37 @@ _SpinAxisMoveVelCWService.Param.Deceleration := ECID.SpinAxis_Deceleration;]]></
 IF PackMLOut.eStateCurrent = E_PackMLState.Idle
 	OR PackMLOut.eStateCurrent = E_PackMLState.Starting
 	OR PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
-	_ServiceCtrl := ServiceCtrl;	// Controlled by external operator
+	// Controlled by external operator
+	_ServiceCtrl.ByName := ServiceCtrl;
+	
 ELSE
-	_ServiceCtrl.SpinAxisMoveAbs := PackMLIn;	// Controlled by module
-	_ServiceCtrl.SpinAxisJogCW := PackMLIn;	// Controlled by module
-	_ServiceCtrl.SpinAxisMoveVelCW := PackMLIn;
+	// Control by module
+	FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
+		_ServiceCtrl.ByIndex[_nIdx] := PackMLIn;
+	END_FOR
 END_IF]]></ST>
       </Implementation>
     </Action>
     <Action Name="A03_Service" Id="{c62275db-aa76-4b4d-95ad-2ecb5851f919}">
       <Implementation>
         <ST><![CDATA[_SpinAxisJogCWService(
-	PackMLIn:= _ServiceCtrl.SpinAxisJogCW,
+	PackMLIn:= _ServiceCtrl.ByName.SpinAxisJogCW,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	// Owner IDs are assigned by the Module so each Service instance is unique.
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisJogCW,
-	Status=> ServiceStatus.SpinAxisJogCW);
+	Status=> ServiceStatus.ByName.SpinAxisJogCW);
 
 _SpinAxisMoveAbsService(
-	PackMLIn:= _ServiceCtrl.SpinAxisMoveAbs,
+	PackMLIn:= _ServiceCtrl.ByName.SpinAxisMoveAbs,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveAbs,
-	Status=> ServiceStatus.SpinAxisMoveAbs);
+	Status=> ServiceStatus.ByName.SpinAxisMoveAbs);
 
 _SpinAxisMoveVelCWService(
-	PackMLIn:= _ServiceCtrl.SpinAxisMoveVelCW,
+	PackMLIn:= _ServiceCtrl.ByName.SpinAxisMoveVelCW,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVelCW,
-	Status=> ServiceStatus.SpinAxisMoveVelCW);
+	Status=> ServiceStatus.ByName.SpinAxisMoveVelCW);
 ]]></ST>
       </Implementation>
     </Action>
@@ -203,9 +208,11 @@ END_VAR
         <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Busy;
 
 // Wait cmd finished
-IF ServiceStatus.SpinAxisMoveAbs.State <> E_PackMLState.Idle THEN
-	RETURN;
-END_IF
+FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
+	IF ServiceStatus.ByIndex[_nIdx].State <> E_PackMLState.Idle THEN
+		RETURN;
+	END_IF
+END_FOR
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>

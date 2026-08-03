@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="U_GC_ServiceCtrlView" Id="{ebffcb9a-149a-4b8d-9ee4-49df4adc4fb1}">
+    <Declaration><![CDATA[TYPE U_GC_ServiceCtrlView :
+UNION
+	ByName : ST_GC_ServiceCtrl;
+	ByIndex : ARRAY[1..GVL_GC_Config.cServiceCount] OF ST_PML_Base_In;
+END_UNION
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

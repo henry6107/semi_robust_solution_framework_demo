@@ -98,11 +98,21 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\U_GC_ServiceCtrlView.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\U_GC_ServiceStatusView.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_Ctrl.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\FB_GC_Module.TcPOU">
       <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\GVLs\GVL_GC_Config.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisJogCWServices.TcPOU">
       <SubType>Code</SubType>
@@ -172,6 +182,7 @@
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService" />
+    <Folder Include="POUs\10_Module\11_GC\GVLs" />
     <Folder Include="POUs\10_Module\11_GC\Services" />
     <Folder Include="POUs\PackML_Base" />
     <Folder Include="POUs\PackML_Base\DUTs" />
