@@ -28,8 +28,8 @@ GC1_Module(
 	ServiceCtrl:= _GC1.ServiceCtrl, 
 	ECID:= _GC1.ECID, 
 	SpinAxis_BaseUnit:= GC1_SpinAxis_BaseUnit, 
-	PackMLOut=> , 
-	ServiceStatus=> , 
+	PackMLOut=> _GC1.ModuleStatus, 
+	ServiceStatus=> _GC1.ServiceStatus, 
 	ALID=> , 
 	DVID=> , 
 	SVID=> );]]></ST>

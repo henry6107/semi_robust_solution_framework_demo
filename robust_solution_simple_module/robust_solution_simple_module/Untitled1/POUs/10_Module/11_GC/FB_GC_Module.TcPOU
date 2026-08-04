@@ -14,7 +14,7 @@ VAR_INPUT
 END_VAR
 
 VAR_OUTPUT
-	ServiceStatus : U_GC_ServiceStatusView;
+	ServiceStatus : ST_GC_ServiceStatus;
 	ALID : ST_GC_ALID;
 	DVID : ST_GC_DVID;
 	SVID : ST_GC_SVID;
@@ -23,7 +23,8 @@ END_VAR
 VAR
 	// 有需要特殊操作的需求，所以建立一個 ST_GC_ServiceCtrl 變數，讓程式內部可以過一手處理
 	_ServiceCtrl : U_GC_ServiceCtrlView;
-	
+	_ServiceStatusView : U_GC_ServiceStatusView;
+
 	_nIdx : UINT;
 	_SpinAxisJogCWService : FB_GCSpinAxisJogCWServices;
 	_SpinAxisMoveAbsService : FB_GCSpinAxisMoveAbsServices;
@@ -36,6 +37,7 @@ A01_ServiceParam();
 A02_ServiceControlResource();
 A03_Service();
 
+ServiceStatus := _ServiceStatusView.ByName;
 SUPER^();]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{92cfe23b-b998-4d76-8aa2-c8089e78aa61}" />
@@ -75,19 +77,19 @@ END_IF]]></ST>
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	// Owner IDs are assigned by the Module so each Service instance is unique.
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisJogCW,
-	Status=> ServiceStatus.ByName.SpinAxisJogCW);
+	Status=> _ServiceStatusView.ByName.SpinAxisJogCW);
 
 _SpinAxisMoveAbsService(
 	PackMLIn:= _ServiceCtrl.ByName.SpinAxisMoveAbs,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveAbs,
-	Status=> ServiceStatus.ByName.SpinAxisMoveAbs);
+	Status=> _ServiceStatusView.ByName.SpinAxisMoveAbs);
 
 _SpinAxisMoveVelCWService(
 	PackMLIn:= _ServiceCtrl.ByName.SpinAxisMoveVelCW,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVelCW,
-	Status=> ServiceStatus.ByName.SpinAxisMoveVelCW);
+	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
 ]]></ST>
       </Implementation>
     </Action>
@@ -112,7 +114,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF ServiceStatus.ByIndex[_nIdx].State <> E_PackMLState.Aborted THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Aborted THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -131,7 +133,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF ServiceStatus.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -216,7 +218,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF ServiceStatus.ByIndex[_nIdx].State <> E_PackMLState.Idle THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Idle THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -256,7 +258,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF ServiceStatus.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
 		RETURN;
 	END_IF
 END_FOR

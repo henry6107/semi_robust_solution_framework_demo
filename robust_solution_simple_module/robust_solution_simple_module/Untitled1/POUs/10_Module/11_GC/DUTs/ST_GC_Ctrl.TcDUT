@@ -6,6 +6,8 @@ STRUCT
 	ModuleCtrl : ST_PML_Base_In;
 	ServiceCtrl : ST_GC_ServiceCtrl;
 	ECID : ST_GC_ECID;
+	ModuleStatus : ST_PML_Base_Out;
+	ServiceStatus : ST_GC_ServiceStatus;
 END_STRUCT
 END_TYPE
 ]]></Declaration>
