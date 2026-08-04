@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_BaseUnit" Id="{f4702b47-ca2c-49e4-bf41-fa6124c0142b}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_BaseUnit
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_BaseUnit IMPLEMENTS I_ResourceLock
 VAR
 	// Owner ID zero means that no Service currently owns this BaseUnit.
 	_ResourceOwnerId : T_ResourceOwnerId;

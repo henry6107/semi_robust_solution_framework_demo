@@ -5,6 +5,7 @@
 VAR
 	GC1_Module : FB_GC_Module;
 	GC1_SpinAxis_BaseUnit : FB_Axis_BaseUnit;
+	GC1_SpinAxis : I_Axis_BaseUnit;
 	_GC1 : ST_GC_Ctrl;
 	
 	// Demo use
@@ -21,13 +22,15 @@ END_VAR
 // 	_GC1 := GVL_CSharp.GC1;
 // END_IF
 
+GC1_SpinAxis := GC1_SpinAxis_BaseUnit;
+
 GC1_Module(
 	HwInput:= GC1_HwIn.Signal, 
 	HwOutput:= GC_HwOut.Signal, 
 	PackMLIn:= _GC1.ModuleCtrl, 
 	ServiceCtrl:= _GC1.ServiceCtrl, 
 	ECID:= _GC1.ECID, 
-	SpinAxis_BaseUnit:= GC1_SpinAxis_BaseUnit, 
+	SpinAxis_BaseUnit:= GC1_SpinAxis,
 	PackMLOut=> _GC1.ModuleStatus, 
 	ServiceStatus=> _GC1.ServiceStatus, 
 	ALID=> , 

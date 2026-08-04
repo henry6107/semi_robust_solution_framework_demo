@@ -4,7 +4,7 @@
     <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisJogCWServices EXTENDS FB_PackMLBase
 VAR_INPUT
 	Param : ST_GCSpinAxisJogParam;
-	Axis_BaseUnit : REFERENCE TO FB_Axis_BaseUnit;
+	Axis_BaseUnit : I_Axis_BaseUnit;
 
 	// The Module assigns a unique ID to this Service instance.
 	ResourceOwnerId : T_ResourceOwnerId;

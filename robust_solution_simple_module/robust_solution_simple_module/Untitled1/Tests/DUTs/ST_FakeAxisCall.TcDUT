@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_FakeAxisCall" Id="{a0ac37fa-42fb-4a18-9127-647a2d8c0501}">
+    <Declaration><![CDATA[TYPE ST_FakeAxisCall :
+STRUCT
+	Sequence : UDINT;
+	Cycle : UDINT;
+	Operation : E_FakeAxisOperation;
+	OwnerId : T_ResourceOwnerId;
+	Accepted : BOOL;
+	Execute : BOOL;
+	JogForward : BOOL;
+	JogBackwards : BOOL;
+	Mode : E_JogMode;
+	Direction : MC_Direction;
+	Position : LREAL;
+	Velocity : LREAL;
+	Acceleration : LREAL;
+	Deceleration : LREAL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

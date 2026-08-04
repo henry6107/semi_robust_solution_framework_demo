@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_FakeAxis_BaseUnitTests" Id="{8bfb2abc-b09a-4a53-af51-3de076979df9}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_FakeAxis_BaseUnitTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	_FakeAxis : FB_FakeAxis_BaseUnit;
+	_Axis : I_Axis_BaseUnit;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ResourceCanBeAcquiredAndReleased();
+OwnerZeroAndNonOwnerStopAreRejected();
+AllNonOwnerMotionCommandsAreRejected();
+ScriptAndHistoryOverflowAreExplicit();
+CommandHistoryPreservesParameters();
+ResponseRemainsLatchedUntilCommandWithdrawal();
+JogErrorIsPublishedAfterConfiguredCycles();]]></ST>
+    </Implementation>
+    <Method Name="ResourceCanBeAcquiredAndReleased" Id="{5ba060d0-d9d5-4d44-83c0-c5d720c5f2fd}">
+      <Declaration><![CDATA[METHOD ResourceCanBeAcquiredAndReleased
+VAR
+	bAcquired : BOOL;
+	bContenderAcquired : BOOL;
+	bReleased : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ResourceCanBeAcquiredAndReleased');
+
+_FakeAxis.M_ResetScenario();
+_Axis := _FakeAxis;
+
+bAcquired := _Axis.M_AcquireResource(OwnerId := 1);
+bContenderAcquired := _Axis.M_AcquireResource(OwnerId := 2);
+bReleased := _Axis.M_ReleaseResource(OwnerId := 1);
+
+AssertTrue(Condition := bAcquired, Message := 'The first valid Owner must acquire the Axis.');
+AssertFalse(Condition := bContenderAcquired, Message := 'A competing Owner must be rejected.');
+AssertTrue(Condition := bReleased, Message := 'The active Owner must release the Axis.');
+AssertFalse(Condition := _Axis.M_IsResourceOwner(OwnerId := 1), Message := 'The Axis must be unowned after Release.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AllNonOwnerMotionCommandsAreRejected" Id="{20863985-8ff8-45ca-9090-68f266501456}">
+      <Declaration><![CDATA[METHOD AllNonOwnerMotionCommandsAreRejected
+VAR
+	bDone : BOOL;
+	bInVelocity : BOOL;
+	bError : BOOL;
+	nErrorId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('AllNonOwnerMotionCommandsAreRejected');
+
+_FakeAxis.M_ResetScenario();
+_Axis := _FakeAxis;
+AssertTrue(Condition := _Axis.M_AcquireResource(OwnerId := 1), Message := 'Owner 1 must acquire the Axis.');
+AssertFalse(Condition := _Axis.M_Jog(OwnerId := 2, JogForward := TRUE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Position := 1, Velocity := 2, Acceleration := 3, Deceleration := 4, Done => bDone, Error => bError, ErrorId => nErrorId), Message := 'Non-Owner Jog must be rejected.');
+AssertFalse(Condition := bDone OR bError OR (nErrorId <> 0), Message := 'Rejected Jog outputs must be neutral.');
+AssertFalse(Condition := _Axis.M_MoveAbs(OwnerId := 2, Execute := TRUE, Position := 1, Velocity := 2, Acceleration := 3, Deceleration := 4, Done => bDone, Error => bError), Message := 'Non-Owner MoveAbs must be rejected.');
+AssertFalse(Condition := _Axis.M_MoveVel(OwnerId := 2, Execute := TRUE, Direction := MC_Direction.MC_Positive_Direction, Velocity := 2, Acceleration := 3, Deceleration := 4, InVelocity => bInVelocity, Error => bError), Message := 'Non-Owner MoveVel must be rejected.');
+AssertFalse(Condition := _Axis.M_Reset(OwnerId := 2, Execute := TRUE, Done => bDone, Error => bError), Message := 'Non-Owner Reset must be rejected.');
+AssertFalse(Condition := bDone OR bInVelocity OR bError, Message := 'All rejected motion outputs must remain neutral.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="ResponseRemainsLatchedUntilCommandWithdrawal" Id="{734c73d9-27c3-46b2-9f08-b0f716913f36}">
+      <Declaration><![CDATA[METHOD ResponseRemainsLatchedUntilCommandWithdrawal
+VAR
+	bError : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('ResponseRemainsLatchedUntilCommandWithdrawal');
+
+_FakeAxis.M_ResetScenario();
+_Axis := _FakeAxis;
+AssertTrue(Condition := _Axis.M_AcquireResource(OwnerId := 1), Message := 'Latch test Owner must acquire Axis.');
+AssertTrue(Condition := _FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.Jog, AfterActiveCycles := 1, Done := FALSE, InVelocity := FALSE, Error := TRUE, ErrorId := 1), Message := 'Jog Error script must be queued.');
+_Axis.M_Jog(OwnerId := 1, JogForward := TRUE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Position := 0, Velocity := 1, Acceleration := 1, Deceleration := 1);
+_Axis.M_CyclicUpdate();
+_Axis.M_Jog(OwnerId := 1, JogForward := TRUE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Position := 0, Velocity := 1, Acceleration := 1, Deceleration := 1, Error => bError);
+AssertTrue(Condition := bError, Message := 'Configured Error must latch.');
+_Axis.M_CyclicUpdate();
+_Axis.M_Jog(OwnerId := 1, JogForward := TRUE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Position := 0, Velocity := 1, Acceleration := 1, Deceleration := 1, Error => bError);
+AssertTrue(Condition := bError, Message := 'Error must remain latched while Jog remains active.');
+_Axis.M_Jog(OwnerId := 1, JogForward := FALSE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Position := 0, Velocity := 1, Acceleration := 1, Deceleration := 1);
+_Axis.M_CyclicUpdate();
+_Axis.M_Jog(OwnerId := 1, JogForward := FALSE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Position := 0, Velocity := 1, Acceleration := 1, Deceleration := 1, Error => bError);
+AssertFalse(Condition := bError, Message := 'Error must clear after both Jog directions are withdrawn and cyclic update runs.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="OwnerZeroAndNonOwnerStopAreRejected" Id="{b152605f-0522-4074-8055-cb8837f34a87}">
+      <Declaration><![CDATA[METHOD OwnerZeroAndNonOwnerStopAreRejected
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+	bRejected : BOOL;
+	bAccepted : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('OwnerZeroAndNonOwnerStopAreRejected');
+
+_FakeAxis.M_ResetScenario();
+_Axis := _FakeAxis;
+AssertFalse(Condition := _Axis.M_AcquireResource(OwnerId := 0), Message := 'OwnerId zero must never acquire a resource.');
+AssertTrue(Condition := _Axis.M_AcquireResource(OwnerId := 1), Message := 'Valid Owner must acquire the Axis.');
+AssertTrue(Condition := _FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.Stop, AfterActiveCycles := 1, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0), Message := 'Stop Done script must be accepted.');
+
+bAccepted := _Axis.M_Stop(OwnerId := 1, Execute := TRUE, Deceleration := 10);
+bRejected := _Axis.M_Stop(OwnerId := 2, Execute := FALSE, Deceleration := 99, Done => bDone, Error => bError);
+AssertFalse(Condition := bRejected, Message := 'Non-Owner Stop must be rejected.');
+AssertFalse(Condition := bDone OR bError, Message := 'Rejected Stop must return neutral outputs.');
+
+_Axis.M_CyclicUpdate();
+_Axis.M_Stop(OwnerId := 1, Execute := TRUE, Deceleration := 10, Done => bDone, Error => bError);
+AssertTrue(Condition := bAccepted AND bDone AND NOT bError, Message := 'Rejected Stop must not cancel the active Owner command.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="ScriptAndHistoryOverflowAreExplicit" Id="{84cf755e-0c45-4c51-a243-d3584445694d}">
+      <Declaration><![CDATA[METHOD ScriptAndHistoryOverflowAreExplicit
+VAR
+	nIndex : UINT;
+	bQueued : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('ScriptAndHistoryOverflowAreExplicit');
+
+_FakeAxis.M_ResetScenario();
+_Axis := _FakeAxis;
+FOR nIndex := 1 TO 32 DO
+	bQueued := _FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.MoveAbs, AfterActiveCycles := nIndex, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0);
+END_FOR
+bQueued := _FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.MoveAbs, AfterActiveCycles := 33, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0);
+AssertFalse(Condition := bQueued, Message := 'Script queue must reject entry 33.');
+AssertTrue(Condition := _FakeAxis.ScriptOverflowed, Message := 'Script overflow must be visible.');
+
+_FakeAxis.M_ResetScenario();
+bQueued := _FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.Jog, AfterActiveCycles := 1, Done := TRUE, InVelocity := FALSE, Error := TRUE, ErrorId := 0);
+AssertFalse(Condition := bQueued, Message := 'Done and Error cannot be configured together.');
+AssertTrue(Condition := _FakeAxis.ScriptConfigurationError, Message := 'Invalid script configuration must be visible.');
+
+FOR nIndex := 1 TO 257 DO
+	_Axis.M_Reset(OwnerId := 77, Execute := TRUE);
+END_FOR
+AssertTrue(Condition := _FakeAxis.HistoryCount = 256, Message := 'History must stop at its fixed capacity.');
+AssertTrue(Condition := _FakeAxis.HistoryOverflowed, Message := 'History overflow must be visible and must not overwrite calls.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="CommandHistoryPreservesParameters" Id="{f554b15b-f27a-4886-bcb6-45bbe3be8a83}">
+      <Declaration><![CDATA[METHOD CommandHistoryPreservesParameters
+VAR
+	CallRecord : ST_FakeAxisCall;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('CommandHistoryPreservesParameters');
+
+_FakeAxis.M_ResetScenario();
+_Axis := _FakeAxis;
+AssertTrue(Condition := _Axis.M_AcquireResource(OwnerId := 5), Message := 'History test Owner must acquire Axis.');
+_Axis.M_MoveAbs(OwnerId := 5, Execute := TRUE, Position := 123.5, Velocity := 45.5, Acceleration := 67.5, Deceleration := 89.5);
+AssertTrue(Condition := _FakeAxis.M_GetCall(Index := 1, CallRecord => CallRecord), Message := 'Accepted MoveAbs must be present in history.');
+AssertTrue(Condition := CallRecord.Accepted AND CallRecord.Execute, Message := 'History must retain acceptance and Execute.');
+AssertTrue(Condition := (CallRecord.Position = 123.5) AND (CallRecord.Velocity = 45.5) AND (CallRecord.Acceleration = 67.5) AND (CallRecord.Deceleration = 89.5), Message := 'History must retain all motion parameters.');
+
+_Axis.M_MoveAbs(OwnerId := 6, Execute := FALSE, Position := 1, Velocity := 2, Acceleration := 3, Deceleration := 4);
+AssertTrue(Condition := _FakeAxis.M_GetCall(Index := 2, CallRecord => CallRecord), Message := 'Rejected command must still be recorded.');
+AssertFalse(Condition := CallRecord.Accepted, Message := 'Rejected history entry must be marked rejected.');
+AssertTrue(Condition := CallRecord.Sequence = 2, Message := 'History sequence must be global and monotonic.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="JogErrorIsPublishedAfterConfiguredCycles" Id="{3501b066-9e8f-4dc4-91a5-7eefc4e9340e}">
+      <Declaration><![CDATA[METHOD JogErrorIsPublishedAfterConfiguredCycles
+VAR_INST
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+	nPhase : UINT;
+	bError : BOOL;
+	bQueued : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('JogErrorIsPublishedAfterConfiguredCycles');
+
+CASE nPhase OF
+	0:
+		FakeAxis.M_ResetScenario();
+		Axis := FakeAxis;
+		AssertTrue(Condition := Axis.M_AcquireResource(OwnerId := 1), Message := 'Test Owner must acquire the Axis.');
+		bQueued := FakeAxis.M_QueueResult(
+			Operation := E_FakeAxisOperation.Jog,
+			AfterActiveCycles := 2,
+			Done := FALSE,
+			InVelocity := FALSE,
+			Error := TRUE,
+			ErrorId := 16#1234);
+		AssertTrue(Condition := bQueued, Message := 'A valid Jog Error script must be queued.');
+		Axis.M_Jog(
+			OwnerId := 1,
+			JogForward := TRUE,
+			JogBackwards := FALSE,
+			Mode := E_JogMode.MC_JOGMODE_CONTINOUS,
+			Position := 0,
+			Velocity := 10,
+			Acceleration := 20,
+			Deceleration := 30);
+		nPhase := 1;
+
+	1:
+		Axis.M_CyclicUpdate();
+		Axis.M_Jog(
+			OwnerId := 1,
+			JogForward := TRUE,
+			JogBackwards := FALSE,
+			Mode := E_JogMode.MC_JOGMODE_CONTINOUS,
+			Position := 0,
+			Velocity := 10,
+			Acceleration := 20,
+			Deceleration := 30,
+			Error => bError);
+		AssertFalse(Condition := bError, Message := 'Jog Error must remain pending after one active cycle.');
+		nPhase := 2;
+
+	2:
+		Axis.M_CyclicUpdate();
+		Axis.M_Jog(
+			OwnerId := 1,
+			JogForward := TRUE,
+			JogBackwards := FALSE,
+			Mode := E_JogMode.MC_JOGMODE_CONTINOUS,
+			Position := 0,
+			Velocity := 10,
+			Acceleration := 20,
+			Deceleration := 30,
+			Error => bError);
+		AssertTrue(Condition := bError, Message := 'Jog Error must be published on the configured cycle.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

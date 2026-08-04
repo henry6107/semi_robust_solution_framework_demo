@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <Itf Name="I_ResourceLock" Id="{c66dc7a3-d4ad-430c-9641-4ad3a02ef796}">
+    <Declaration><![CDATA[INTERFACE I_ResourceLock
+]]></Declaration>
+    <Method Name="M_AcquireResource" Id="{4d82e03b-401c-4cff-9b03-a14c249856ae}">
+      <Declaration><![CDATA[METHOD M_AcquireResource : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="M_IsResourceOwner" Id="{dde30e9c-7230-421b-8310-2de3a28ba148}">
+      <Declaration><![CDATA[METHOD M_IsResourceOwner : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="M_ReleaseResource" Id="{ab3c4f6a-4e7a-4f68-877f-40d077f92e94}">
+      <Declaration><![CDATA[METHOD M_ReleaseResource : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

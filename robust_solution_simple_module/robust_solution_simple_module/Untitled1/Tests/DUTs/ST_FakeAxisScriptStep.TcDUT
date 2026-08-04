@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_FakeAxisScriptStep" Id="{139388fa-d3a4-43a3-8c2a-db4e0be51a91}">
+    <Declaration><![CDATA[TYPE ST_FakeAxisScriptStep :
+STRUCT
+	Operation : E_FakeAxisOperation;
+	AfterActiveCycles : UINT;
+	Done : BOOL;
+	InVelocity : BOOL;
+	Error : BOOL;
+	ErrorId : UDINT;
+	Started : BOOL;
+	ResultLatched : BOOL;
+	Consumed : BOOL;
+	ActiveCycles : UINT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="PRG_TEST" Id="{dd0c9370-fdb3-4448-9242-43ea44c7b9f9}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_TEST
+VAR
+	FakeAxisContractTests : FB_FakeAxis_BaseUnitTests;
+	JogServiceTests : FB_GCSpinAxisJogCWServiceTests;
+	MoveAbsServiceTests : FB_GCSpinAxisMoveAbsServiceTests;
+	MoveVelServiceTests : FB_GCSpinAxisMoveVelCWServiceTests;
+	GCModuleTests : FB_GC_ModuleTests;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TcUnit.RUN();]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -12,7 +12,9 @@ TYPE E_GCSpinAxisMoveVelErrorCode :
 	MoveVel_Error_During_Execute,
 	Error_While_Stop_Axis,
 	// The BaseUnit was already owned by another Service.
-	Resource_Acquire_Failed_During_Starting
+	Resource_Acquire_Failed_During_Starting,
+	// The asynchronous Reset used while aborting failed.
+	Error_While_Reset_Axis
 )UDINT;
 END_TYPE
 ]]></Declaration>

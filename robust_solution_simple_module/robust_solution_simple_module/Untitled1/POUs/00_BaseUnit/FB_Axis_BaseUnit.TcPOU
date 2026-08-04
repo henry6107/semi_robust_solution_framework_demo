@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_Axis_BaseUnit" Id="{28a42f80-195a-4223-a1bf-e623b7d6079c}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_Axis_BaseUnit EXTENDS FB_BaseUnit
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Axis_BaseUnit EXTENDS FB_BaseUnit IMPLEMENTS I_Axis_BaseUnit
 VAR_INPUT
 END_VAR
 VAR_OUTPUT
@@ -21,7 +21,14 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[_MCPower(Axis:= _Axis,
+      <ST><![CDATA[M_CyclicUpdate();]]></ST>
+    </Implementation>
+    <Method Name="M_CyclicUpdate" Id="{40d31be8-e262-49a2-98a0-53468206e8c7}">
+      <Declaration><![CDATA[METHOD M_CyclicUpdate
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[_MCPower(Axis:= _Axis,
 			Enable:= TRUE,
 			Enable_Positive:= TRUE,
 			Enable_Negative:= TRUE,
@@ -34,8 +41,8 @@ _MCMoveVel(Axis:= _Axis);
 _MCMoveVel_2(Axis:= _Axis);
 _MCJog(Axis:= _Axis);
 
-_Axis.ReadStatus();]]></ST>
-    </Implementation>
+_Axis.ReadStatus();]]></ST></Implementation>
+    </Method>
     <Property Name="AxisActualVelocity" Id="{777cc680-8953-4809-acb4-3307920aad6a}">
       <Declaration><![CDATA[PROPERTY PUBLIC AxisActualVelocity : LREAL
 ]]></Declaration>
@@ -242,6 +249,7 @@ M_Reset := TRUE;]]></ST>
     <Method Name="M_Stop" Id="{2df51e0d-c316-436a-9fe7-294a4bc52bdf}">
       <Declaration><![CDATA[METHOD M_Stop : BOOL
 VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
 	Execute : BOOL;
 	Deceleration : LREAL;
 END_VAR
@@ -251,7 +259,14 @@ VAR_OUTPUT
 	Error : BOOL;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_MCStop.Execute := Execute;
+        <ST><![CDATA[M_Stop := FALSE;
+Done := FALSE;
+Error := FALSE;
+IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
+	RETURN;
+END_IF
+
+_MCStop.Execute := Execute;
 _MCStop.Deceleration := Deceleration;
 
 Done := _MCStop.Done;

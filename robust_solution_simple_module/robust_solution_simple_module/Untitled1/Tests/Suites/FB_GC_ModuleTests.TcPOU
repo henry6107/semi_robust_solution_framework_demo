@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_GC_ModuleTests" Id="{96672931-1460-48e8-9f48-00c039353553}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GC_ModuleTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation><ST><![CDATA[UnboundAxisLeavesModuleInert();
+BoundAxisUpdatesOnceAndServicesShareOwnership();]]></ST></Implementation>
+    <Method Name="UnboundAxisLeavesModuleInert" Id="{78647b77-734a-4eb9-b53f-950502397826}">
+      <Declaration><![CDATA[METHOD UnboundAxisLeavesModuleInert
+VAR
+	Module : FB_GC_Module;
+	Axis : I_Axis_BaseUnit;
+	HwInput : ST_GC_Signal_In;
+	HwOutput : ST_GC_Signal_Out;
+	ModuleCtrl : ST_PML_Base_In;
+	ServiceCtrl : ST_GC_ServiceCtrl;
+	ECID : ST_GC_ECID;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('UnboundAxisLeavesModuleInert');
+
+Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+AssertTrue(Condition := Module.PackMLOut.eStateCurrent = E_PackMLState.Undefined, Message := 'Unbound Axis must prevent Module and Service execution.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="BoundAxisUpdatesOnceAndServicesShareOwnership" Id="{08f6ebae-7123-48dc-89e6-73b2de80ca9a}">
+      <Declaration><![CDATA[METHOD BoundAxisUpdatesOnceAndServicesShareOwnership
+VAR_INST
+	Module : FB_GC_Module;
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+	HwInput : ST_GC_Signal_In;
+	HwOutput : ST_GC_Signal_Out;
+	ModuleCtrl : ST_PML_Base_In;
+	ServiceCtrl : ST_GC_ServiceCtrl;
+	ECID : ST_GC_ECID;
+	CallRecord : ST_FakeAxisCall;
+	nPhase : UINT;
+	nOwnerCount : UINT;
+	nCallIndex : UINT;
+	bAcceptedCommandFound : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('BoundAxisUpdatesOnceAndServicesShareOwnership');
+
+CASE nPhase OF
+	0:
+		FakeAxis.M_ResetScenario();
+		Axis := FakeAxis;
+		ECID.SpinAxisJogCW.Velocity := 10;
+		ECID.SpinAxisJogCW.Acceleration := 20;
+		ECID.SpinAxisJogCW.Deceleration := 30;
+		ECID.SpinAxisMoveAbs.Position := 100;
+		ECID.SpinAxisMoveAbs.Velocity := 10;
+		ECID.SpinAxisMoveAbs.Acceleration := 20;
+		ECID.SpinAxisMoveAbs.Deceleration := 30;
+		ECID.SpinAxisMoveVelCW.Velocity := 10;
+		ECID.SpinAxisMoveVelCW.Acceleration := 20;
+		ECID.SpinAxisMoveVelCW.Deceleration := 30;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		AssertTrue(Condition := FakeAxis.CurrentCycle = 1, Message := 'Module must update the Axis exactly once in its first scan.');
+		nPhase := 1;
+
+	1:
+		ModuleCtrl.eCommand := E_PackMLCommand.Clear;
+		ModuleCtrl.bCommandChangeRequest := TRUE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		AssertTrue(Condition := FakeAxis.CurrentCycle = 2, Message := 'Module must not call Axis cyclic update once per Service.');
+		nPhase := 2;
+
+	2:
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		AssertTrue(Condition := Module.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Clearing must wait until every Service is Stopped.');
+		AssertTrue(Condition := Module.ServiceStatus.SpinAxisJogCW.State = E_PackMLState.Stopped, Message := 'Jog ServiceStatus must be mapped by name.');
+		AssertTrue(Condition := Module.ServiceStatus.SpinAxisMoveAbs.State = E_PackMLState.Stopped, Message := 'MoveAbs ServiceStatus must be mapped by name.');
+		AssertTrue(Condition := Module.ServiceStatus.SpinAxisMoveVelCW.State = E_PackMLState.Stopped, Message := 'MoveVel ServiceStatus must be mapped by name.');
+		nPhase := 3;
+
+	3:
+		ModuleCtrl.bCommandChangeRequest := FALSE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		ModuleCtrl.eCommand := E_PackMLCommand.Reset;
+		ModuleCtrl.bCommandChangeRequest := TRUE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		nPhase := 4;
+
+	4:
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		AssertTrue(Condition := Module.PackMLOut.eStateCurrent = E_PackMLState.Idle, Message := 'Resetting must wait until every Service is Idle.');
+		nPhase := 5;
+
+	5:
+		ModuleCtrl.bCommandChangeRequest := FALSE;
+		ServiceCtrl.SpinAxisJogCW.eCommand := E_PackMLCommand.Start;
+		ServiceCtrl.SpinAxisJogCW.bCommandChangeRequest := TRUE;
+		ServiceCtrl.SpinAxisMoveAbs.eCommand := E_PackMLCommand.Start;
+		ServiceCtrl.SpinAxisMoveAbs.bCommandChangeRequest := TRUE;
+		ServiceCtrl.SpinAxisMoveVelCW.eCommand := E_PackMLCommand.Start;
+		ServiceCtrl.SpinAxisMoveVelCW.bCommandChangeRequest := TRUE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		nPhase := 6;
+
+	6:
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		nOwnerCount := 0;
+		IF Axis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisJogCW) THEN nOwnerCount := nOwnerCount + 1; END_IF
+		IF Axis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisMoveAbs) THEN nOwnerCount := nOwnerCount + 1; END_IF
+		IF Axis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisMoveVelCW) THEN nOwnerCount := nOwnerCount + 1; END_IF
+		AssertTrue(Condition := nOwnerCount <= 1, Message := 'Simultaneous Service Starts may choose any caller, but at most one may own the shared Axis.');
+		AssertTrue(Condition := Module.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Module must enter Execute after Service reset coordination.');
+		bAcceptedCommandFound := FALSE;
+		FOR nCallIndex := 1 TO FakeAxis.HistoryCount DO
+			IF FakeAxis.M_GetCall(Index := nCallIndex, CallRecord => CallRecord) AND CallRecord.Accepted AND CallRecord.Execute THEN
+				bAcceptedCommandFound := TRUE;
+				CASE CallRecord.Operation OF
+					E_FakeAxisOperation.Jog:
+						AssertTrue(Condition := (CallRecord.OwnerId = E_GCResourceOwnerId.SpinAxisJogCW) AND (CallRecord.Velocity = 10) AND (CallRecord.Acceleration = 20) AND (CallRecord.Deceleration = 30), Message := 'Jog ECID and Owner ID must pass through Module.');
+					E_FakeAxisOperation.MoveAbs:
+						AssertTrue(Condition := (CallRecord.OwnerId = E_GCResourceOwnerId.SpinAxisMoveAbs) AND (CallRecord.Position = 100) AND (CallRecord.Velocity = 10), Message := 'MoveAbs ECID and Owner ID must pass through Module.');
+					E_FakeAxisOperation.MoveVel:
+						AssertTrue(Condition := (CallRecord.OwnerId = E_GCResourceOwnerId.SpinAxisMoveVelCW) AND (CallRecord.Velocity = 10), Message := 'MoveVel ECID and Owner ID must pass through Module.');
+				END_CASE
+				EXIT;
+			END_IF
+		END_FOR
+		nPhase := 7;
+
+	7:
+		ServiceCtrl.SpinAxisJogCW.bCommandChangeRequest := FALSE;
+		ServiceCtrl.SpinAxisMoveAbs.bCommandChangeRequest := FALSE;
+		ServiceCtrl.SpinAxisMoveVelCW.bCommandChangeRequest := FALSE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		ServiceCtrl.SpinAxisJogCW.eCommand := E_PackMLCommand.Stop;
+		ServiceCtrl.SpinAxisJogCW.bCommandChangeRequest := TRUE;
+		ServiceCtrl.SpinAxisMoveAbs.eCommand := E_PackMLCommand.Stop;
+		ServiceCtrl.SpinAxisMoveAbs.bCommandChangeRequest := TRUE;
+		ServiceCtrl.SpinAxisMoveVelCW.eCommand := E_PackMLCommand.Stop;
+		ServiceCtrl.SpinAxisMoveVelCW.bCommandChangeRequest := TRUE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisJogCW) OR Axis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisMoveAbs) OR Axis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisMoveVelCW), Message := 'Execute-state external ServiceCtrl must stop and release the active Service.');
+		nPhase := 8;
+
+	8:
+		ServiceCtrl.SpinAxisJogCW.bCommandChangeRequest := FALSE;
+		ServiceCtrl.SpinAxisMoveAbs.bCommandChangeRequest := FALSE;
+		ServiceCtrl.SpinAxisMoveVelCW.bCommandChangeRequest := FALSE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		ServiceCtrl.SpinAxisJogCW.eCommand := E_PackMLCommand.Reset;
+		ServiceCtrl.SpinAxisJogCW.bCommandChangeRequest := TRUE;
+		ServiceCtrl.SpinAxisMoveAbs.eCommand := E_PackMLCommand.Reset;
+		ServiceCtrl.SpinAxisMoveAbs.bCommandChangeRequest := TRUE;
+		ServiceCtrl.SpinAxisMoveVelCW.eCommand := E_PackMLCommand.Reset;
+		ServiceCtrl.SpinAxisMoveVelCW.bCommandChangeRequest := TRUE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		nPhase := 9;
+
+	9:
+		ServiceCtrl.SpinAxisJogCW.bCommandChangeRequest := FALSE;
+		ServiceCtrl.SpinAxisMoveAbs.bCommandChangeRequest := FALSE;
+		ServiceCtrl.SpinAxisMoveVelCW.bCommandChangeRequest := FALSE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		ServiceCtrl.SpinAxisJogCW.eCommand := E_PackMLCommand.Start;
+		ServiceCtrl.SpinAxisJogCW.bCommandChangeRequest := TRUE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisJogCW), Message := 'A deterministic Jog Start must acquire the shared Axis with its assigned Owner ID.');
+		nPhase := 10;
+
+	10:
+		ServiceCtrl.SpinAxisJogCW.bCommandChangeRequest := FALSE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => CallRecord), Message := 'Module-routed Jog command must be recorded.');
+		AssertTrue(Condition := CallRecord.Accepted AND (CallRecord.Operation = E_FakeAxisOperation.Jog) AND (CallRecord.OwnerId = E_GCResourceOwnerId.SpinAxisJogCW), Message := 'Module must route Jog through the shared Interface and assigned Owner ID.');
+		AssertTrue(Condition := (CallRecord.Velocity = ECID.SpinAxisJogCW.Velocity) AND (CallRecord.Acceleration = ECID.SpinAxisJogCW.Acceleration) AND (CallRecord.Deceleration = ECID.SpinAxisJogCW.Deceleration), Message := 'Module must pass Jog ECID parameters unchanged.');
+		nPhase := 11;
+
+	11:
+		ServiceCtrl.SpinAxisJogCW.eCommand := E_PackMLCommand.Stop;
+		ServiceCtrl.SpinAxisJogCW.bCommandChangeRequest := TRUE;
+		Module(HwInput := HwInput, HwOutput := HwOutput, PackMLIn := ModuleCtrl, ServiceCtrl := ServiceCtrl, ECID := ECID, SpinAxis_BaseUnit := Axis);
+		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisJogCW), Message := 'Final Jog Stop must release the shared Axis.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

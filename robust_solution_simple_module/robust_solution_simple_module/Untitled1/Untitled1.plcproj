@@ -35,6 +35,12 @@
     <Compile Include="POUs\00_BaseUnit\FB_Axis_BaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\00_BaseUnit\Interfaces\I_Axis_BaseUnit.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\00_BaseUnit\Interfaces\I_ResourceLock.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\00_BaseUnit\FB_BaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -168,11 +174,42 @@
     <Compile Include="POUs\PackML_Base\Utilities\F_PackMLStateToString.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\PRG_TEST.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Fakes\FB_FakeAxis_BaseUnit.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\DUTs\E_FakeAxisOperation.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\DUTs\ST_FakeAxisCall.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\DUTs\ST_FakeAxisScriptStep.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\FB_FakeAxis_BaseUnitTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\FB_GCSpinAxisJogCWServiceTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\FB_GCSpinAxisMoveAbsServiceTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\FB_GCSpinAxisMoveVelCWServiceTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\FB_GC_ModuleTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DUTs" />
     <Folder Include="GVLs" />
     <Folder Include="POUs\00_BaseUnit" />
+    <Folder Include="POUs\00_BaseUnit\Interfaces" />
     <Folder Include="POUs\10_Module" />
     <Folder Include="POUs\10_Module\11_GC" />
     <Folder Include="POUs\10_Module\11_GC\DUTs" />
@@ -189,6 +226,10 @@
     <Folder Include="POUs\PackML_Base\Utilities" />
     <Folder Include="VISUs" />
     <Folder Include="POUs" />
+    <Folder Include="Tests" />
+    <Folder Include="Tests\DUTs" />
+    <Folder Include="Tests\Fakes" />
+    <Folder Include="Tests\Suites" />
   </ItemGroup>
   <ItemGroup>
     <PlaceholderReference Include="Tc2_MC2">
@@ -207,6 +248,10 @@
       <DefaultResolution>Tc3_Module, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc3_Module</Namespace>
       <SystemLibrary>true</SystemLibrary>
+    </PlaceholderReference>
+    <PlaceholderReference Include="TcUnit">
+      <DefaultResolution>TcUnit, * (www.tcunit.org)</DefaultResolution>
+      <Namespace>TcUnit</Namespace>
     </PlaceholderReference>
   </ItemGroup>
   <ItemGroup>

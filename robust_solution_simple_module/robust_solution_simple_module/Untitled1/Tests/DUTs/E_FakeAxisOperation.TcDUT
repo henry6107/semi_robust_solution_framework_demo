@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_FakeAxisOperation" Id="{5c1740a7-e04a-485b-bb46-a93b6e64c7a2}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE E_FakeAxisOperation :
+(
+	None := 0,
+	Jog,
+	MoveAbs,
+	MoveVel,
+	Stop,
+	Reset
+) UINT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
