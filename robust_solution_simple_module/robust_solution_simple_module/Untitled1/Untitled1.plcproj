@@ -80,19 +80,13 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_SVID.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService\E_GCSpinAxisJogErrorCode.TcDUT">
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\E_GCSpinAxisServiceErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService\ST_GCSpinAxisJogParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService\E_GCSpinAxisMoveAbsErrorCode.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService\ST_GCSpinAxisMoveAbsParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\E_GCSpinAxisMoveVelErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelParam.TcDUT">

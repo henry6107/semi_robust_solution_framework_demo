@@ -146,7 +146,7 @@ CASE nPhase OF
 		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
 		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Reset Error must finish Aborting.');
-		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCSpinAxisMoveVelErrorCode.Error_While_Reset_Axis, Message := 'MoveVelocity Abort must expose Reset Error code.');
+		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCSpinAxisServiceErrorCode.Error_While_Reset_Axis, Message := 'MoveVelocity Abort must expose the shared Reset Error code.');
 		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 32), Message := 'Reset Error must release MoveVelocity ownership.');
 		nPhase := 0;
 		TEST_FINISHED();

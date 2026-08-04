@@ -79,7 +79,7 @@ CASE nPhase OF
 		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
 		AssertTrue(Condition := Service.Status.Error, Message := 'Scripted Jog Error must be reported.');
-		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCSpinAxisJogErrorCode.Jog_Error_During_Execute, Message := 'Jog Error must use the Service error code.');
+		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCSpinAxisServiceErrorCode.Axis_Command_Error_During_Execute, Message := 'Jog Error must use the shared Service error code.');
 		nPhase := 7;
 
 	7:
@@ -136,7 +136,7 @@ CASE nPhase OF
 		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 12);
 		AssertTrue(Condition := Service.Status.Error, Message := 'Zero Jog velocity must be rejected.');
-		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCSpinAxisJogErrorCode.Invalid_Param, Message := 'Invalid Jog data must report Invalid_Param.');
+		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCSpinAxisServiceErrorCode.Invalid_Param, Message := 'Invalid Jog data must report Invalid_Param.');
 		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 12), Message := 'Parameter validation must occur before ownership.');
 		nPhase := 0;
 		TEST_FINISHED();
