@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="FB_GCSpinAxisMoveAbsServiceTests" Id="{976b21c2-7581-4c58-b755-8768083df5a7}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServiceTests EXTENDS TcUnit.FB_TestSuite
+  <POU Name="FB_GCLiftPinAxisMoveAbsServiceTests" Id="{b1ab0001-5c2d-4e3f-9a80-b1ab00000001}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCLiftPinAxisMoveAbsServiceTests EXTENDS TcUnit.FB_TestSuite
 ]]></Declaration>
     <Implementation><ST><![CDATA[DelayedDoneCompletesAndReleasesAxis();
 StopAndResetErrorsReachRecoverableAbortedState();]]></ST></Implementation>
-    <Method Name="DelayedDoneCompletesAndReleasesAxis" Id="{7f47f8ae-15f2-4e92-b2c7-8cd52301a876}">
+    <Method Name="DelayedDoneCompletesAndReleasesAxis" Id="{b1ab0002-5c2d-4e3f-9a80-b1ab00000002}">
       <Declaration><![CDATA[METHOD DelayedDoneCompletesAndReleasesAxis
 VAR_INST
 	FakeAxis : FB_FakeAxis_BaseUnit;
 	Axis : I_Axis_BaseUnit;
-	Service : FB_GCSpinAxisMoveAbsServices;
+	Service : FB_GCLiftPinAxisMoveAbsServices;
 	Ctrl : ST_PML_Base_In;
-	Param : ST_GCSpinAxisMoveAbsParam;
+	Param : ST_GCLiftPinAxisMoveAbsParam;
 	CallRecord : ST_FakeAxisCall;
 	nPhase : UINT;
 END_VAR
@@ -83,14 +83,14 @@ CASE nPhase OF
 		TEST_FINISHED();
 END_CASE]]></ST></Implementation>
     </Method>
-    <Method Name="StopAndResetErrorsReachRecoverableAbortedState" Id="{b9229082-c8d5-4882-95e8-07156341bc38}">
+    <Method Name="StopAndResetErrorsReachRecoverableAbortedState" Id="{b1ab0003-5c2d-4e3f-9a80-b1ab00000003}">
       <Declaration><![CDATA[METHOD StopAndResetErrorsReachRecoverableAbortedState
 VAR_INST
 	FakeAxis : FB_FakeAxis_BaseUnit;
 	Axis : I_Axis_BaseUnit;
-	Service : FB_GCSpinAxisMoveAbsServices;
+	Service : FB_GCLiftPinAxisMoveAbsServices;
 	Ctrl : ST_PML_Base_In;
-	Param : ST_GCSpinAxisMoveAbsParam;
+	Param : ST_GCLiftPinAxisMoveAbsParam;
 	nPhase : UINT;
 END_VAR
 ]]></Declaration>

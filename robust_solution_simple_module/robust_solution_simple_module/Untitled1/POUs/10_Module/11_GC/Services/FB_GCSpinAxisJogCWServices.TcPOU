@@ -15,12 +15,12 @@ VAR_OUTPUT
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[// Update data
+      <ST><![CDATA[SUPER^();
+
+// Update data
 Status.Ack := PackMLIn.bCommandChangeRequest;	// Acknowledge to upper controller that command received
 Status.State := PackMLOut.eStateCurrent;
 Status.CtrlErrorId := PackMLOut.eStateErrorID;
-
-SUPER^();
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{30486db3-fa54-4a70-b426-5f8ba9d0504f}" />
@@ -99,7 +99,7 @@ Status.Busy := FALSE;
 Status.Done := TRUE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCSpinAxisServiceErrorCode.None;]]></ST>
+Status.ServiceErrorId := E_GCServiceErrorCode.None;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnCompleting" Id="{61491643-adf6-4106-831a-f4dfe9e14738}" FolderPath="StateAction\">
@@ -113,7 +113,7 @@ END_VAR
 Status.Done := TRUE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCSpinAxisServiceErrorCode.None;
+Status.ServiceErrorId := E_GCServiceErrorCode.None;
 
 Axis_BaseUnit.M_Jog(
 	OwnerId:= ResourceOwnerId,
@@ -147,7 +147,7 @@ Status.Busy := TRUE;
 Status.Done := FALSE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCSpinAxisServiceErrorCode.None;
+Status.ServiceErrorId := E_GCServiceErrorCode.None;
 
 Axis_BaseUnit.M_Jog(
 	OwnerId:= ResourceOwnerId,
@@ -163,7 +163,7 @@ Axis_BaseUnit.M_Jog(
 
 IF bError THEN
 		Status.Error := TRUE;
-		Status.ServiceErrorId := E_GCSpinAxisServiceErrorCode.Axis_Command_Error_During_Execute;
+		Status.ServiceErrorId := E_GCServiceErrorCode.Axis_Command_Error_During_Execute;
 		
 		RequestCommand(E_PackMLCommand.Stop);
 END_IF
@@ -205,7 +205,7 @@ Status.Busy := FALSE;
 Status.Done := FALSE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCSpinAxisServiceErrorCode.None;]]></ST>
+Status.ServiceErrorId := E_GCServiceErrorCode.None;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{cd0cb289-d0f8-442c-af15-52d2005bf619}" FolderPath="StateAction\">
@@ -219,7 +219,7 @@ END_VAR
 Status.Done := FALSE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCSpinAxisServiceErrorCode.None;
+Status.ServiceErrorId := E_GCServiceErrorCode.None;
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -237,26 +237,26 @@ Status.Busy := TRUE;
 Status.Done := FALSE;
 Status.Error := FALSE;
 Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCSpinAxisServiceErrorCode.None;
+Status.ServiceErrorId := E_GCServiceErrorCode.None;
 
 // Validate Service-owned data before reserving the shared BaseUnit.
 IF Param.Velocity <= 0 THEN
 	Status.Error:= TRUE;
-	Status.ServiceErrorId:= E_GCSpinAxisServiceErrorCode.Invalid_Param;
+	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Acceleration < 0 THEN
 	Status.Error:= TRUE;
-	Status.ServiceErrorId:= E_GCSpinAxisServiceErrorCode.Invalid_Param;
+	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Deceleration < 0 THEN
 	Status.Error:= TRUE;
-	Status.ServiceErrorId:= E_GCSpinAxisServiceErrorCode.Invalid_Param;
+	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
@@ -264,7 +264,7 @@ END_IF
 // Resource contention is a failed Start, not a wait condition.
 IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
 	Status.Error := TRUE;
-	Status.ServiceErrorId := E_GCSpinAxisServiceErrorCode.Resource_Acquire_Failed_During_Starting;
+	Status.ServiceErrorId := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
@@ -272,14 +272,14 @@ END_IF
 // Physical checks occur only after this Service owns the BaseUnit.
 IF Axis_BaseUnit.AxisIsDisabled THEN
 	Status.Error:= TRUE;
-	Status.ServiceErrorId:= E_GCSpinAxisServiceErrorCode.Axis_Not_Servo_On_During_Starting;
+	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting;
 	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
 IF Axis_BaseUnit.AxisHasJob THEN
 	Status.Error:= TRUE;
-	Status.ServiceErrorId:= E_GCSpinAxisServiceErrorCode.Axis_Is_Busy_During_Starting;
+	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Is_Busy_During_Starting;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF

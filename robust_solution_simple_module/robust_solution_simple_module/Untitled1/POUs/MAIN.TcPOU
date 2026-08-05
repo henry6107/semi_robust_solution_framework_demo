@@ -6,6 +6,8 @@ VAR
 	GC1_Module : FB_GC_Module;
 	GC1_SpinAxis_BaseUnit : FB_Axis_BaseUnit;
 	GC1_SpinAxis : I_Axis_BaseUnit;
+	GC1_LiftPinAxis_BaseUnit : FB_Axis_BaseUnit;
+	GC1_LiftPinAxis : I_Axis_BaseUnit;
 	_GC1 : ST_GC_Ctrl;
 	
 	// Demo use
@@ -23,6 +25,7 @@ END_VAR
 // END_IF
 
 GC1_SpinAxis := GC1_SpinAxis_BaseUnit;
+GC1_LiftPinAxis := GC1_LiftPinAxis_BaseUnit;
 
 GC1_Module(
 	HwInput:= GC1_HwIn.Signal, 
@@ -31,6 +34,7 @@ GC1_Module(
 	ServiceCtrl:= _GC1.ServiceCtrl, 
 	ECID:= _GC1.ECID, 
 	SpinAxis_BaseUnit:= GC1_SpinAxis,
+	LiftPinAxis_BaseUnit:= GC1_LiftPinAxis,
 	PackMLOut=> _GC1.ModuleStatus, 
 	ServiceStatus=> _GC1.ServiceStatus, 
 	ALID=> , 

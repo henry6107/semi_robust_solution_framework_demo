@@ -80,7 +80,13 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_SVID.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\E_GCSpinAxisServiceErrorCode.TcDUT">
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\E_GCServiceErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService\ST_GCLiftPinAxisMoveAbsParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveVelService\ST_GCLiftPinAxisMoveVelParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService\ST_GCSpinAxisJogParam.TcDUT">
@@ -121,6 +127,15 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveVelCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveAbsServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveVelCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveVelCCWServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\MAIN.TcPOU">
@@ -195,7 +210,19 @@
     <Compile Include="Tests\Suites\FB_GCSpinAxisMoveVelCWServiceTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Suites\FB_GCLiftPinAxisMoveAbsServiceTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\FB_GCLiftPinAxisMoveVelCWServiceTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\FB_GCLiftPinAxisMoveVelCCWServiceTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Suites\FB_GC_ModuleTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TestTask.TcTTO">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
@@ -210,6 +237,8 @@
     <Folder Include="POUs\10_Module\11_GC\DUTs\Hardware" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\SecsGem" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveVelService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService" />
@@ -256,8 +285,8 @@
   <ProjectExtensions>
     <PlcProjectOptions>
       <XmlArchive>
-  <Data>
-    <o xml:space="preserve" t="OptionKey">
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
       <v n="Name">"&lt;ProjectRoot&gt;"</v>
       <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
         <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
@@ -327,14 +356,14 @@
       </d>
       <d n="Values" t="Hashtable" />
     </o>
-  </Data>
-  <TypeList>
-    <Type n="Boolean">System.Boolean</Type>
-    <Type n="Hashtable">System.Collections.Hashtable</Type>
-    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
-    <Type n="String">System.String</Type>
-  </TypeList>
-</XmlArchive>
+        </Data>
+        <TypeList>
+          <Type n="Boolean">System.Boolean</Type>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
     </PlcProjectOptions>
   </ProjectExtensions>
 </Project>

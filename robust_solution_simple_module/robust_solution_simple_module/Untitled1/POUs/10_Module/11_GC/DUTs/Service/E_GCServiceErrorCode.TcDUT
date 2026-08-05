@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <DUT Name="E_GCSpinAxisServiceErrorCode" Id="{1d2a58d6-c250-44b9-a473-331b556cf166}">
+  <DUT Name="E_GCServiceErrorCode" Id="{1d2a58d6-c250-44b9-a473-331b556cf166}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 {attribute 'to_string'}
-TYPE E_GCSpinAxisServiceErrorCode :
+TYPE E_GCServiceErrorCode :
 (
 	None := 0,
 	Axis_Not_Servo_On_During_Starting := 1,

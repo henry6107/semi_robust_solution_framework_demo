@@ -6,6 +6,9 @@ STRUCT
 	SpinAxisJogCW : ST_GCSpinAxisJogParam;
 	SpinAxisMoveAbs : ST_GCSpinAxisMoveAbsParam;
 	SpinAxisMoveVelCW : ST_GCSpinAxisMoveVelParam;
+	LiftPinAxisMoveVelCW : ST_GCLiftPinAxisMoveVelParam;
+	LiftPinAxisMoveVelCCW : ST_GCLiftPinAxisMoveVelParam;
+	LiftPinAxisMoveAbs : ST_GCLiftPinAxisMoveAbsParam;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

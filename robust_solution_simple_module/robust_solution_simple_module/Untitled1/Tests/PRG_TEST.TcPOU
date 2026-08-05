@@ -7,6 +7,9 @@ VAR
 	JogServiceTests : FB_GCSpinAxisJogCWServiceTests;
 	MoveAbsServiceTests : FB_GCSpinAxisMoveAbsServiceTests;
 	MoveVelServiceTests : FB_GCSpinAxisMoveVelCWServiceTests;
+	LiftPinMoveAbsServiceTests : FB_GCLiftPinAxisMoveAbsServiceTests;
+	LiftPinMoveVelCWServiceTests : FB_GCLiftPinAxisMoveVelCWServiceTests;
+	LiftPinMoveVelCCWServiceTests : FB_GCLiftPinAxisMoveVelCCWServiceTests;
 	GCModuleTests : FB_GC_ModuleTests;
 END_VAR
 ]]></Declaration>

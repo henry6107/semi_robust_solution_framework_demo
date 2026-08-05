@@ -11,6 +11,7 @@ VAR_INPUT
 	
 	// Base unit used in GC chamber
 	SpinAxis_BaseUnit : I_Axis_BaseUnit;
+	LiftPinAxis_BaseUnit : I_Axis_BaseUnit;
 END_VAR
 
 VAR_OUTPUT
@@ -29,33 +30,41 @@ VAR
 	_SpinAxisJogCWService : FB_GCSpinAxisJogCWServices;
 	_SpinAxisMoveAbsService : FB_GCSpinAxisMoveAbsServices;
 	_SpinAxisMoveVelCWService : FB_GCSpinAxisMoveVelCWServices;
+	_LiftPinAxisMoveVelCWService : FB_GCLiftPinAxisMoveVelCWServices;
+	_LiftPinAxisMoveVelCCWService : FB_GCLiftPinAxisMoveVelCCWServices;
+	_LiftPinAxisMoveAbsService : FB_GCLiftPinAxisMoveAbsServices;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[// An unbound Axis interface is a composition error. Keep the Module inert.
-IF SpinAxis_BaseUnit = 0 THEN
+IF (SpinAxis_BaseUnit = 0) OR (LiftPinAxis_BaseUnit = 0) THEN
 	RETURN;
 END_IF
 
-A00_BaseUnit();
+SUPER^();
 A01_ServiceParam();
 A02_ServiceControlResource();
 A03_Service();
+A00_BaseUnit();
 
 ServiceStatus := _ServiceStatusView.ByName;
-SUPER^();]]></ST>
+]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{92cfe23b-b998-4d76-8aa2-c8089e78aa61}" />
     <Action Name="A00_BaseUnit" Id="{e32e8cc6-0faf-4aa6-8f04-fdfae785d66d}">
       <Implementation>
-        <ST><![CDATA[SpinAxis_BaseUnit.M_CyclicUpdate();]]></ST>
+        <ST><![CDATA[SpinAxis_BaseUnit.M_CyclicUpdate();
+LiftPinAxis_BaseUnit.M_CyclicUpdate();]]></ST>
       </Implementation>
     </Action>
     <Action Name="A01_ServiceParam" Id="{8b66dd3f-2093-4de6-963d-8da3bda49bf6}">
       <Implementation>
         <ST><![CDATA[_SpinAxisMoveAbsService.Param := ECID.SpinAxisMoveAbs;
 _SpinAxisJogCWService.Param := ECID.SpinAxisJogCW;
-_SpinAxisMoveVelCWService.Param := ECID.SpinAxisMoveVelCW;]]></ST>
+_SpinAxisMoveVelCWService.Param := ECID.SpinAxisMoveVelCW;
+_LiftPinAxisMoveVelCWService.Param := ECID.LiftPinAxisMoveVelCW;
+_LiftPinAxisMoveVelCCWService.Param := ECID.LiftPinAxisMoveVelCCW;
+_LiftPinAxisMoveAbsService.Param := ECID.LiftPinAxisMoveAbs;]]></ST>
       </Implementation>
     </Action>
     <Action Name="A02_ServiceControlResource" Id="{2f460f0f-4f51-4597-948c-8705f2c24753}">
@@ -95,6 +104,24 @@ _SpinAxisMoveVelCWService(
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVelCW,
 	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
+
+_LiftPinAxisMoveVelCWService(
+	PackMLIn:= _ServiceCtrl.ByName.LiftPinAxisMoveVelCW,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCW,
+	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCW);
+
+_LiftPinAxisMoveVelCCWService(
+	PackMLIn:= _ServiceCtrl.ByName.LiftPinAxisMoveVelCCW,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCCW,
+	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCCW);
+
+_LiftPinAxisMoveAbsService(
+	PackMLIn:= _ServiceCtrl.ByName.LiftPinAxisMoveAbs,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveAbs,
+	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
 ]]></ST>
       </Implementation>
     </Action>

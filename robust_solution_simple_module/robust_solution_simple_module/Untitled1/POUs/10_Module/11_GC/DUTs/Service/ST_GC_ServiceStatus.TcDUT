@@ -6,6 +6,9 @@ STRUCT
 	SpinAxisJogCW : ST_ServiceStatusBase;
 	SpinAxisMoveAbs : ST_ServiceStatusBase;
 	SpinAxisMoveVelCW : ST_ServiceStatusBase;
+	LiftPinAxisMoveVelCW : ST_ServiceStatusBase;
+	LiftPinAxisMoveVelCCW : ST_ServiceStatusBase;
+	LiftPinAxisMoveAbs : ST_ServiceStatusBase;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

@@ -28,63 +28,63 @@ CASE nPhase OF
 		Param.Acceleration := 20;
 		Param.Deceleration := 30;
 		AssertTrue(Condition := FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.Jog, AfterActiveCycles := 2, Done := FALSE, InVelocity := FALSE, Error := TRUE, ErrorId := 16#4444), Message := 'Jog Error script must be accepted.');
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		nPhase := 1;
 
 	1:
 		Ctrl.eCommand := E_PackMLCommand.Clear;
 		Ctrl.bCommandChangeRequest := TRUE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		nPhase := 2;
 
 	2:
 		Ctrl.bCommandChangeRequest := FALSE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		Ctrl.eCommand := E_PackMLCommand.Reset;
 		Ctrl.bCommandChangeRequest := TRUE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		nPhase := 3;
 
 	3:
 		Ctrl.bCommandChangeRequest := FALSE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		Ctrl.eCommand := E_PackMLCommand.Start;
 		Ctrl.bCommandChangeRequest := TRUE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		Ctrl.bCommandChangeRequest := FALSE;
 		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Valid Jog must enter Execute.');
 		nPhase := 4;
 
 	4:
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => CallRecord), Message := 'Jog command must be recorded.');
 		AssertTrue(Condition := CallRecord.JogForward AND NOT CallRecord.JogBackwards, Message := 'Jog direction must be forward only.');
 		AssertTrue(Condition := (CallRecord.Velocity = 12.5) AND (CallRecord.Acceleration = 20) AND (CallRecord.Deceleration = 30), Message := 'Jog parameters must reach the Axis unchanged.');
 		nPhase := 5;
 
 	5:
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		AssertFalse(Condition := Service.Status.Error, Message := 'Jog Error must still be pending after one active cycle.');
 		nPhase := 6;
 
 	6:
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := Service.Status.Error, Message := 'Scripted Jog Error must be reported.');
-		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCSpinAxisServiceErrorCode.Axis_Command_Error_During_Execute, Message := 'Jog Error must use the shared Service error code.');
+		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCServiceErrorCode.Axis_Command_Error_During_Execute, Message := 'Jog Error must use the shared Service error code.');
 		nPhase := 7;
 
 	7:
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
+		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Jog Error must finish the Stop transition.');
 		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 11), Message := 'Jog Stop must release ownership.');
 		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => CallRecord), Message := 'Jog cancellation must be recorded.');
@@ -111,32 +111,32 @@ CASE nPhase OF
 		FakeAxis.M_ResetScenario();
 		Axis := FakeAxis;
 		Param.Velocity := 0;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 12);
+		FakeAxis.M_CyclicUpdate();
 		nPhase := 1;
 	1:
 		Ctrl.eCommand := E_PackMLCommand.Clear;
 		Ctrl.bCommandChangeRequest := TRUE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 12);
+		FakeAxis.M_CyclicUpdate();
 		Ctrl.bCommandChangeRequest := FALSE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 12);
+		FakeAxis.M_CyclicUpdate();
 		Ctrl.eCommand := E_PackMLCommand.Reset;
 		Ctrl.bCommandChangeRequest := TRUE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 12);
+		FakeAxis.M_CyclicUpdate();
 		nPhase := 2;
 	2:
 		Ctrl.bCommandChangeRequest := FALSE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 12);
+		FakeAxis.M_CyclicUpdate();
 		Ctrl.eCommand := E_PackMLCommand.Start;
 		Ctrl.bCommandChangeRequest := TRUE;
-		FakeAxis.M_CyclicUpdate();
 		Service(PackMLIn := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 12);
+		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := Service.Status.Error, Message := 'Zero Jog velocity must be rejected.');
-		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCSpinAxisServiceErrorCode.Invalid_Param, Message := 'Invalid Jog data must report Invalid_Param.');
+		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCServiceErrorCode.Invalid_Param, Message := 'Invalid Jog data must report Invalid_Param.');
 		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 12), Message := 'Parameter validation must occur before ownership.');
 		nPhase := 0;
 		TEST_FINISHED();
