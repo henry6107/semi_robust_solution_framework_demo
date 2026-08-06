@@ -3,7 +3,7 @@
   <GVL Name="GVL_CSharp" Id="{2ccf78e0-eb9f-46e8-912a-067d5425c8dd}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 VAR_GLOBAL
-	GC1 : ST_GC_Ctrl;
+	GC1 : ST_GC_CtrlStatus;
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

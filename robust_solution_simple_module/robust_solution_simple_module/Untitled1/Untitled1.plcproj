@@ -119,7 +119,7 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\U_GC_ServiceStatusView.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_Ctrl.TcDUT">
+    <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_CtrlStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\FB_GC_Module.TcPOU">
