@@ -45,10 +45,10 @@ END_IF
 
 PackMLIn := ModuleCtrl.PackMLIn;
 SUPER^();
-A01_ServiceParam();
-A02_ServiceControlResource();
-A03_Service();
-A00_BaseUnit();
+A01_UpdateServiceParam();
+A02_SelectServiceControlSource();
+A03_UpdateService();
+A04_UpdateBaseUnit();
 
 // Updata status
 IF PackMLIn.bCommandChangeRequest OR PackMLIn.bModeChangeRequest THEN
@@ -62,13 +62,7 @@ ServiceStatus := _ServiceStatusView.ByName;
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{92cfe23b-b998-4d76-8aa2-c8089e78aa61}" />
-    <Action Name="A00_BaseUnit" Id="{e32e8cc6-0faf-4aa6-8f04-fdfae785d66d}">
-      <Implementation>
-        <ST><![CDATA[SpinAxis_BaseUnit.M_CyclicUpdate();
-LiftPinAxis_BaseUnit.M_CyclicUpdate();]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="A01_ServiceParam" Id="{8b66dd3f-2093-4de6-963d-8da3bda49bf6}">
+    <Action Name="A01_UpdateServiceParam" Id="{8b66dd3f-2093-4de6-963d-8da3bda49bf6}">
       <Implementation>
         <ST><![CDATA[_SpinAxisMoveAbsService.Param := ECID.SpinAxisMoveAbs;
 _SpinAxisJogCWService.Param := ECID.SpinAxisJogCW;
@@ -78,7 +72,7 @@ _LiftPinAxisMoveVelCCWService.Param := ECID.LiftPinAxisMoveVelCCW;
 _LiftPinAxisMoveAbsService.Param := ECID.LiftPinAxisMoveAbs;]]></ST>
       </Implementation>
     </Action>
-    <Action Name="A02_ServiceControlResource" Id="{2f460f0f-4f51-4597-948c-8705f2c24753}">
+    <Action Name="A02_SelectServiceControlSource" Id="{2f460f0f-4f51-4597-948c-8705f2c24753}">
       <Implementation>
         <ST><![CDATA[// Select control source
 IF PackMLOut.eStateCurrent = E_PackMLState.Idle
@@ -86,7 +80,6 @@ IF PackMLOut.eStateCurrent = E_PackMLState.Idle
 	OR PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
 	// Controlled by external operator
 	_ServiceCtrlView.ByName := ServiceCtrl;
-	
 ELSE
 	// Control by module
 	FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
@@ -96,7 +89,7 @@ ELSE
 END_IF]]></ST>
       </Implementation>
     </Action>
-    <Action Name="A03_Service" Id="{c62275db-aa76-4b4d-95ad-2ecb5851f919}">
+    <Action Name="A03_UpdateService" Id="{c62275db-aa76-4b4d-95ad-2ecb5851f919}">
       <Implementation>
         <ST><![CDATA[_SpinAxisJogCWService(
 	Ctrl:= _ServiceCtrlView.ByName.SpinAxisJogCW,
@@ -135,6 +128,12 @@ _LiftPinAxisMoveAbsService(
 	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveAbs,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
 ]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="A04_UpdateBaseUnit" Id="{e32e8cc6-0faf-4aa6-8f04-fdfae785d66d}">
+      <Implementation>
+        <ST><![CDATA[SpinAxis_BaseUnit.M_CyclicUpdate();
+LiftPinAxis_BaseUnit.M_CyclicUpdate();]]></ST>
       </Implementation>
     </Action>
     <Method Name="H_OnAborted" Id="{de8d6f56-427f-41df-b4d5-ddd289e1aed8}" FolderPath="StateAction\">
