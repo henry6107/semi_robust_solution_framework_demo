@@ -162,7 +162,7 @@ CASE nPhase OF
 		Service(Ctrl := Ctrl, Param := Param, Axis_BaseUnit := Axis, ResourceOwnerId := 22);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Reset Error must terminate Aborting at Aborted.');
-		AssertTrue(Condition := Service.Status.Error, Message := 'Reset Error must remain reported.');
+		AssertTrue(Condition := Service.Status.ServiceErrorId <> 0, Message := 'Reset Error must remain reported.');
 		AssertTrue(Condition := Service.Status.ServiceErrorId = E_GCServiceErrorCode.Error_While_Reset_Axis, Message := 'Reset Error must use the shared Service error code.');
 		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 22), Message := 'Reset Error must release ownership.');
 		nPhase := 0;

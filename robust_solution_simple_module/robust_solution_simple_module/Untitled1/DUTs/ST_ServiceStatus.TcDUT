@@ -4,11 +4,7 @@
     <Declaration><![CDATA[TYPE ST_ServiceStatus :
 STRUCT
 	ResponseId : UDINT;
-	Busy : BOOL;
-	Done : BOOL;
-	Error : BOOL;
-	Aborted : BOOL;
-	CtrlErrorId : UDINT;
+	CommandErrorId : UDINT;
 	ServiceErrorId : UDINT;
 	State : E_PackMLState;
 END_STRUCT

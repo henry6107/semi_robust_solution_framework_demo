@@ -20,13 +20,15 @@ END_VAR
 SUPER^();
 
 // Updata status
+Status.CommandErrorId := PackMLOut.eStateErrorID;
+
 IF PackMLIn.bCommandChangeRequest THEN // Acknowledge to upper controller that command received
 	Status.ResponseId := Ctrl.RequestId;
 ELSE
 	Status.ResponseId := 0;
 END_IF
+
 Status.State := PackMLOut.eStateCurrent;
-Status.CtrlErrorId := PackMLOut.eStateErrorID;
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{30486db3-fa54-4a70-b426-5f8ba9d0504f}" />
@@ -38,11 +40,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Release defensively in case an unexpected transition skipped cleanup.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-
-Status.Busy := FALSE;
-Status.Done := FALSE;
-Status.Aborted := TRUE;]]></ST>
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnAborting" Id="{df4c7f2d-8a88-4d35-a321-0716e918b536}" FolderPath="StateAction\">
@@ -99,13 +97,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Completing normally releases first; this is an idempotent safety net.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-
-Status.Busy := FALSE;
-Status.Done := TRUE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;]]></ST>
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnCompleting" Id="{61491643-adf6-4106-831a-f4dfe9e14738}" FolderPath="StateAction\">
@@ -115,13 +107,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.Busy := FALSE;
-Status.Done := TRUE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;
-
-Axis_BaseUnit.M_Jog(
+        <ST><![CDATA[Axis_BaseUnit.M_Jog(
 	OwnerId:= ResourceOwnerId,
 	JogForward:= FALSE, 
 	JogBackwards:= FALSE, 
@@ -149,12 +135,6 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
 
-Status.Busy := TRUE;
-Status.Done := FALSE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;
-
 Axis_BaseUnit.M_Jog(
 	OwnerId:= ResourceOwnerId,
 	JogForward:= TRUE,
@@ -168,9 +148,7 @@ Axis_BaseUnit.M_Jog(
 
 
 IF bError THEN
-		Status.Error := TRUE;
 		Status.ServiceErrorId := E_GCServiceErrorCode.Axis_Command_Error_During_Execute;
-		
 		RequestCommand(E_PackMLCommand.Stop);
 END_IF
 ]]></ST>
@@ -205,13 +183,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Idle Services must not retain a Resource from an earlier operation.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-
-Status.Busy := FALSE;
-Status.Done := FALSE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;]]></ST>
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{cd0cb289-d0f8-442c-af15-52d2005bf619}" FolderPath="StateAction\">
@@ -221,11 +193,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.Busy := FALSE;
-Status.Done := FALSE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;
+        <ST><![CDATA[Status.ServiceErrorId := E_GCServiceErrorCode.None;
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -239,29 +207,20 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
 
-Status.Busy := TRUE;
-Status.Done := FALSE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;
-
 // Validate Service-owned data before reserving the shared BaseUnit.
 IF Param.Velocity <= 0 THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Acceleration < 0 THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Deceleration < 0 THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
@@ -269,7 +228,6 @@ END_IF
 
 // Resource contention is a failed Start, not a wait condition.
 IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
-	Status.Error := TRUE;
 	Status.ServiceErrorId := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
@@ -277,14 +235,12 @@ END_IF
 
 // Physical checks occur only after this Service owns the BaseUnit.
 IF Axis_BaseUnit.AxisIsDisabled THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting;
 	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
 IF Axis_BaseUnit.AxisHasJob THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Is_Busy_During_Starting;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
@@ -303,10 +259,6 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Release defensively after every Stop path.
 Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-
-Status.Busy := FALSE;
-Status.Done := FALSE;
-Status.Aborted := TRUE;
 ]]></ST>
       </Implementation>
     </Method>

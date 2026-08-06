@@ -25,13 +25,15 @@ END_VAR
 SUPER^();
 
 // Updata status
+Status.CommandErrorId := PackMLOut.eStateErrorID;
+
 IF PackMLIn.bCommandChangeRequest THEN // Acknowledge to upper controller that command received
 	Status.ResponseId := Ctrl.RequestId;
 ELSE
 	Status.ResponseId := 0;
 END_IF
+
 Status.State := PackMLOut.eStateCurrent;
-Status.CtrlErrorId := PackMLOut.eStateErrorID;
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{a1cc0002-6b2c-4d3e-8f90-a1cc00000002}" />
@@ -46,11 +48,7 @@ END_VAR
 Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 
 _CommandedVelocity := 0;
-_VelocityRetriggerPending := FALSE;
-
-Status.Busy := FALSE;
-Status.Done := FALSE;
-Status.Aborted := TRUE;]]></ST>
+_VelocityRetriggerPending := FALSE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnAborting" Id="{a1cc0004-6b2c-4d3e-8f90-a1cc00000004}" FolderPath="StateAction\">
@@ -99,7 +97,6 @@ ELSIF bError THEN
 	Axis_BaseUnit.M_Reset(
 		OwnerId := ResourceOwnerId,
 		Execute := FALSE);
-	Status.Error := TRUE;
 	Status.ServiceErrorId := E_GCServiceErrorCode.Error_While_Reset_Axis;
 	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 	H_OnAborting := E_PackMLHookResult.Done;
@@ -133,13 +130,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Completing normally releases first; this is an idempotent safety net.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-
-Status.Busy := FALSE;
-Status.Done := TRUE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;]]></ST>
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnCompleting" Id="{a1cc0007-6b2c-4d3e-8f90-a1cc00000007}" FolderPath="StateAction\">
@@ -149,13 +140,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.Busy := FALSE;
-Status.Done := TRUE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;
-
-Axis_BaseUnit.M_MoveVel(
+        <ST><![CDATA[Axis_BaseUnit.M_MoveVel(
 	OwnerId := ResourceOwnerId,
 	Execute := FALSE,
 	Direction := MC_Direction.MC_Negative_Direction,
@@ -181,15 +166,8 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
 
-Status.Busy := TRUE;
-Status.Done := FALSE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;
-
 // Parameters can change while Execute is active, so validate them every scan.
 IF (Param.Velocity <= 0) OR (Param.Acceleration < 0) OR (Param.Deceleration < 0) THEN
-	Status.Error := TRUE;
 	Status.ServiceErrorId := E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
@@ -235,7 +213,6 @@ ELSE
 END_IF
 
 IF bError THEN
-	Status.Error := TRUE;
 	Status.ServiceErrorId := E_GCServiceErrorCode.Axis_Command_Error_During_Execute;
 	RequestCommand(E_PackMLCommand.Stop);
 END_IF
@@ -274,13 +251,7 @@ END_VAR
 Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 
 _CommandedVelocity := 0;
-_VelocityRetriggerPending := FALSE;
-
-Status.Busy := FALSE;
-Status.Done := FALSE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;]]></ST>
+_VelocityRetriggerPending := FALSE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{a1cc000c-6b2c-4d3e-8f90-a1cc0000000c}" FolderPath="StateAction\">
@@ -290,11 +261,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.Busy := FALSE;
-Status.Done := FALSE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;
+        <ST><![CDATA[Status.ServiceErrorId := E_GCServiceErrorCode.None;
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -308,29 +275,20 @@ END_VAR
       <Implementation>
         <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
 
-Status.Busy := TRUE;
-Status.Done := FALSE;
-Status.Error := FALSE;
-Status.Aborted := FALSE;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;
-
 // Validate Service-owned data before reserving the shared BaseUnit.
 IF Param.Velocity <= 0 THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Acceleration < 0 THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Deceleration < 0 THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
@@ -338,7 +296,6 @@ END_IF
 
 // Resource contention is a failed Start, not a wait condition.
 IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
-	Status.Error := TRUE;
 	Status.ServiceErrorId := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
@@ -346,14 +303,12 @@ END_IF
 
 // Physical checks occur only after this Service owns the BaseUnit.
 IF Axis_BaseUnit.AxisIsDisabled THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting;
 	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
 IF Axis_BaseUnit.AxisHasJob THEN
-	Status.Error:= TRUE;
 	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Is_Busy_During_Starting;
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
@@ -377,12 +332,7 @@ END_VAR
 Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 
 _CommandedVelocity := 0;
-_VelocityRetriggerPending := FALSE;
-
-Status.Busy := FALSE;
-Status.Done := FALSE;
-Status.Aborted := TRUE;
-]]></ST>
+_VelocityRetriggerPending := FALSE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnStopping" Id="{a1cc000f-6b2c-4d3e-8f90-a1cc0000000f}" FolderPath="StateAction\">
@@ -431,7 +381,6 @@ IF bDone THEN
 
 ELSIF bError THEN
 	// Throw up error
-	Status.Error := TRUE;
 	Status.ServiceErrorId := E_GCServiceErrorCode.Error_While_Stop_Axis;
 
 	Axis_BaseUnit.M_Stop(
