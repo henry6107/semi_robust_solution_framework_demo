@@ -7,6 +7,7 @@ Project("{B1E792BE-AA5F-4E3C-8C82-674BF9C0715B}") = "robust_solution_simple_modu
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|TwinCAT OS (ARMT2) = Debug|TwinCAT OS (ARMT2)
 		Debug|TwinCAT OS (ARMV7-A) = Debug|TwinCAT OS (ARMV7-A)
 		Debug|TwinCAT OS (ARMV7-M) = Debug|TwinCAT OS (ARMV7-M)
 		Debug|TwinCAT OS (ARMV8-A) = Debug|TwinCAT OS (ARMV8-A)
@@ -14,6 +15,7 @@ Global
 		Debug|TwinCAT OS (x64-E) = Debug|TwinCAT OS (x64-E)
 		Debug|TwinCAT RT (x64) = Debug|TwinCAT RT (x64)
 		Debug|TwinCAT RT (x86) = Debug|TwinCAT RT (x86)
+		Release|TwinCAT OS (ARMT2) = Release|TwinCAT OS (ARMT2)
 		Release|TwinCAT OS (ARMV7-A) = Release|TwinCAT OS (ARMV7-A)
 		Release|TwinCAT OS (ARMV7-M) = Release|TwinCAT OS (ARMV7-M)
 		Release|TwinCAT OS (ARMV8-A) = Release|TwinCAT OS (ARMV8-A)
@@ -23,6 +25,8 @@ Global
 		Release|TwinCAT RT (x86) = Release|TwinCAT RT (x86)
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BA04A25F-8912-4CFE-B93A-682828410991}.Debug|TwinCAT OS (ARMT2).ActiveCfg = Debug|TwinCAT OS (ARMT2)
+		{BA04A25F-8912-4CFE-B93A-682828410991}.Debug|TwinCAT OS (ARMT2).Build.0 = Debug|TwinCAT OS (ARMT2)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Debug|TwinCAT OS (ARMV7-A).ActiveCfg = Debug|TwinCAT OS (ARMT2)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Debug|TwinCAT OS (ARMV7-M).ActiveCfg = Debug|TwinCAT OS (ARMT2)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Debug|TwinCAT OS (ARMV8-A).ActiveCfg = Debug|TwinCAT OS (ARMT2)
@@ -33,6 +37,8 @@ Global
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Debug|TwinCAT RT (x64).Build.0 = Debug|TwinCAT RT (x64)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Debug|TwinCAT RT (x86).ActiveCfg = Debug|TwinCAT RT (x86)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Debug|TwinCAT RT (x86).Build.0 = Debug|TwinCAT RT (x86)
+		{BA04A25F-8912-4CFE-B93A-682828410991}.Release|TwinCAT OS (ARMT2).ActiveCfg = Release|TwinCAT OS (ARMT2)
+		{BA04A25F-8912-4CFE-B93A-682828410991}.Release|TwinCAT OS (ARMT2).Build.0 = Release|TwinCAT OS (ARMT2)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Release|TwinCAT OS (ARMV7-A).ActiveCfg = Release|TwinCAT OS (ARMT2)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Release|TwinCAT OS (ARMV7-M).ActiveCfg = Release|TwinCAT OS (ARMT2)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Release|TwinCAT OS (ARMV8-A).ActiveCfg = Release|TwinCAT OS (ARMT2)
@@ -43,6 +49,8 @@ Global
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Release|TwinCAT RT (x64).Build.0 = Release|TwinCAT RT (x64)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Release|TwinCAT RT (x86).ActiveCfg = Release|TwinCAT RT (x86)
 		{BA04A25F-8912-4CFE-B93A-682828410991}.Release|TwinCAT RT (x86).Build.0 = Release|TwinCAT RT (x86)
+		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Debug|TwinCAT OS (ARMT2).ActiveCfg = Debug|TwinCAT OS (ARMT2)
+		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Debug|TwinCAT OS (ARMT2).Build.0 = Debug|TwinCAT OS (ARMT2)
 		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Debug|TwinCAT OS (ARMV7-A).ActiveCfg = Debug|TwinCAT OS (ARMT2)
 		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Debug|TwinCAT OS (ARMV7-M).ActiveCfg = Debug|TwinCAT OS (ARMT2)
 		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Debug|TwinCAT OS (ARMV8-A).ActiveCfg = Debug|TwinCAT OS (ARMT2)
@@ -53,6 +61,8 @@ Global
 		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Debug|TwinCAT RT (x64).Build.0 = Debug|TwinCAT RT (x64)
 		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Debug|TwinCAT RT (x86).ActiveCfg = Debug|TwinCAT RT (x86)
 		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Debug|TwinCAT RT (x86).Build.0 = Debug|TwinCAT RT (x86)
+		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Release|TwinCAT OS (ARMT2).ActiveCfg = Release|TwinCAT OS (ARMT2)
+		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Release|TwinCAT OS (ARMT2).Build.0 = Release|TwinCAT OS (ARMT2)
 		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Release|TwinCAT OS (ARMV7-A).ActiveCfg = Release|TwinCAT OS (ARMT2)
 		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Release|TwinCAT OS (ARMV7-M).ActiveCfg = Release|TwinCAT OS (ARMT2)
 		{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}.Release|TwinCAT OS (ARMV8-A).ActiveCfg = Release|TwinCAT OS (ARMT2)

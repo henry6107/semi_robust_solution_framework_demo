@@ -1,9 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GCSpinAxisMoveAbsServices" Id="{9c4945bc-98e0-4f80-811d-303c8e7f09ff}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_PackMLBase
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_PackMLModeSet
 VAR_INPUT
 	Param : ST_GCSpinAxisMoveAbsParam;
+	Ctrl : REFERENCE TO ST_ServiceCtrl;
 	Axis_BaseUnit : I_Axis_BaseUnit;
 	
 	// The Module assigns a unique ID to this Service instance.
@@ -11,14 +12,19 @@ VAR_INPUT
 END_VAR
 
 VAR_OUTPUT
-	Status : ST_ServiceStatusBase;
+	Status : ST_ServiceStatus;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[SUPER^();
+      <ST><![CDATA[PackMLIn := Ctrl.PackMLIn;
+SUPER^();
 
-// Update data
-Status.Ack := PackMLIn.bCommandChangeRequest;	// Acknowledge to upper controller that command received
+// Updata status
+IF PackMLIn.bCommandChangeRequest THEN // Acknowledge to upper controller that command received
+	Status.ResponseId := Ctrl.RequestId;
+ELSE
+	Status.ResponseId := 0;
+END_IF
 Status.State := PackMLOut.eStateCurrent;
 Status.CtrlErrorId := PackMLOut.eStateErrorID;
 ]]></ST>

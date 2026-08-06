@@ -4,6 +4,7 @@
     <Declaration><![CDATA[FUNCTION_BLOCK FB_GCLiftPinAxisMoveVelCCWServices EXTENDS FB_PackMLModeSet
 VAR_INPUT
 	Param : ST_GCLiftPinAxisMoveVelParam;
+	Ctrl : REFERENCE TO ST_ServiceCtrl;
 	Axis_BaseUnit : I_Axis_BaseUnit;
 
 	// The Module assigns a unique ID to this Service instance.
@@ -11,7 +12,7 @@ VAR_INPUT
 END_VAR
 
 VAR_OUTPUT
-	Status : ST_ServiceStatusBase;
+	Status : ST_ServiceStatus;
 END_VAR
 
 VAR
@@ -20,10 +21,15 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[SUPER^();
+      <ST><![CDATA[PackMLIn := Ctrl.PackMLIn;
+SUPER^();
 
-// Update data
-Status.Ack := PackMLIn.bCommandChangeRequest;	// Acknowledge to upper controller that command received
+// Updata status
+IF PackMLIn.bCommandChangeRequest THEN // Acknowledge to upper controller that command received
+	Status.ResponseId := Ctrl.RequestId;
+ELSE
+	Status.ResponseId := 0;
+END_IF
 Status.State := PackMLOut.eStateCurrent;
 Status.CtrlErrorId := PackMLOut.eStateErrorID;
 ]]></ST>

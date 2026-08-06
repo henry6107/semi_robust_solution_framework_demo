@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_ModuleStatus" Id="{6c7acf88-b8e8-4b23-b4ca-30b3cf9d6905}">
+    <Declaration><![CDATA[TYPE ST_ModuleStatus :
+STRUCT
+	ResponseId : UDINT;
+	PackMLOut : ST_PML_Base_Out;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

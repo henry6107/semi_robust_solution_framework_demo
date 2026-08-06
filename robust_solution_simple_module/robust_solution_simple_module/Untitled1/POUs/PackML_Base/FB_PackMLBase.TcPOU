@@ -3,7 +3,7 @@
   <POU Name="FB_PackMLBase" Id="{bb7074bb-cd46-4555-9ada-1eb1c7832876}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_PackMLBase
 VAR_INPUT
-	PackMLIn	: REFERENCE TO ST_PML_Base_In;
+	PackMLIn	: ST_PML_Base_In;
 	
 	bEnable				: BOOL := TRUE;
 	bExternalFault		: BOOL;

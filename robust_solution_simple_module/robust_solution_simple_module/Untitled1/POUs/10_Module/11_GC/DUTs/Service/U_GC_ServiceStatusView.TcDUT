@@ -4,7 +4,7 @@
     <Declaration><![CDATA[TYPE U_GC_ServiceStatusView :
 UNION
 	ByName : ST_GC_ServiceStatus;
-	ByIndex : ARRAY[1..GVL_GC_Config.cServiceCount] OF ST_ServiceStatusBase;
+	ByIndex : ARRAY[1..GVL_GC_Config.cServiceCount] OF ST_ServiceStatus;
 END_UNION
 END_TYPE
 ]]></Declaration>

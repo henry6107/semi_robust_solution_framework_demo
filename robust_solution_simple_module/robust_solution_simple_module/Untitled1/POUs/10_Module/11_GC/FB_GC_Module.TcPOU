@@ -6,6 +6,7 @@ VAR_INPUT
 	HwInput : REFERENCE TO ST_GC_Signal_In;
 	HwOutput : REFERENCE TO ST_GC_Signal_Out;
 	
+	ModuleCtrl : REFERENCE TO ST_ModuleCtrl;
 	ServiceCtrl : REFERENCE TO ST_GC_ServiceCtrl;
 	ECID : REFERENCE TO ST_GC_ECID;
 	
@@ -15,6 +16,7 @@ VAR_INPUT
 END_VAR
 
 VAR_OUTPUT
+	ModuleStatus : ST_ModuleStatus;
 	ServiceStatus : ST_GC_ServiceStatus;
 	ALID : ST_GC_ALID;
 	DVID : ST_GC_DVID;
@@ -23,7 +25,7 @@ END_VAR
 
 VAR
 	// 有需要特殊操作的需求，所以建立一個 ST_GC_ServiceCtrl 變數，讓程式內部可以過一手處理
-	_ServiceCtrl : U_GC_ServiceCtrlView;
+	_ServiceCtrlView : U_GC_ServiceCtrlView;
 	_ServiceStatusView : U_GC_ServiceStatusView;
 
 	_nIdx : UINT;
@@ -41,13 +43,22 @@ IF (SpinAxis_BaseUnit = 0) OR (LiftPinAxis_BaseUnit = 0) THEN
 	RETURN;
 END_IF
 
+PackMLIn := ModuleCtrl.PackMLIn;
 SUPER^();
 A01_ServiceParam();
 A02_ServiceControlResource();
 A03_Service();
 A00_BaseUnit();
 
+// Updata status
+IF PackMLIn.bCommandChangeRequest OR PackMLIn.bModeChangeRequest THEN
+	ModuleStatus.ResponseId := ModuleCtrl.RequestId;
+ELSE
+	ModuleStatus.ResponseId := 0;
+END_IF
+ModuleStatus.PackMLOut := PackMLOut;
 ServiceStatus := _ServiceStatusView.ByName;
+
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{92cfe23b-b998-4d76-8aa2-c8089e78aa61}" />
@@ -74,12 +85,13 @@ IF PackMLOut.eStateCurrent = E_PackMLState.Idle
 	OR PackMLOut.eStateCurrent = E_PackMLState.Starting
 	OR PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
 	// Controlled by external operator
-	_ServiceCtrl.ByName := ServiceCtrl;
+	_ServiceCtrlView.ByName := ServiceCtrl;
 	
 ELSE
 	// Control by module
 	FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-		_ServiceCtrl.ByIndex[_nIdx] := PackMLIn;
+		_ServiceCtrlView.ByIndex[_nIdx].PackMLIn := ModuleCtrl.PackMLIn;
+		_ServiceCtrlView.ByIndex[_nIdx].RequestId := ModuleCtrl.RequestId;
 	END_FOR
 END_IF]]></ST>
       </Implementation>
@@ -87,38 +99,38 @@ END_IF]]></ST>
     <Action Name="A03_Service" Id="{c62275db-aa76-4b4d-95ad-2ecb5851f919}">
       <Implementation>
         <ST><![CDATA[_SpinAxisJogCWService(
-	PackMLIn:= _ServiceCtrl.ByName.SpinAxisJogCW,
+	Ctrl:= _ServiceCtrlView.ByName.SpinAxisJogCW,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	// Owner IDs are assigned by the Module so each Service instance is unique.
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisJogCW,
 	Status=> _ServiceStatusView.ByName.SpinAxisJogCW);
 
 _SpinAxisMoveAbsService(
-	PackMLIn:= _ServiceCtrl.ByName.SpinAxisMoveAbs,
+	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveAbs,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveAbs,
 	Status=> _ServiceStatusView.ByName.SpinAxisMoveAbs);
 
 _SpinAxisMoveVelCWService(
-	PackMLIn:= _ServiceCtrl.ByName.SpinAxisMoveVelCW,
+	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveVelCW,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVelCW,
 	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
 
 _LiftPinAxisMoveVelCWService(
-	PackMLIn:= _ServiceCtrl.ByName.LiftPinAxisMoveVelCW,
+	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCW,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCW,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCW);
 
 _LiftPinAxisMoveVelCCWService(
-	PackMLIn:= _ServiceCtrl.ByName.LiftPinAxisMoveVelCCW,
+	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCCW,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCCW,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCCW);
 
 _LiftPinAxisMoveAbsService(
-	PackMLIn:= _ServiceCtrl.ByName.LiftPinAxisMoveAbs,
+	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveAbs,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveAbs,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);

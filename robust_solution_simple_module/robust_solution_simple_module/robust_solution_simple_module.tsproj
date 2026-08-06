@@ -2095,7 +2095,7 @@ External Setpoint Generation:
 		</Motion>
 		<Plc>
 			<Project GUID="{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}" Name="Untitled1" PrjFilePath="Untitled1\Untitled1.plcproj" TmcFilePath="Untitled1\Untitled1.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{CAEBA7D2-C0EC-6AA9-7F49-C77C609CD373}" TmcPath="Untitled1\Untitled1.tmc">
+				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{9A0636DB-4663-363D-D510-BD9B99E270F6}" TmcPath="Untitled1\Untitled1.tmc">
 					<Name>Untitled1 Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" ContextId="1" AreaNo="17">
@@ -2364,6 +2364,7 @@ External Setpoint Generation:
 		</Io>
 	</Project>
 	<Mappings>
+		<MappingInfo Identifier="{05000010-2001-0850-3000-040301205008}" Id="#x02030010" Watchdog="14000000040000000400000004000000"/>
 		<OwnerA Name="TIPC^Untitled1^Untitled1 Instance">
 			<OwnerB Name="TINC^NC-Task 1 SAF^Axes^Axis 1">
 				<Link VarA="PlcTask Inputs^MAIN.GC1_SpinAxis_BaseUnit._Axis.NcToPlc" VarB="Outputs^ToPlc"/>
