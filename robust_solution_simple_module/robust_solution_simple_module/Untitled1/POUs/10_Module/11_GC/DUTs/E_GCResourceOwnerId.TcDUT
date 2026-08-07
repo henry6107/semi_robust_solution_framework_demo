@@ -12,7 +12,8 @@ TYPE E_GCResourceOwnerId :
 	SpinAxisMoveVelCW := 3,
 	LiftPinAxisMoveVelCW := 4,
 	LiftPinAxisMoveVelCCW := 5,
-	LiftPinAxisMoveAbs := 6
+	LiftPinAxisMoveAbs := 6,
+	SingleProcess := 7
 ) UDINT;
 END_TYPE
 ]]></Declaration>

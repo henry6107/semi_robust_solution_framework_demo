@@ -14,7 +14,9 @@ TYPE E_GCServiceErrorCode :
 	// The BaseUnit was already owned by another Service.
 	Resource_Acquire_Failed_During_Starting := 6,
 	// The asynchronous Reset used while aborting failed.
-	Error_While_Reset_Axis := 7
+	Error_While_Reset_Axis := 7,
+	// A SingleProcess stage did not finish before its configured timeout.
+	Stage_Timeout := 8
 )UDINT;
 END_TYPE
 ]]></Declaration>

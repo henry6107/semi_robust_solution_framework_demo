@@ -16,6 +16,13 @@
     <Implicit_KindOfTask>{b7aa054f-b51a-4b61-b7f4-06d94131e1de}</Implicit_KindOfTask>
     <Implicit_Jitter_Distribution>{ce02874f-cb3f-4a67-9d0d-6b1e575b647c}</Implicit_Jitter_Distribution>
     <LibraryReferences>{aad4cebc-a342-45e7-bdf7-a255f00dc573}</LibraryReferences>
+    <Released>false</Released>
+    <Title>RobustSolution</Title>
+    <ProjectVersion>1.0.0.0</ProjectVersion>
+    <Company>BATW</Company>
+    <DefaultNamespace>RobustSolution</DefaultNamespace>
+    <Placeholder>RobustSolution</Placeholder>
+    <Author>BATW</Author>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="DUTs\ST_ModuleCtrl.TcDUT">
@@ -92,6 +99,45 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\E_GCServiceErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\E_GCSingleProcessAbortPhase.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\E_GCSingleProcessAxis.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\E_GCSingleProcessResult.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\E_GCSingleProcessStage.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessCycleRecord.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStageTimeConfig.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStageTimeConfigs.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStageTiming.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStageTimings.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\U_GCSingleProcessStageTimeConfigView.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\U_GCSingleProcessStageTimingView.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService\ST_GCLiftPinAxisMoveAbsParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -145,6 +191,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveVelCCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSingleProcessService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\MAIN.TcPOU">
@@ -207,28 +256,31 @@
     <Compile Include="Tests\DUTs\ST_FakeAxisScriptStep.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\FB_FakeAxis_BaseUnitTests.TcPOU">
+    <Compile Include="Tests\Suites\BaseUnit\FB_FakeAxis_BaseUnitTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\FB_GCSpinAxisJogCWServiceTests.TcPOU">
+    <Compile Include="Tests\Suites\Modules\FB_GC_ModuleTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\FB_GCSpinAxisMoveAbsServiceTests.TcPOU">
+    <Compile Include="Tests\Suites\Services\FB_GCLiftPinAxisMoveAbsServiceTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\FB_GCSpinAxisMoveVelCWServiceTests.TcPOU">
+    <Compile Include="Tests\Suites\Services\FB_GCLiftPinAxisMoveVelCCWServiceTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\FB_GCLiftPinAxisMoveAbsServiceTests.TcPOU">
+    <Compile Include="Tests\Suites\Services\FB_GCLiftPinAxisMoveVelCWServiceTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\FB_GCLiftPinAxisMoveVelCWServiceTests.TcPOU">
+    <Compile Include="Tests\Suites\Services\FB_GCSingleProcessServiceTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\FB_GCLiftPinAxisMoveVelCCWServiceTests.TcPOU">
+    <Compile Include="Tests\Suites\Services\FB_GCSpinAxisJogCWServiceTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\FB_GC_ModuleTests.TcPOU">
+    <Compile Include="Tests\Suites\Services\FB_GCSpinAxisMoveAbsServiceTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\Services\FB_GCSpinAxisMoveVelCWServiceTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="TestTask.TcTTO">
@@ -251,11 +303,15 @@
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService" />
     <Folder Include="POUs\10_Module\11_GC\GVLs" />
     <Folder Include="POUs\10_Module\11_GC\Services" />
     <Folder Include="POUs\PackML_Base" />
     <Folder Include="POUs\PackML_Base\DUTs" />
     <Folder Include="POUs\PackML_Base\Utilities" />
+    <Folder Include="Tests\Suites\Modules" />
+    <Folder Include="Tests\Suites\BaseUnit" />
+    <Folder Include="Tests\Suites\Services" />
     <Folder Include="VISUs" />
     <Folder Include="POUs" />
     <Folder Include="Tests" />
@@ -294,8 +350,8 @@
   <ProjectExtensions>
     <PlcProjectOptions>
       <XmlArchive>
-  <Data>
-    <o xml:space="preserve" t="OptionKey">
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
       <v n="Name">"&lt;ProjectRoot&gt;"</v>
       <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
         <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
@@ -371,14 +427,14 @@
       </d>
       <d n="Values" t="Hashtable" />
     </o>
-  </Data>
-  <TypeList>
-    <Type n="Boolean">System.Boolean</Type>
-    <Type n="Hashtable">System.Collections.Hashtable</Type>
-    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
-    <Type n="String">System.String</Type>
-  </TypeList>
-</XmlArchive>
+        </Data>
+        <TypeList>
+          <Type n="Boolean">System.Boolean</Type>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
     </PlcProjectOptions>
   </ProjectExtensions>
 </Project>

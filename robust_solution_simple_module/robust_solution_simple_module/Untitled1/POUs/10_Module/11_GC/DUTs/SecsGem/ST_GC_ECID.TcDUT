@@ -9,6 +9,7 @@ STRUCT
 	LiftPinAxisMoveVelCW : ST_GCLiftPinAxisMoveVelParam;
 	LiftPinAxisMoveVelCCW : ST_GCLiftPinAxisMoveVelParam;
 	LiftPinAxisMoveAbs : ST_GCLiftPinAxisMoveAbsParam;
+	SingleProcess : ST_GCSingleProcessParam;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

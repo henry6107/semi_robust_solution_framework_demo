@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_GCSingleProcessAxis" Id="{d343cc97-b1b7-48f8-b368-325d48269d20}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE E_GCSingleProcessAxis :
+(
+	None := 0,
+	SpinAxis := 1,
+	LiftPinAxis := 2,
+	Both := 3
+) UINT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

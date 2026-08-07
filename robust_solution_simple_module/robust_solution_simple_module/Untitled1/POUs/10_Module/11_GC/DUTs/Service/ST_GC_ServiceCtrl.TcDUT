@@ -9,6 +9,7 @@ STRUCT
 	LiftPinAxisMoveVelCW : ST_ServiceCtrl;
 	LiftPinAxisMoveVelCCW : ST_ServiceCtrl;
 	LiftPinAxisMoveAbs : ST_ServiceCtrl;
+	SingleProcess : ST_ServiceCtrl;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

@@ -36,6 +36,7 @@ CASE nPhase OF
 		// Init module / service param / base units
 		SpinFakeAxis.M_ResetScenario();
 		LiftFakeAxis.M_ResetScenario();
+		AssertTrue(Condition := GVL_GC_Config.cServiceCount = 7, Message := 'GC service view must include SingleProcess as the seventh Service.');
 		SpinAxis := SpinFakeAxis;
 		LiftAxis := LiftFakeAxis;
 		ECID.SpinAxisJogCW.Velocity := 10;
@@ -85,6 +86,7 @@ CASE nPhase OF
 		AssertTrue(Condition := Module.ServiceStatus.LiftPinAxisMoveVelCW.State = E_PackMLState.Stopped, Message := 'LiftPin CW ServiceStatus must be Stopped state after module reset cmd.');
 		AssertTrue(Condition := Module.ServiceStatus.LiftPinAxisMoveVelCCW.State = E_PackMLState.Stopped, Message := 'LiftPin CCW ServiceStatus must be Stopped state after module reset cmd.');
 		AssertTrue(Condition := Module.ServiceStatus.LiftPinAxisMoveAbs.State = E_PackMLState.Stopped, Message := 'LiftPin MoveAbs ServiceStatus must be Stopped state after module reset cmd.');
+		AssertTrue(Condition := Module.ServiceStatus.SingleProcess.State = E_PackMLState.Stopped, Message := 'SingleProcess ServiceStatus must be Stopped after the module Clear path.');
 		nPhase := 3;
 
 	3:
@@ -106,6 +108,8 @@ CASE nPhase OF
 		AssertTrue(Condition := Module.ServiceStatus.LiftPinAxisMoveVelCW.State = E_PackMLState.Idle, Message := 'LiftPin CW ServiceStatus must be Idle state after module reset cmd');
 		AssertTrue(Condition := Module.ServiceStatus.LiftPinAxisMoveVelCCW.State = E_PackMLState.Idle, Message := 'LiftPin CCW ServiceStatus must be Idle state after module reset cmd');
 		AssertTrue(Condition := Module.ServiceStatus.LiftPinAxisMoveAbs.State = E_PackMLState.Idle, Message := 'LiftPin MoveAbs ServiceStatus must be Idle state after module reset cmd');
+		AssertTrue(Condition := Module.ServiceStatus.SingleProcess.State = E_PackMLState.Idle, Message := 'SingleProcess ServiceStatus must be routed to Idle after module Reset.');
+		AssertTrue(Condition := Module.SVID.SingleProcess.CurrentStage = E_GCSingleProcessStage.None, Message := 'SingleProcess SVID must be exposed by the GC Module.');
 		nPhase := 5;
 
 	5:

@@ -9,6 +9,7 @@ STRUCT
 	LiftPinAxisMoveVelCW : ST_ServiceStatus;
 	LiftPinAxisMoveVelCCW : ST_ServiceStatus;
 	LiftPinAxisMoveAbs : ST_ServiceStatus;
+	SingleProcess : ST_ServiceStatus;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

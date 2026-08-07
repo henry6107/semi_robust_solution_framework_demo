@@ -1,0 +1,408 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_GCSingleProcessServiceTests" Id="{e3d0369e-f8e0-45fb-b94f-5e94979a8be9}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSingleProcessServiceTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[HappyPathCompletesAllStagesAndRetainsTiming();
+InvalidParamFailsBeforeMotion();
+LiftReadyTimeoutStopsBothAxesAndRetainsFailure();
+ParameterChangesApplyOnNextStartOnly();]]></ST>
+    </Implementation>
+    <Method Name="HappyPathCompletesAllStagesAndRetainsTiming" Id="{ac8f5f42-f131-46e9-9807-3404dcf6f17b}">
+      <Declaration><![CDATA[METHOD HappyPathCompletesAllStagesAndRetainsTiming
+VAR_INST
+	SpinFake : FB_FakeAxis_BaseUnit;
+	LiftFake : FB_FakeAxis_BaseUnit;
+	SpinAxis : I_Axis_BaseUnit;
+	LiftAxis : I_Axis_BaseUnit;
+	Service : FB_GCSingleProcessService;
+	Ctrl : ST_ServiceCtrl;
+	Param : ST_GCSingleProcessParam;
+	nPhase : UINT;
+	nRunCycles : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HappyPathCompletesAllStagesAndRetainsTiming');
+
+CASE nPhase OF
+	0:
+		SpinFake.M_ResetScenario();
+		LiftFake.M_ResetScenario();
+		SpinAxis := SpinFake;
+		LiftAxis := LiftFake;
+		M_SetValidParam(Param := Param);
+
+		AssertTrue(SpinFake.M_QueueResult(E_FakeAxisOperation.MoveAbs, 1, TRUE, FALSE, FALSE, 0), 'SpinAlign result must be queued.');
+		AssertTrue(SpinFake.M_QueueResult(E_FakeAxisOperation.MoveAbs, 1, TRUE, FALSE, FALSE, 0), 'ProcessEntrySpin result must be queued.');
+		AssertTrue(SpinFake.M_QueueResult(E_FakeAxisOperation.MoveVel, 1, FALSE, TRUE, FALSE, 0), 'SpinRampUp result must be queued.');
+		AssertTrue(SpinFake.M_QueueResult(E_FakeAxisOperation.Stop, 1, TRUE, FALSE, FALSE, 0), 'ProcessExit Stop result must be queued.');
+		AssertTrue(SpinFake.M_QueueResult(E_FakeAxisOperation.MoveAbs, 1, TRUE, FALSE, FALSE, 0), 'SpinStandby result must be queued.');
+
+		AssertTrue(LiftFake.M_QueueResult(E_FakeAxisOperation.MoveAbs, 1, TRUE, FALSE, FALSE, 0), 'LiftReady result must be queued.');
+		AssertTrue(LiftFake.M_QueueResult(E_FakeAxisOperation.MoveAbs, 2, TRUE, FALSE, FALSE, 0), 'ProcessEntryLift result must be queued.');
+		AssertTrue(LiftFake.M_QueueResult(E_FakeAxisOperation.MoveAbs, 2, TRUE, FALSE, FALSE, 0), 'ProcessExitLift result must be queued.');
+
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 31);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nPhase := 1;
+
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 31);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 31);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 31);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nPhase := 2;
+
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 31);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 31);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		nRunCycles := 0;
+		nPhase := 3;
+
+	3:
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 31);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nRunCycles := nRunCycles + 1;
+
+		IF Service.PackMLOut.eStateCurrent = E_PackMLState.Complete THEN
+			AssertTrue(Service.ProcessStatus.LastCycle.Result = E_GCSingleProcessResult.Completed, 'Successful cycle must be retained as Completed.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.Prepare.Completed, 'Prepare timing must complete.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.LiftReady.Completed, 'LiftReady timing must complete.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.SpinAlign.Completed, 'SpinAlign timing must complete.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.ConcurrentProcessEntry.Completed, 'ConcurrentProcessEntry timing must complete.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.SpinRampUp.Completed, 'SpinRampUp timing must complete.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.ProcessHold.Completed, 'ProcessHold timing must complete.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.ConcurrentProcessExit.Completed, 'ConcurrentProcessExit timing must complete.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.SpinStandby.Completed, 'SpinStandby timing must complete.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.ProcessHold.ActualTime >= T#20MS, 'ProcessHold must not finish before its target.');
+			AssertFalse(SpinAxis.M_IsResourceOwner(31), 'Completed cycle must release SpinAxis.');
+			AssertFalse(LiftAxis.M_IsResourceOwner(31), 'Completed cycle must release LiftPinAxis.');
+			nPhase := 0;
+			TEST_FINISHED();
+		ELSIF nRunCycles > 200 THEN
+			AssertTrue(FALSE, 'SingleProcess did not complete within the test cycle budget.');
+			nPhase := 0;
+			TEST_FINISHED();
+		END_IF
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="InvalidParamFailsBeforeMotion" Id="{9e5d7ad8-0e79-4dc3-8af7-c89350a19e20}">
+      <Declaration><![CDATA[METHOD InvalidParamFailsBeforeMotion
+VAR_INST
+	SpinFake : FB_FakeAxis_BaseUnit;
+	LiftFake : FB_FakeAxis_BaseUnit;
+	SpinAxis : I_Axis_BaseUnit;
+	LiftAxis : I_Axis_BaseUnit;
+	Service : FB_GCSingleProcessService;
+	Ctrl : ST_ServiceCtrl;
+	Param : ST_GCSingleProcessParam;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('InvalidParamFailsBeforeMotion');
+
+CASE nPhase OF
+	0:
+		SpinFake.M_ResetScenario();
+		LiftFake.M_ResetScenario();
+		SpinAxis := SpinFake;
+		LiftAxis := LiftFake;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 32);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nPhase := 1;
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 32);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 32);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 32);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nPhase := 2;
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 32);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 32);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		nPhase := 3;
+	3:
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 32);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		AssertTrue(Service.Status.ServiceErrorId = E_GCServiceErrorCode.Invalid_Param, 'Zero-valued parameters must report Invalid_Param.');
+		AssertTrue(Service.ProcessStatus.LastCycle.Result = E_GCSingleProcessResult.Failed, 'Invalid parameters must retain a Failed cycle.');
+		AssertTrue(Service.ProcessStatus.LastCycle.FailedStage = E_GCSingleProcessStage.Prepare, 'Invalid parameters must fail in Prepare.');
+		AssertTrue(SpinFake.HistoryCount = 0, 'Invalid parameters must not command SpinAxis.');
+		AssertTrue(LiftFake.HistoryCount = 0, 'Invalid parameters must not command LiftPinAxis.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="LiftReadyTimeoutStopsBothAxesAndRetainsFailure" Id="{ae4e847d-9623-45e4-84ec-576bee241bbb}">
+      <Declaration><![CDATA[METHOD LiftReadyTimeoutStopsBothAxesAndRetainsFailure
+VAR_INST
+	SpinFake : FB_FakeAxis_BaseUnit;
+	LiftFake : FB_FakeAxis_BaseUnit;
+	SpinAxis : I_Axis_BaseUnit;
+	LiftAxis : I_Axis_BaseUnit;
+	Service : FB_GCSingleProcessService;
+	Ctrl : ST_ServiceCtrl;
+	Param : ST_GCSingleProcessParam;
+	nPhase : UINT;
+	nRunCycles : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('LiftReadyTimeoutStopsBothAxesAndRetainsFailure');
+
+CASE nPhase OF
+	0:
+		SpinFake.M_ResetScenario();
+		LiftFake.M_ResetScenario();
+		SpinAxis := SpinFake;
+		LiftAxis := LiftFake;
+		M_SetValidParam(Param := Param);
+		Param.StageTiming.LiftReady.Timeout := T#30MS;
+		AssertTrue(SpinFake.M_QueueResult(E_FakeAxisOperation.Stop, 1, TRUE, FALSE, FALSE, 0), 'Spin Stop cleanup must be queued.');
+		AssertTrue(LiftFake.M_QueueResult(E_FakeAxisOperation.Stop, 1, TRUE, FALSE, FALSE, 0), 'Lift Stop cleanup must be queued.');
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nPhase := 1;
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nPhase := 2;
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		nRunCycles := 0;
+		nPhase := 3;
+	3:
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nRunCycles := nRunCycles + 1;
+		IF Service.PackMLOut.eStateCurrent = E_PackMLState.Stopped THEN
+			AssertTrue(Service.ProcessStatus.LastCycle.Result = E_GCSingleProcessResult.Failed, 'Timed out cycle must be retained as Failed.');
+			AssertTrue(Service.ProcessStatus.LastCycle.FailedStage = E_GCSingleProcessStage.LiftReady, 'LiftReady timeout must identify LiftReady.');
+			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.LiftReady.TimedOut, 'LiftReady timing must be marked TimedOut.');
+			AssertTrue(Service.Status.ServiceErrorId = E_GCServiceErrorCode.Stage_Timeout, 'LiftReady timeout must report Stage_Timeout.');
+			AssertFalse(SpinAxis.M_IsResourceOwner(33), 'Timeout cleanup must release SpinAxis.');
+			AssertFalse(LiftAxis.M_IsResourceOwner(33), 'Timeout cleanup must release LiftPinAxis.');
+			nPhase := 0;
+			TEST_FINISHED();
+		ELSIF nRunCycles > 100 THEN
+			AssertTrue(FALSE, 'Timeout cleanup did not reach Stopped within the test cycle budget.');
+			nPhase := 0;
+			TEST_FINISHED();
+		END_IF
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetValidParam" Id="{f31450a1-8221-4d60-9f87-e7afc78cff3d}">
+      <Declaration><![CDATA[METHOD PRIVATE M_SetValidParam
+VAR_IN_OUT
+	Param : ST_GCSingleProcessParam;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Param.LiftReady.Position := 10;
+Param.LiftReady.Velocity := 5;
+Param.LiftReady.Acceleration := 10;
+Param.LiftReady.Deceleration := 10;
+Param.SpinAlign.Position := 90;
+Param.SpinAlign.Velocity := 30;
+Param.SpinAlign.Acceleration := 60;
+Param.SpinAlign.Deceleration := 60;
+Param.ProcessEntrySpin.Position := 180;
+Param.ProcessEntrySpin.Velocity := 30;
+Param.ProcessEntrySpin.Acceleration := 60;
+Param.ProcessEntrySpin.Deceleration := 60;
+Param.ProcessEntryLift.Position := 20;
+Param.ProcessEntryLift.Velocity := 5;
+Param.ProcessEntryLift.Acceleration := 10;
+Param.ProcessEntryLift.Deceleration := 10;
+Param.SpinProcess.Velocity := 120;
+Param.SpinProcess.Acceleration := 100;
+Param.SpinProcess.Deceleration := 100;
+Param.ProcessExitLift.Position := 0;
+Param.ProcessExitLift.Velocity := 5;
+Param.ProcessExitLift.Acceleration := 10;
+Param.ProcessExitLift.Deceleration := 10;
+Param.SpinStandby.Position := 0;
+Param.SpinStandby.Velocity := 30;
+Param.SpinStandby.Acceleration := 60;
+Param.SpinStandby.Deceleration := 60;
+Param.SpinStopDeceleration := 100;
+Param.LiftStopDeceleration := 10;
+
+Param.StageTiming.Prepare.Timeout := T#1S;
+Param.StageTiming.LiftReady.Timeout := T#1S;
+Param.StageTiming.SpinAlign.Timeout := T#1S;
+Param.StageTiming.ConcurrentProcessEntry.Timeout := T#1S;
+Param.StageTiming.SpinRampUp.Timeout := T#1S;
+Param.StageTiming.ProcessHold.TargetTime := T#20MS;
+Param.StageTiming.ProcessHold.Timeout := T#1S;
+Param.StageTiming.ConcurrentProcessExit.Timeout := T#1S;
+Param.StageTiming.SpinStandby.Timeout := T#1S;
+Param.StopTimeout := T#1S;
+Param.ResetTimeout := T#1S;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ParameterChangesApplyOnNextStartOnly" Id="{458e45bc-1420-48c5-8b8e-e637dd7240eb}">
+      <Declaration><![CDATA[METHOD ParameterChangesApplyOnNextStartOnly
+VAR_INST
+	SpinFake : FB_FakeAxis_BaseUnit;
+	LiftFake : FB_FakeAxis_BaseUnit;
+	SpinAxis : I_Axis_BaseUnit;
+	LiftAxis : I_Axis_BaseUnit;
+	Service : FB_GCSingleProcessService;
+	Ctrl : ST_ServiceCtrl;
+	Param : ST_GCSingleProcessParam;
+	CallRecord : ST_FakeAxisCall;
+	nPhase : UINT;
+	nRunCycles : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ParameterChangesApplyOnNextStartOnly');
+
+CASE nPhase OF
+	0:
+		SpinFake.M_ResetScenario();
+		LiftFake.M_ResetScenario();
+		SpinAxis := SpinFake;
+		LiftAxis := LiftFake;
+		M_SetValidParam(Param := Param);
+		AssertTrue(SpinFake.M_QueueResult(E_FakeAxisOperation.Stop, 1, TRUE, FALSE, FALSE, 0), 'Spin Stop cleanup must be queued.');
+		AssertTrue(LiftFake.M_QueueResult(E_FakeAxisOperation.Stop, 1, TRUE, FALSE, FALSE, 0), 'Lift Stop cleanup must be queued.');
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 34);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nPhase := 1;
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 34);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 34);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 34);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nPhase := 2;
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 34);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 34);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		nPhase := 3;
+	3:
+		Param.LiftReady.Position := 999;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 34);
+		AssertTrue(LiftFake.M_GetCall(LiftFake.HistoryCount, CallRecord => CallRecord), 'LiftReady command must be recorded.');
+		AssertTrue(CallRecord.Position = 10, 'The active cycle must use the Start-time LiftReady position snapshot.');
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nPhase := 4;
+	4:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Stop;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 34);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		nRunCycles := 0;
+		nPhase := 5;
+	5:
+		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 34);
+		SpinFake.M_CyclicUpdate();
+		LiftFake.M_CyclicUpdate();
+		nRunCycles := nRunCycles + 1;
+		IF Service.PackMLOut.eStateCurrent = E_PackMLState.Stopped THEN
+			AssertTrue(Service.ProcessStatus.LastCycle.Result = E_GCSingleProcessResult.Stopped, 'User Stop must retain a Stopped cycle.');
+			AssertFalse(SpinAxis.M_IsResourceOwner(34), 'Stop must release SpinAxis.');
+			AssertFalse(LiftAxis.M_IsResourceOwner(34), 'Stop must release LiftPinAxis.');
+			nPhase := 0;
+			TEST_FINISHED();
+		ELSIF nRunCycles > 30 THEN
+			AssertTrue(FALSE, 'Stop cleanup did not finish within the test cycle budget.');
+			nPhase := 0;
+			TEST_FINISHED();
+		END_IF
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

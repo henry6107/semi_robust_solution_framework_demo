@@ -9,6 +9,7 @@ STRUCT
 	
 	ModuleStatus : ST_ModuleStatus;
 	ServiceStatus : ST_GC_ServiceStatus;
+	SVID : ST_GC_SVID;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

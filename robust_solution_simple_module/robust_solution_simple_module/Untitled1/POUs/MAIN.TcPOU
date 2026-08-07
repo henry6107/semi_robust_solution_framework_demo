@@ -6,8 +6,6 @@ VAR
 	GC1_Module : FB_GC_Module;
 	GC1_SpinAxis_BaseUnit : FB_Axis_BaseUnit;
 	GC1_LiftPinAxis_BaseUnit : FB_Axis_BaseUnit;
-	
-	// Demo use
 	_GC1 : ST_GC_CtrlStatus;
 	GC1_HwIn :  U_GC_HW_In;
 	GC_HwOut : U_GC_HW_Out;
@@ -34,7 +32,7 @@ GC1_Module(
 	ServiceStatus=> _GC1.ServiceStatus, 
 	ALID=> , 
 	DVID=> , 
-	SVID=> );]]></ST>
+	SVID=> _GC1.SVID);]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

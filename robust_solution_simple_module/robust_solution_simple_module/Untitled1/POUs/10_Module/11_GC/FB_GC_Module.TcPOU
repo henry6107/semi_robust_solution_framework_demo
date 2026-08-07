@@ -35,6 +35,7 @@ VAR
 	_LiftPinAxisMoveVelCWService : FB_GCLiftPinAxisMoveVelCWServices;
 	_LiftPinAxisMoveVelCCWService : FB_GCLiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_GCLiftPinAxisMoveAbsServices;
+	_SingleProcessService : FB_GCSingleProcessService;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -69,7 +70,8 @@ _SpinAxisJogCWService.Param := ECID.SpinAxisJogCW;
 _SpinAxisMoveVelCWService.Param := ECID.SpinAxisMoveVelCW;
 _LiftPinAxisMoveVelCWService.Param := ECID.LiftPinAxisMoveVelCW;
 _LiftPinAxisMoveVelCCWService.Param := ECID.LiftPinAxisMoveVelCCW;
-_LiftPinAxisMoveAbsService.Param := ECID.LiftPinAxisMoveAbs;]]></ST>
+_LiftPinAxisMoveAbsService.Param := ECID.LiftPinAxisMoveAbs;
+_SingleProcessService.Param := ECID.SingleProcess;]]></ST>
       </Implementation>
     </Action>
     <Action Name="A02_SelectServiceControlSource" Id="{2f460f0f-4f51-4597-948c-8705f2c24753}">
@@ -127,6 +129,14 @@ _LiftPinAxisMoveAbsService(
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveAbs,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
+
+_SingleProcessService(
+	Ctrl := _ServiceCtrlView.ByName.SingleProcess,
+	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
+	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
+	ResourceOwnerId := E_GCResourceOwnerId.SingleProcess,
+	Status => _ServiceStatusView.ByName.SingleProcess,
+	ProcessStatus => SVID.SingleProcess);
 ]]></ST>
       </Implementation>
     </Action>

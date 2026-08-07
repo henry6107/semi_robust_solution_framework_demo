@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_GCSingleProcessStageTimeConfigs" Id="{5252657b-d113-4ec3-8605-d510db42a751}">
+    <Declaration><![CDATA[TYPE ST_GCSingleProcessStageTimeConfigs :
+STRUCT
+	Prepare : ST_GCSingleProcessStageTimeConfig;
+	LiftReady : ST_GCSingleProcessStageTimeConfig;
+	SpinAlign : ST_GCSingleProcessStageTimeConfig;
+	ConcurrentProcessEntry : ST_GCSingleProcessStageTimeConfig;
+	SpinRampUp : ST_GCSingleProcessStageTimeConfig;
+	ProcessHold : ST_GCSingleProcessStageTimeConfig;
+	ConcurrentProcessExit : ST_GCSingleProcessStageTimeConfig;
+	SpinStandby : ST_GCSingleProcessStageTimeConfig;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

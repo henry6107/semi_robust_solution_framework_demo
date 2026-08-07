@@ -10,6 +10,7 @@ VAR
 	LiftPinMoveAbsServiceTests : FB_GCLiftPinAxisMoveAbsServiceTests;
 	LiftPinMoveVelCWServiceTests : FB_GCLiftPinAxisMoveVelCWServiceTests;
 	LiftPinMoveVelCCWServiceTests : FB_GCLiftPinAxisMoveVelCCWServiceTests;
+	SingleProcessServiceTests : FB_GCSingleProcessServiceTests;
 	GCModuleTests : FB_GC_ModuleTests;
 END_VAR
 ]]></Declaration>

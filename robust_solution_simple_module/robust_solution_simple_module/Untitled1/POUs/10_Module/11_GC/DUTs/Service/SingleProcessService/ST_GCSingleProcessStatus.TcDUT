@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_GCSingleProcessStatus" Id="{c0ba11b5-bedb-4bc4-9d21-17ebcb01ab25}">
+    <Declaration><![CDATA[TYPE ST_GCSingleProcessStatus :
+STRUCT
+	CurrentStage : E_GCSingleProcessStage;
+	CurrentStageElapsed : TIME;
+	CurrentCycle : ST_GCSingleProcessCycleRecord;
+	LastCycle : ST_GCSingleProcessCycleRecord;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
