@@ -36,6 +36,9 @@ VAR
 	_LiftPinAxisMoveVelCCWService : FB_GCLiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_GCLiftPinAxisMoveAbsServices;
 	_SingleProcessService : FB_GCSingleProcessService;
+	
+	_CmdRequestOneShot : R_TRIG;
+	_ModeRequestOneShot : R_TRIG;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -51,12 +54,14 @@ A02_SelectServiceControlSource();
 A03_UpdateService();
 A04_UpdateBaseUnit();
 
+_CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
+_ModeRequestOneShot(CLK:= PackMLIn.bModeChangeRequest, Q=> );
+
 // Updata status
-IF PackMLIn.bCommandChangeRequest OR PackMLIn.bModeChangeRequest THEN
+IF _CmdRequestOneShot.Q OR _ModeRequestOneShot.Q THEN
 	ModuleStatus.ResponseId := ModuleCtrl.RequestId;
-ELSE
-	ModuleStatus.ResponseId := 0;
 END_IF
+
 ModuleStatus.PackMLOut := PackMLOut;
 ServiceStatus := _ServiceStatusView.ByName;
 

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GCSingleProcessService" Id="{5d47bd44-f72c-444e-8484-13a433140fa9}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSingleProcessService EXTENDS FB_PackMLModeSet
@@ -32,20 +32,24 @@ VAR
 	_bFailurePending : BOOL;
 	_bSpinStageDone : BOOL;
 	_bLiftStageDone : BOOL;
+	
+	_CmdRequestOneShot : R_TRIG;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[PackMLIn := Ctrl.PackMLIn;
 SUPER^();
 
+_CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
+
+// Update status
 Status.CommandErrorId := PackMLOut.eStateErrorID;
-IF PackMLIn.bCommandChangeRequest THEN
+IF _CmdRequestOneShot.Q THEN
 	Status.ResponseId := Ctrl.RequestId;
-ELSE
-	Status.ResponseId := 0;
 END_IF
 Status.State := PackMLOut.eStateCurrent;
 
+// Update process status
 ProcessStatus.CurrentStage := _CurrentStage;
 ProcessStatus.CurrentCycle.StageTiming := _CurrentTimingView.ByName;
 IF _bCycleActive AND (_CurrentStage <> E_GCSingleProcessStage.None) THEN
@@ -61,10 +65,10 @@ ELSE
 END_IF
 ]]></ST>
     </Implementation>
-    <Folder Name="StateAction" Id="{7e9969de-fe7d-4b6b-90d0-3b8c849de6cc}" />
     <Folder Name="PrivateMethods" Id="{35e183e5-3b88-4185-aece-b5e3e2f874fc}" />
-    <Method Name="H_OnIdle" Id="{14203000-1e3a-4189-918e-12e2bffe23c4}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnIdle
+    <Folder Name="StateAction" Id="{7e9969de-fe7d-4b6b-90d0-3b8c849de6cc}" />
+    <Method Name="H_OnAborted" Id="{bd8a358c-0a39-4e60-85d3-620a7f638340}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnAborted
 VAR_INPUT
 	bFirstScan : BOOL;
 END_VAR
@@ -74,88 +78,130 @@ END_VAR
 LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnStarting" Id="{3df20413-49f1-482c-b089-5486816ceecf}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+    <Method Name="H_OnAborting" Id="{2e657739-7cb6-4013-a94c-abf5cbf5d1d8}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnAborting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+VAR
+	bAccepted : BOOL;
+	bDone : BOOL;
+	bError : BOOL;
+	bAdvanceToReset : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
+
+IF bFirstScan THEN
+	M_FreezeStage(TimedOut := FALSE);
+	M_WithdrawStageCommand();
+	_AbortPhase := E_GCSingleProcessAbortPhase.StopAxes;
+	_CleanupTimer(IN := FALSE);
+	_bSpinStageDone := NOT SpinAxis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId);
+	_bLiftStageDone := NOT LiftPinAxis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId);
+END_IF
+
+CASE _AbortPhase OF
+	E_GCSingleProcessAbortPhase.StopAxes:
+		_CleanupTimer(IN := TRUE, PT := _LatchedParam.StopTimeout);
+		IF NOT _bSpinStageDone THEN
+			bAccepted := SpinAxis_BaseUnit.M_Stop(ResourceOwnerId, TRUE, _LatchedParam.SpinStopDeceleration, Done => bDone, Error => bError);
+			IF (NOT bAccepted) OR bError THEN
+				M_SetFailure(E_GCServiceErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
+				_bSpinStageDone := TRUE;
+			ELSIF bDone THEN
+				SpinAxis_BaseUnit.M_Stop(ResourceOwnerId, FALSE, _LatchedParam.SpinStopDeceleration);
+				_bSpinStageDone := TRUE;
+			END_IF
+		END_IF
+		IF NOT _bLiftStageDone THEN
+			bAccepted := LiftPinAxis_BaseUnit.M_Stop(ResourceOwnerId, TRUE, _LatchedParam.LiftStopDeceleration, Done => bDone, Error => bError);
+			IF (NOT bAccepted) OR bError THEN
+				M_SetFailure(E_GCServiceErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
+				_bLiftStageDone := TRUE;
+			ELSIF bDone THEN
+				LiftPinAxis_BaseUnit.M_Stop(ResourceOwnerId, FALSE, _LatchedParam.LiftStopDeceleration);
+				_bLiftStageDone := TRUE;
+			END_IF
+		END_IF
+		bAdvanceToReset := _bSpinStageDone AND _bLiftStageDone;
+		IF _CleanupTimer.Q THEN
+			M_SetFailure(E_GCServiceErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
+			bAdvanceToReset := TRUE;
+		END_IF
+		IF bAdvanceToReset THEN
+			_CleanupTimer(IN := FALSE);
+			_AbortPhase := E_GCSingleProcessAbortPhase.ResetAxes;
+			_bSpinStageDone := NOT SpinAxis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId);
+			_bLiftStageDone := NOT LiftPinAxis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId);
+		END_IF
+
+	E_GCSingleProcessAbortPhase.ResetAxes:
+		_CleanupTimer(IN := TRUE, PT := _LatchedParam.ResetTimeout);
+		IF NOT _bSpinStageDone THEN
+			bAccepted := SpinAxis_BaseUnit.M_Reset(ResourceOwnerId, TRUE, Done => bDone, Error => bError);
+			IF (NOT bAccepted) OR bError THEN
+				M_SetFailure(E_GCServiceErrorCode.Error_While_Reset_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
+				SpinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
+				_bSpinStageDone := TRUE;
+			ELSIF bDone THEN
+				SpinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
+				_bSpinStageDone := TRUE;
+			END_IF
+		END_IF
+		IF NOT _bLiftStageDone THEN
+			bAccepted := LiftPinAxis_BaseUnit.M_Reset(ResourceOwnerId, TRUE, Done => bDone, Error => bError);
+			IF (NOT bAccepted) OR bError THEN
+				M_SetFailure(E_GCServiceErrorCode.Error_While_Reset_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
+				LiftPinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
+				_bLiftStageDone := TRUE;
+			ELSIF bDone THEN
+				LiftPinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
+				_bLiftStageDone := TRUE;
+			END_IF
+		END_IF
+		IF _bSpinStageDone AND _bLiftStageDone THEN
+			_CleanupTimer(IN := FALSE);
+			SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+			LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+			M_FinalizeCycle(Result := E_GCSingleProcessResult.Aborted);
+			H_OnAborting := E_PackMLHookResult.Done;
+			RETURN;
+		END_IF
+		IF _CleanupTimer.Q THEN
+			M_SetFailure(E_GCServiceErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
+			SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+			LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+			M_FinalizeCycle(Result := E_GCSingleProcessResult.Aborted);
+			H_OnAborting := E_PackMLHookResult.Done;
+		END_IF
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnComplete" Id="{4683186e-a7e8-45f4-bf5c-79b4698058df}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnComplete
 VAR_INPUT
 	bFirstScan : BOOL;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
-
-IF bFirstScan THEN
-	M_BeginCycle();
-	M_StartStage(Stage := E_GCSingleProcessStage.Prepare);
-END_IF
-
-M_UpdateStageTimer();
-
-IF NOT M_ValidateParam() THEN
-	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Invalid_Param,
-		FailedAxis := E_GCSingleProcessAxis.None,
-		TimedOut := FALSE);
-	RequestCommand(E_PackMLCommand.Stop);
-	RETURN;
-END_IF
-
-IF NOT SpinAxis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
-	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting,
-		FailedAxis := E_GCSingleProcessAxis.SpinAxis,
-		TimedOut := FALSE);
-	RequestCommand(E_PackMLCommand.Stop);
-	RETURN;
-END_IF
-
-IF NOT LiftPinAxis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
-	SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting,
-		FailedAxis := E_GCSingleProcessAxis.LiftPinAxis,
-		TimedOut := FALSE);
-	RequestCommand(E_PackMLCommand.Stop);
-	RETURN;
-END_IF
-
-IF SpinAxis_BaseUnit.AxisIsDisabled THEN
-	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting,
-		FailedAxis := E_GCSingleProcessAxis.SpinAxis,
-		TimedOut := FALSE);
-	RequestCommand(E_PackMLCommand.Abort);
-	RETURN;
-END_IF
-
-IF LiftPinAxis_BaseUnit.AxisIsDisabled THEN
-	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting,
-		FailedAxis := E_GCSingleProcessAxis.LiftPinAxis,
-		TimedOut := FALSE);
-	RequestCommand(E_PackMLCommand.Abort);
-	RETURN;
-END_IF
-
-IF SpinAxis_BaseUnit.AxisHasJob THEN
-	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Axis_Is_Busy_During_Starting,
-		FailedAxis := E_GCSingleProcessAxis.SpinAxis,
-		TimedOut := FALSE);
-	RequestCommand(E_PackMLCommand.Stop);
-	RETURN;
-END_IF
-
-IF LiftPinAxis_BaseUnit.AxisHasJob THEN
-	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Axis_Is_Busy_During_Starting,
-		FailedAxis := E_GCSingleProcessAxis.LiftPinAxis,
-		TimedOut := FALSE);
-	RequestCommand(E_PackMLCommand.Stop);
-	RETURN;
-END_IF
-
-M_CompleteStage(NextStage := E_GCSingleProcessStage.LiftReady);
-H_OnStarting := E_PackMLHookResult.Done;]]></ST>
+        <ST><![CDATA[SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnCompleting" Id="{ae8be5a5-4675-40ab-b3c5-93494d262705}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnCompleting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_WithdrawStageCommand();
+SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+M_FinalizeCycle(Result := E_GCSingleProcessResult.Completed);
+H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnExecute" Id="{728d1c66-44bc-4acc-97a9-5480ea496f7d}" FolderPath="StateAction\">
@@ -382,22 +428,115 @@ IF _StageTimer.Q THEN
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnCompleting" Id="{ae8be5a5-4675-40ab-b3c5-93494d262705}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnCompleting : E_PackMLHookResult
+    <Method Name="H_OnIdle" Id="{14203000-1e3a-4189-918e-12e2bffe23c4}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnIdle
 VAR_INPUT
 	bFirstScan : BOOL;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_WithdrawStageCommand();
-SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-M_FinalizeCycle(Result := E_GCSingleProcessResult.Completed);
-H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
+        <ST><![CDATA[SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnComplete" Id="{4683186e-a7e8-45f4-bf5c-79b4698058df}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnComplete
+    <Method Name="H_OnResetting" Id="{39613e00-e769-4ac3-b999-788a83ae567a}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnResetting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Status.ServiceErrorId := E_GCServiceErrorCode.None;
+_CurrentStage := E_GCSingleProcessStage.None;
+H_OnResetting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStarting" Id="{3df20413-49f1-482c-b089-5486816ceecf}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
+
+IF bFirstScan THEN
+	M_BeginCycle();
+	M_StartStage(Stage := E_GCSingleProcessStage.Prepare);
+END_IF
+
+M_UpdateStageTimer();
+
+IF NOT M_ValidateParam() THEN
+	M_SetFailure(
+		ErrorCode := E_GCServiceErrorCode.Invalid_Param,
+		FailedAxis := E_GCSingleProcessAxis.None,
+		TimedOut := FALSE);
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+IF NOT SpinAxis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
+	M_SetFailure(
+		ErrorCode := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting,
+		FailedAxis := E_GCSingleProcessAxis.SpinAxis,
+		TimedOut := FALSE);
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+IF NOT LiftPinAxis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
+	SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+	M_SetFailure(
+		ErrorCode := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting,
+		FailedAxis := E_GCSingleProcessAxis.LiftPinAxis,
+		TimedOut := FALSE);
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+IF SpinAxis_BaseUnit.AxisIsDisabled THEN
+	M_SetFailure(
+		ErrorCode := E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting,
+		FailedAxis := E_GCSingleProcessAxis.SpinAxis,
+		TimedOut := FALSE);
+	RequestCommand(E_PackMLCommand.Abort);
+	RETURN;
+END_IF
+
+IF LiftPinAxis_BaseUnit.AxisIsDisabled THEN
+	M_SetFailure(
+		ErrorCode := E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting,
+		FailedAxis := E_GCSingleProcessAxis.LiftPinAxis,
+		TimedOut := FALSE);
+	RequestCommand(E_PackMLCommand.Abort);
+	RETURN;
+END_IF
+
+IF SpinAxis_BaseUnit.AxisHasJob THEN
+	M_SetFailure(
+		ErrorCode := E_GCServiceErrorCode.Axis_Is_Busy_During_Starting,
+		FailedAxis := E_GCSingleProcessAxis.SpinAxis,
+		TimedOut := FALSE);
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+IF LiftPinAxis_BaseUnit.AxisHasJob THEN
+	M_SetFailure(
+		ErrorCode := E_GCServiceErrorCode.Axis_Is_Busy_During_Starting,
+		FailedAxis := E_GCSingleProcessAxis.LiftPinAxis,
+		TimedOut := FALSE);
+	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+M_CompleteStage(NextStage := E_GCSingleProcessStage.LiftReady);
+H_OnStarting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopped" Id="{febbe7ed-9368-4fcb-9515-a743a3f2474e}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStopped
 VAR_INPUT
 	bFirstScan : BOOL;
 END_VAR
@@ -472,141 +611,6 @@ IF _CleanupTimer.Q THEN
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnStopped" Id="{febbe7ed-9368-4fcb-9515-a743a3f2474e}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnStopped
-VAR_INPUT
-	bFirstScan : BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnAborting" Id="{2e657739-7cb6-4013-a94c-abf5cbf5d1d8}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnAborting : E_PackMLHookResult
-VAR_INPUT
-	bFirstScan : BOOL;
-END_VAR
-VAR
-	bAccepted : BOOL;
-	bDone : BOOL;
-	bError : BOOL;
-	bAdvanceToReset : BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
-
-IF bFirstScan THEN
-	M_FreezeStage(TimedOut := FALSE);
-	M_WithdrawStageCommand();
-	_AbortPhase := E_GCSingleProcessAbortPhase.StopAxes;
-	_CleanupTimer(IN := FALSE);
-	_bSpinStageDone := NOT SpinAxis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId);
-	_bLiftStageDone := NOT LiftPinAxis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId);
-END_IF
-
-CASE _AbortPhase OF
-	E_GCSingleProcessAbortPhase.StopAxes:
-		_CleanupTimer(IN := TRUE, PT := _LatchedParam.StopTimeout);
-		IF NOT _bSpinStageDone THEN
-			bAccepted := SpinAxis_BaseUnit.M_Stop(ResourceOwnerId, TRUE, _LatchedParam.SpinStopDeceleration, Done => bDone, Error => bError);
-			IF (NOT bAccepted) OR bError THEN
-				M_SetFailure(E_GCServiceErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
-				_bSpinStageDone := TRUE;
-			ELSIF bDone THEN
-				SpinAxis_BaseUnit.M_Stop(ResourceOwnerId, FALSE, _LatchedParam.SpinStopDeceleration);
-				_bSpinStageDone := TRUE;
-			END_IF
-		END_IF
-		IF NOT _bLiftStageDone THEN
-			bAccepted := LiftPinAxis_BaseUnit.M_Stop(ResourceOwnerId, TRUE, _LatchedParam.LiftStopDeceleration, Done => bDone, Error => bError);
-			IF (NOT bAccepted) OR bError THEN
-				M_SetFailure(E_GCServiceErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
-				_bLiftStageDone := TRUE;
-			ELSIF bDone THEN
-				LiftPinAxis_BaseUnit.M_Stop(ResourceOwnerId, FALSE, _LatchedParam.LiftStopDeceleration);
-				_bLiftStageDone := TRUE;
-			END_IF
-		END_IF
-		bAdvanceToReset := _bSpinStageDone AND _bLiftStageDone;
-		IF _CleanupTimer.Q THEN
-			M_SetFailure(E_GCServiceErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
-			bAdvanceToReset := TRUE;
-		END_IF
-		IF bAdvanceToReset THEN
-			_CleanupTimer(IN := FALSE);
-			_AbortPhase := E_GCSingleProcessAbortPhase.ResetAxes;
-			_bSpinStageDone := NOT SpinAxis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId);
-			_bLiftStageDone := NOT LiftPinAxis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId);
-		END_IF
-
-	E_GCSingleProcessAbortPhase.ResetAxes:
-		_CleanupTimer(IN := TRUE, PT := _LatchedParam.ResetTimeout);
-		IF NOT _bSpinStageDone THEN
-			bAccepted := SpinAxis_BaseUnit.M_Reset(ResourceOwnerId, TRUE, Done => bDone, Error => bError);
-			IF (NOT bAccepted) OR bError THEN
-				M_SetFailure(E_GCServiceErrorCode.Error_While_Reset_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
-				SpinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
-				_bSpinStageDone := TRUE;
-			ELSIF bDone THEN
-				SpinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
-				_bSpinStageDone := TRUE;
-			END_IF
-		END_IF
-		IF NOT _bLiftStageDone THEN
-			bAccepted := LiftPinAxis_BaseUnit.M_Reset(ResourceOwnerId, TRUE, Done => bDone, Error => bError);
-			IF (NOT bAccepted) OR bError THEN
-				M_SetFailure(E_GCServiceErrorCode.Error_While_Reset_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
-				LiftPinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
-				_bLiftStageDone := TRUE;
-			ELSIF bDone THEN
-				LiftPinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
-				_bLiftStageDone := TRUE;
-			END_IF
-		END_IF
-		IF _bSpinStageDone AND _bLiftStageDone THEN
-			_CleanupTimer(IN := FALSE);
-			SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-			LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-			M_FinalizeCycle(Result := E_GCSingleProcessResult.Aborted);
-			H_OnAborting := E_PackMLHookResult.Done;
-			RETURN;
-		END_IF
-		IF _CleanupTimer.Q THEN
-			M_SetFailure(E_GCServiceErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
-			SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-			LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-			M_FinalizeCycle(Result := E_GCSingleProcessResult.Aborted);
-			H_OnAborting := E_PackMLHookResult.Done;
-		END_IF
-END_CASE]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnAborted" Id="{bd8a358c-0a39-4e60-85d3-620a7f638340}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnAborted
-VAR_INPUT
-	bFirstScan : BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
-LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnResetting" Id="{39613e00-e769-4ac3-b999-788a83ae567a}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnResetting : E_PackMLHookResult
-VAR_INPUT
-	bFirstScan : BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[Status.ServiceErrorId := E_GCServiceErrorCode.None;
-_CurrentStage := E_GCSingleProcessStage.None;
-H_OnResetting := E_PackMLHookResult.Done;]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_BeginCycle" Id="{90d41616-4f9a-48e3-87b5-d1c67ab4397e}" FolderPath="PrivateMethods\">
       <Declaration><![CDATA[METHOD PRIVATE M_BeginCycle
 VAR
@@ -631,31 +635,6 @@ ProcessStatus.CurrentCycle.Result := E_GCSingleProcessResult.Running;
 Status.ServiceErrorId := E_GCServiceErrorCode.None;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_StartStage" Id="{2e7ecaf9-8db8-4431-8155-68161a71b148}" FolderPath="PrivateMethods\">
-      <Declaration><![CDATA[METHOD PRIVATE M_StartStage
-VAR_INPUT
-	Stage : E_GCSingleProcessStage;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[_StageTimer(IN := FALSE);
-_CurrentStage := Stage;
-_bStageFrozen := FALSE;
-_bSpinStageDone := FALSE;
-_bLiftStageDone := FALSE;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_UpdateStageTimer" Id="{9717408a-8e58-42bd-8c08-080d707f84b0}" FolderPath="PrivateMethods\">
-      <Declaration><![CDATA[METHOD PRIVATE M_UpdateStageTimer
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[IF _bCycleActive AND NOT _bStageFrozen AND (_CurrentStage <> E_GCSingleProcessStage.None) THEN
-	_StageTimer(IN := TRUE, PT := _StageConfigView.ByIndex[TO_UINT(_CurrentStage)].Timeout);
-END_IF]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_CompleteStage" Id="{82c2ba89-3e0f-49ee-82f7-24d710c7fd7b}" FolderPath="PrivateMethods\">
       <Declaration><![CDATA[METHOD PRIVATE M_CompleteStage
 VAR_INPUT
@@ -678,6 +657,31 @@ _StageTimer(IN := FALSE);
 IF NextStage <> E_GCSingleProcessStage.None THEN
 	M_StartStage(Stage := NextStage);
 END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_FinalizeCycle" Id="{1b5eb052-b68e-4624-9e00-b9b246911983}" FolderPath="PrivateMethods\">
+      <Declaration><![CDATA[METHOD PRIVATE M_FinalizeCycle
+VAR_INPUT
+	Result : E_GCSingleProcessResult;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT _bCycleActive OR _bCycleFinalized THEN
+	RETURN;
+END_IF
+
+M_FreezeStage(TimedOut := FALSE);
+IF _bFailurePending THEN
+	ProcessStatus.CurrentCycle.Result := E_GCSingleProcessResult.Failed;
+ELSE
+	ProcessStatus.CurrentCycle.Result := Result;
+END_IF
+ProcessStatus.CurrentCycle.TotalActualTime := _CompletedTotalTime;
+ProcessStatus.CurrentCycle.StageTiming := _CurrentTimingView.ByName;
+ProcessStatus.LastCycle := ProcessStatus.CurrentCycle;
+_bCycleFinalized := TRUE;
+_bCycleActive := FALSE;
+_CurrentStage := E_GCSingleProcessStage.None;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_FreezeStage" Id="{ea62f3c5-f352-462b-b0ca-db64ecb5f896}" FolderPath="PrivateMethods\">
@@ -719,29 +723,29 @@ IF NOT _bFailurePending THEN
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_FinalizeCycle" Id="{1b5eb052-b68e-4624-9e00-b9b246911983}" FolderPath="PrivateMethods\">
-      <Declaration><![CDATA[METHOD PRIVATE M_FinalizeCycle
+    <Method Name="M_StartStage" Id="{2e7ecaf9-8db8-4431-8155-68161a71b148}" FolderPath="PrivateMethods\">
+      <Declaration><![CDATA[METHOD PRIVATE M_StartStage
 VAR_INPUT
-	Result : E_GCSingleProcessResult;
+	Stage : E_GCSingleProcessStage;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT _bCycleActive OR _bCycleFinalized THEN
-	RETURN;
-END_IF
-
-M_FreezeStage(TimedOut := FALSE);
-IF _bFailurePending THEN
-	ProcessStatus.CurrentCycle.Result := E_GCSingleProcessResult.Failed;
-ELSE
-	ProcessStatus.CurrentCycle.Result := Result;
-END_IF
-ProcessStatus.CurrentCycle.TotalActualTime := _CompletedTotalTime;
-ProcessStatus.CurrentCycle.StageTiming := _CurrentTimingView.ByName;
-ProcessStatus.LastCycle := ProcessStatus.CurrentCycle;
-_bCycleFinalized := TRUE;
-_bCycleActive := FALSE;
-_CurrentStage := E_GCSingleProcessStage.None;]]></ST>
+        <ST><![CDATA[_StageTimer(IN := FALSE);
+_CurrentStage := Stage;
+_bStageFrozen := FALSE;
+_bSpinStageDone := FALSE;
+_bLiftStageDone := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateStageTimer" Id="{9717408a-8e58-42bd-8c08-080d707f84b0}" FolderPath="PrivateMethods\">
+      <Declaration><![CDATA[METHOD PRIVATE M_UpdateStageTimer
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _bCycleActive AND NOT _bStageFrozen AND (_CurrentStage <> E_GCSingleProcessStage.None) THEN
+	_StageTimer(IN := TRUE, PT := _StageConfigView.ByIndex[TO_UINT(_CurrentStage)].Timeout);
+END_IF]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_ValidateParam" Id="{0a8a7465-9d0d-4177-84d6-5308e88cb992}" FolderPath="PrivateMethods\">

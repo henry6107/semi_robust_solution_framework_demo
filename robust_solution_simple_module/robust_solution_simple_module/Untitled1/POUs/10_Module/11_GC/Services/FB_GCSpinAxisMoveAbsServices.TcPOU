@@ -14,18 +14,21 @@ END_VAR
 VAR_OUTPUT
 	Status : ST_ServiceStatus;
 END_VAR
-]]></Declaration>
+
+VAR
+	_CmdRequestOneShot : R_TRIG;
+END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[PackMLIn := Ctrl.PackMLIn;
 SUPER^();
 
+_CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
+
 // Updata status
 Status.CommandErrorId := PackMLOut.eStateErrorID;
 
-IF PackMLIn.bCommandChangeRequest THEN // Acknowledge to upper controller that command received
+IF _CmdRequestOneShot.Q THEN // Acknowledge to upper controller that command received
 	Status.ResponseId := Ctrl.RequestId;
-ELSE
-	Status.ResponseId := 0;
 END_IF
 
 Status.State := PackMLOut.eStateCurrent;
