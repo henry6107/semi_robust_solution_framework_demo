@@ -48,40 +48,28 @@ IF _bTest THEN
 	(* Spin：先對位至 90° *)
 	_GC1.ECID.SingleProcess.SpinAlign.Position := 90.0;
 	_GC1.ECID.SingleProcess.SpinAlign.Velocity := 30.0;
-	_GC1.ECID.SingleProcess.SpinAlign.Acceleration := 60.0;
-	_GC1.ECID.SingleProcess.SpinAlign.Deceleration := 60.0;
 	
 	(* 同步進入製程：Spin 180°、LiftPin 20 mm *)
 	_GC1.ECID.SingleProcess.ProcessEntrySpin.Position := 180.0;
 	_GC1.ECID.SingleProcess.ProcessEntrySpin.Velocity := 30.0;
-	_GC1.ECID.SingleProcess.ProcessEntrySpin.Acceleration := 60.0;
-	_GC1.ECID.SingleProcess.ProcessEntrySpin.Deceleration := 60.0;
 	
 	_GC1.ECID.SingleProcess.ProcessEntryLift.Position := 20.0;
 	_GC1.ECID.SingleProcess.ProcessEntryLift.Velocity := 5.0;
-	_GC1.ECID.SingleProcess.ProcessEntryLift.Acceleration := 10.0;
-	_GC1.ECID.SingleProcess.ProcessEntryLift.Deceleration := 10.0;
 	
 	(* 製程旋轉：CW 120 *)
 	_GC1.ECID.SingleProcess.SpinProcess.Velocity := 120.0;
-	_GC1.ECID.SingleProcess.SpinProcess.Acceleration := 100.0;
-	_GC1.ECID.SingleProcess.SpinProcess.Deceleration := 100.0;
 	
 	(* 同步退出：LiftPin 回到 Standby *)
 	_GC1.ECID.SingleProcess.ProcessExitLift.Position := 0.0;
 	_GC1.ECID.SingleProcess.ProcessExitLift.Velocity := 5.0;
-	_GC1.ECID.SingleProcess.ProcessExitLift.Acceleration := 10.0;
-	_GC1.ECID.SingleProcess.ProcessExitLift.Deceleration := 10.0;
 	
 	(* Spin 回待機角度 *)
 	_GC1.ECID.SingleProcess.SpinStandby.Position := 0.0;
-	_GC1.ECID.SingleProcess.SpinStandby.Velocity := 30.0;
-	_GC1.ECID.SingleProcess.SpinStandby.Acceleration := 60.0;
-	_GC1.ECID.SingleProcess.SpinStandby.Deceleration := 60.0;
+	_GC1.ECID.SingleProcess.SpinStandby.Velocity := 300.0;
 	
 	(* Stop／Abort 減速度 *)
 	_GC1.ECID.SingleProcess.SpinStopDeceleration := 100.0;
-	_GC1.ECID.SingleProcess.LiftStopDeceleration := 10.0;
+	_GC1.ECID.SingleProcess.LiftStopDeceleration := 200.0;
 	
 	(* 各階段預期時間與逾時 *)
 	_GC1.ECID.SingleProcess.StageTiming.Prepare.TargetTime := T#100MS;

@@ -18,31 +18,12 @@ VAR
 	_bVelSwitch : BOOL;
 	_MCPower	: MC_Power;
 	_MCJog		: MC_Jog;
+	_MCHalt		: MC_Halt;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[M_CyclicUpdate();]]></ST>
     </Implementation>
-    <Method Name="M_CyclicUpdate" Id="{40d31be8-e262-49a2-98a0-53468206e8c7}">
-      <Declaration><![CDATA[METHOD M_CyclicUpdate
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation><ST><![CDATA[_MCPower(Axis:= _Axis,
-			Enable:= TRUE,
-			Enable_Positive:= TRUE,
-			Enable_Negative:= TRUE,
-			Override:= 100);
-			
-_MCReset(Axis:= _Axis);
-_MCStop(Axis:= _Axis);
-_MCMoveAbs(Axis:= _Axis);
-_MCMoveVel(Axis:= _Axis);
-_MCMoveVel_2(Axis:= _Axis);
-_MCJog(Axis:= _Axis);
-
-_Axis.ReadStatus();]]></ST></Implementation>
-    </Method>
     <Property Name="AxisActualVelocity" Id="{777cc680-8953-4809-acb4-3307920aad6a}">
       <Declaration><![CDATA[PROPERTY PUBLIC AxisActualVelocity : LREAL
 ]]></Declaration>
@@ -82,6 +63,59 @@ AxisIsDisabled := _Axis.Status.Disabled;]]></ST>
         </Implementation>
       </Get>
     </Property>
+    <Method Name="M_CyclicUpdate" Id="{40d31be8-e262-49a2-98a0-53468206e8c7}">
+      <Declaration><![CDATA[METHOD M_CyclicUpdate
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_MCPower(Axis:= _Axis,
+			Enable:= TRUE,
+			Enable_Positive:= TRUE,
+			Enable_Negative:= TRUE,
+			Override:= 100);
+			
+_MCReset(Axis:= _Axis);
+_MCStop(Axis:= _Axis);
+_MCMoveAbs(Axis:= _Axis);
+_MCMoveVel(Axis:= _Axis);
+_MCMoveVel_2(Axis:= _Axis);
+_MCJog(Axis:= _Axis);
+_MCHalt(Axis:= _Axis);
+
+_Axis.ReadStatus();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Halt" Id="{99020f71-ff22-43ce-a9cc-2f51d191b702}">
+      <Declaration><![CDATA[METHOD M_Halt : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+	Execute : BOOL;
+	Deceleration : LREAL;
+END_VAR
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_Halt := FALSE;
+Done := FALSE;
+Error := FALSE;
+IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
+	RETURN;
+END_IF
+
+_MCHalt.Execute := Execute;
+_MCHalt.Deceleration := Deceleration;
+
+Done := _MCHalt.Done;
+Error := _MCHalt.Error;
+M_Halt := TRUE;
+
+]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_Jog" Id="{dc88b92a-725e-4df4-aa19-7fa274329a3a}">
       <Declaration><![CDATA[METHOD M_Jog : BOOL
 VAR_INPUT

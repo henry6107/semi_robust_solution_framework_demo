@@ -144,6 +144,22 @@ CallRecord := _aHistory[Index];
 M_GetCall := TRUE;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_Halt" Id="{6eead5a4-5f3f-43d9-aa96-68d42a79be0a}">
+      <Declaration><![CDATA[METHOD M_Halt : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+	Execute : BOOL;
+	Deceleration : LREAL;
+END_VAR
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_Jog" Id="{5e662ea3-bf75-47da-a7ed-fc6bb775a22a}">
       <Declaration><![CDATA[METHOD M_Jog : BOOL
 VAR_INPUT

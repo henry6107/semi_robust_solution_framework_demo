@@ -1,11 +1,38 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_Axis_BaseUnit" Id="{6467168b-19d5-4331-8d22-d28396010198}">
     <Declaration><![CDATA[INTERFACE I_Axis_BaseUnit EXTENDS I_ResourceLock
 ]]></Declaration>
+    <Property Name="AxisHasJob" Id="{a1938803-7419-476d-8402-590d311440cf}">
+      <Declaration><![CDATA[PROPERTY AxisHasJob : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{f06a2727-a7b5-40e3-8e1f-b665de9846da}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="AxisIsDisabled" Id="{2d6192b0-67ac-40f2-b5fa-6a71916a4e40}">
+      <Declaration><![CDATA[PROPERTY AxisIsDisabled : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{08c167f8-c5d6-4bf5-ae04-4d1f31fbeb0c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Method Name="M_CyclicUpdate" Id="{1cba92c4-21e1-4f38-a0a3-633174eef5ec}">
       <Declaration><![CDATA[METHOD M_CyclicUpdate
 VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="M_Halt" Id="{1794374f-bb34-4f57-8d42-269a47ec9875}">
+      <Declaration><![CDATA[METHOD M_Halt : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+	Execute : BOOL;
+	Deceleration : LREAL;
+END_VAR
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
 END_VAR
 ]]></Declaration>
     </Method>
@@ -60,6 +87,18 @@ VAR_OUTPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Method Name="M_Reset" Id="{8fe19313-b7c2-4cbf-a8f1-cb5cb030e7af}">
+      <Declaration><![CDATA[METHOD M_Reset : BOOL
+VAR_INPUT
+	OwnerId : T_ResourceOwnerId;
+	Execute : BOOL;
+END_VAR
+VAR_OUTPUT
+	Done : BOOL;
+	Error : BOOL;
+END_VAR
+]]></Declaration>
+    </Method>
     <Method Name="M_Stop" Id="{b848d1e0-db43-4d37-93f3-46b8e8154c0b}">
       <Declaration><![CDATA[METHOD M_Stop : BOOL
 VAR_INPUT
@@ -73,31 +112,5 @@ VAR_OUTPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Method Name="M_Reset" Id="{8fe19313-b7c2-4cbf-a8f1-cb5cb030e7af}">
-      <Declaration><![CDATA[METHOD M_Reset : BOOL
-VAR_INPUT
-	OwnerId : T_ResourceOwnerId;
-	Execute : BOOL;
-END_VAR
-VAR_OUTPUT
-	Done : BOOL;
-	Error : BOOL;
-END_VAR
-]]></Declaration>
-    </Method>
-    <Property Name="AxisIsDisabled" Id="{2d6192b0-67ac-40f2-b5fa-6a71916a4e40}">
-      <Declaration><![CDATA[PROPERTY AxisIsDisabled : BOOL
-]]></Declaration>
-      <Get Name="Get" Id="{08c167f8-c5d6-4bf5-ae04-4d1f31fbeb0c}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
-    <Property Name="AxisHasJob" Id="{a1938803-7419-476d-8402-590d311440cf}">
-      <Declaration><![CDATA[PROPERTY AxisHasJob : BOOL
-]]></Declaration>
-      <Get Name="Get" Id="{f06a2727-a7b5-40e3-8e1f-b665de9846da}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
   </Itf>
 </TcPlcObject>
