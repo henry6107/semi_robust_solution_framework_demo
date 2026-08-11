@@ -10,7 +10,8 @@ TYPE E_FakeAxisOperation :
 	MoveAbs,
 	MoveVel,
 	Stop,
-	Reset
+	Reset,
+	Halt
 ) UINT;
 END_TYPE
 ]]></Declaration>

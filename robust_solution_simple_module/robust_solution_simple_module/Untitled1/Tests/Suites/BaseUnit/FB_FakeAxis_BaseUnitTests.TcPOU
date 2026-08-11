@@ -11,6 +11,11 @@ END_VAR
       <ST><![CDATA[ResourceCanBeAcquiredAndReleased();
 OwnerZeroAndNonOwnerStopAreRejected();
 AllNonOwnerMotionCommandsAreRejected();
+ValidOwnerHaltIsAcceptedAndRecorded();
+OwnerZeroAndNonOwnerHaltAreRejected();
+HaltDoneIsPublishedAfterConfiguredCycles();
+HaltErrorIsPublishedAfterConfiguredCycles();
+HaltWithdrawalClearsResultAndPreservesOwnership();
 ScriptAndHistoryOverflowAreExplicit();
 CommandHistoryPreservesParameters();
 ResponseRemainsLatchedUntilCommandWithdrawal();
@@ -251,6 +256,181 @@ AssertTrue(Condition := _FakeAxis.HistoryCount = 256, Message := 'History must s
 AssertTrue(Condition := _FakeAxis.HistoryOverflowed, Message := 'History overflow must be visible and must not overwrite calls.');
 
 TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ValidOwnerHaltIsAcceptedAndRecorded" Id="{84fc874f-1e05-4ef9-8c8e-973bd7f2e0e4}">
+      <Declaration><![CDATA[METHOD ValidOwnerHaltIsAcceptedAndRecorded
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+	CallRecord : ST_FakeAxisCall;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ValidOwnerHaltIsAcceptedAndRecorded');
+
+_FakeAxis.M_ResetScenario();
+_Axis := _FakeAxis;
+AssertTrue(Condition := _Axis.M_AcquireResource(OwnerId := 11), Message := 'Valid Halt Owner must acquire the Axis.');
+AssertTrue(Condition := _Axis.M_Halt(OwnerId := 11, Execute := TRUE, Deceleration := 12.5, Done => bDone, Error => bError), Message := 'Valid Owner Halt must be accepted.');
+AssertFalse(Condition := bDone OR bError, Message := 'Unscripted Halt outputs must be neutral.');
+AssertTrue(Condition := _FakeAxis.M_GetCall(Index := 1, CallRecord => CallRecord), Message := 'Accepted Halt must be present in history.');
+AssertTrue(Condition := (CallRecord.Operation = E_FakeAxisOperation.Halt) AND CallRecord.Accepted AND CallRecord.Execute, Message := 'History must identify an accepted active Halt.');
+AssertTrue(Condition := (CallRecord.OwnerId = 11) AND (CallRecord.Deceleration = 12.5), Message := 'Halt history must preserve Owner and deceleration.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="OwnerZeroAndNonOwnerHaltAreRejected" Id="{712a8080-b325-4843-8b62-46be3e3986c8}">
+      <Declaration><![CDATA[METHOD OwnerZeroAndNonOwnerHaltAreRejected
+VAR
+	bDone : BOOL;
+	bError : BOOL;
+	bAccepted : BOOL;
+	CallRecord : ST_FakeAxisCall;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('OwnerZeroAndNonOwnerHaltAreRejected');
+
+_FakeAxis.M_ResetScenario();
+_Axis := _FakeAxis;
+AssertTrue(Condition := _Axis.M_AcquireResource(OwnerId := 31), Message := 'Valid Owner must acquire the Axis.');
+
+bAccepted := _Axis.M_Halt(OwnerId := 0, Execute := TRUE, Deceleration := 20, Done => bDone, Error => bError);
+AssertFalse(Condition := bAccepted, Message := 'OwnerId zero Halt must be rejected.');
+AssertFalse(Condition := bDone OR bError, Message := 'OwnerId zero Halt outputs must be neutral.');
+AssertTrue(Condition := _FakeAxis.M_GetCall(Index := 1, CallRecord => CallRecord), Message := 'OwnerId zero Halt must be recorded.');
+AssertFalse(Condition := CallRecord.Accepted, Message := 'OwnerId zero Halt history must be rejected.');
+
+bAccepted := _Axis.M_Halt(OwnerId := 32, Execute := TRUE, Deceleration := 21, Done => bDone, Error => bError);
+AssertFalse(Condition := bAccepted, Message := 'Non-Owner Halt must be rejected.');
+AssertFalse(Condition := bDone OR bError, Message := 'Non-Owner Halt outputs must be neutral.');
+AssertTrue(Condition := _FakeAxis.M_GetCall(Index := 2, CallRecord => CallRecord), Message := 'Non-Owner Halt must be recorded.');
+AssertFalse(Condition := CallRecord.Accepted, Message := 'Non-Owner Halt history must be rejected.');
+AssertTrue(Condition := _Axis.M_IsResourceOwner(OwnerId := 31), Message := 'Rejected Halt must preserve the current Owner.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HaltDoneIsPublishedAfterConfiguredCycles" Id="{b8b78379-88c8-4b29-817e-891925523aad}">
+      <Declaration><![CDATA[METHOD HaltDoneIsPublishedAfterConfiguredCycles
+VAR_INST
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+	nPhase : UINT;
+	bDone : BOOL;
+	bError : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HaltDoneIsPublishedAfterConfiguredCycles');
+
+CASE nPhase OF
+	0:
+		FakeAxis.M_ResetScenario();
+		Axis := FakeAxis;
+		AssertTrue(Condition := Axis.M_AcquireResource(OwnerId := 21), Message := 'Halt Done test Owner must acquire the Axis.');
+		AssertTrue(Condition := FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.Halt, AfterActiveCycles := 2, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0), Message := 'Halt Done script must be queued.');
+		AssertTrue(Condition := Axis.M_Halt(OwnerId := 21, Execute := TRUE, Deceleration := 10, Done => bDone, Error => bError), Message := 'Owner Halt must be accepted.');
+		AssertFalse(Condition := bDone OR bError, Message := 'Halt result must initially be pending.');
+		nPhase := 1;
+
+	1:
+		Axis.M_CyclicUpdate();
+		Axis.M_Halt(OwnerId := 21, Execute := TRUE, Deceleration := 10, Done => bDone, Error => bError);
+		AssertFalse(Condition := bDone OR bError, Message := 'Halt Done must remain pending after one active cycle.');
+		nPhase := 2;
+
+	2:
+		Axis.M_CyclicUpdate();
+		Axis.M_Halt(OwnerId := 21, Execute := TRUE, Deceleration := 10, Done => bDone, Error => bError);
+		AssertTrue(Condition := bDone AND NOT bError, Message := 'Halt Done must be published on the configured cycle.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HaltErrorIsPublishedAfterConfiguredCycles" Id="{339d446c-ff6a-4551-9fc8-f43ca13f8e15}">
+      <Declaration><![CDATA[METHOD HaltErrorIsPublishedAfterConfiguredCycles
+VAR_INST
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+	nPhase : UINT;
+	bDone : BOOL;
+	bError : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HaltErrorIsPublishedAfterConfiguredCycles');
+
+CASE nPhase OF
+	0:
+		FakeAxis.M_ResetScenario();
+		Axis := FakeAxis;
+		AssertTrue(Condition := Axis.M_AcquireResource(OwnerId := 22), Message := 'Halt Error test Owner must acquire the Axis.');
+		AssertTrue(Condition := FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.Halt, AfterActiveCycles := 2, Done := FALSE, InVelocity := FALSE, Error := TRUE, ErrorId := 16#5678), Message := 'Halt Error script must be queued.');
+		Axis.M_Halt(OwnerId := 22, Execute := TRUE, Deceleration := 11, Done => bDone, Error => bError);
+		AssertFalse(Condition := bDone OR bError, Message := 'Halt Error must initially be pending.');
+		nPhase := 1;
+
+	1:
+		Axis.M_CyclicUpdate();
+		Axis.M_Halt(OwnerId := 22, Execute := TRUE, Deceleration := 11, Done => bDone, Error => bError);
+		AssertFalse(Condition := bDone OR bError, Message := 'Halt Error must remain pending after one active cycle.');
+		nPhase := 2;
+
+	2:
+		Axis.M_CyclicUpdate();
+		Axis.M_Halt(OwnerId := 22, Execute := TRUE, Deceleration := 11, Done => bDone, Error => bError);
+		AssertTrue(Condition := bError AND NOT bDone, Message := 'Halt Error must be published on the configured cycle.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HaltWithdrawalClearsResultAndPreservesOwnership" Id="{2d566e8d-4770-4882-a65f-d0120767cbc0}">
+      <Declaration><![CDATA[METHOD HaltWithdrawalClearsResultAndPreservesOwnership
+VAR_INST
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+	nPhase : UINT;
+	bDone : BOOL;
+	bError : BOOL;
+	CallRecord : ST_FakeAxisCall;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HaltWithdrawalClearsResultAndPreservesOwnership');
+
+CASE nPhase OF
+	0:
+		FakeAxis.M_ResetScenario();
+		Axis := FakeAxis;
+		AssertTrue(Condition := Axis.M_AcquireResource(OwnerId := 23), Message := 'Halt withdrawal test Owner must acquire the Axis.');
+		AssertTrue(Condition := FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.Halt, AfterActiveCycles := 1, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0), Message := 'Halt withdrawal script must be queued.');
+		Axis.M_Halt(OwnerId := 23, Execute := TRUE, Deceleration := 12);
+		nPhase := 1;
+
+	1:
+		Axis.M_CyclicUpdate();
+		Axis.M_Halt(OwnerId := 23, Execute := TRUE, Deceleration := 12, Done => bDone, Error => bError);
+		AssertTrue(Condition := bDone AND NOT bError, Message := 'Halt must complete before command withdrawal.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 23), Message := 'Halt completion must not release its Owner.');
+		AssertTrue(Condition := Axis.M_Halt(OwnerId := 23, Execute := FALSE, Deceleration := 12), Message := 'Owner must be allowed to withdraw Halt.');
+		AssertTrue(Condition := FakeAxis.M_GetCall(Index := 3, CallRecord => CallRecord), Message := 'Withdrawn Halt must be recorded.');
+		AssertTrue(Condition := (CallRecord.Operation = E_FakeAxisOperation.Halt) AND CallRecord.Accepted AND NOT CallRecord.Execute, Message := 'Halt history must expose accepted command withdrawal.');
+		Axis.M_CyclicUpdate();
+		nPhase := 2;
+
+	2:
+		Axis.M_Halt(OwnerId := 23, Execute := FALSE, Deceleration := 12, Done => bDone, Error => bError);
+		AssertFalse(Condition := bDone OR bError, Message := 'Halt result must clear after withdrawal and cyclic update.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 23), Message := 'Halt withdrawal must preserve resource ownership.');
+		AssertFalse(Condition := Axis.M_AcquireResource(OwnerId := 24), Message := 'A contender must remain rejected after Halt withdrawal.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
       </Implementation>
     </Method>
   </POU>

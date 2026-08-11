@@ -22,6 +22,7 @@ VAR
 	_bMoveVelActive : BOOL;
 	_bStopActive : BOOL;
 	_bResetActive : BOOL;
+	_bHaltActive : BOOL;
 
 	_bJogDone : BOOL;
 	_bJogInVelocity : BOOL;
@@ -43,6 +44,10 @@ VAR
 	_bResetInVelocity : BOOL;
 	_bResetError : BOOL;
 	_nResetErrorId : UDINT;
+	_bHaltDone : BOOL;
+	_bHaltInVelocity : BOOL;
+	_bHaltError : BOOL;
+	_nHaltErrorId : UDINT;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -122,7 +127,8 @@ M_ProcessOperation(Operation := E_FakeAxisOperation.Jog, Active := _bJogActive, 
 M_ProcessOperation(Operation := E_FakeAxisOperation.MoveAbs, Active := _bMoveAbsActive, Done := _bMoveAbsDone, InVelocity := _bMoveAbsInVelocity, Error := _bMoveAbsError, ErrorId := _nMoveAbsErrorId);
 M_ProcessOperation(Operation := E_FakeAxisOperation.MoveVel, Active := _bMoveVelActive, Done := _bMoveVelDone, InVelocity := _bMoveVelInVelocity, Error := _bMoveVelError, ErrorId := _nMoveVelErrorId);
 M_ProcessOperation(Operation := E_FakeAxisOperation.Stop, Active := _bStopActive, Done := _bStopDone, InVelocity := _bStopInVelocity, Error := _bStopError, ErrorId := _nStopErrorId);
-M_ProcessOperation(Operation := E_FakeAxisOperation.Reset, Active := _bResetActive, Done := _bResetDone, InVelocity := _bResetInVelocity, Error := _bResetError, ErrorId := _nResetErrorId);]]></ST>
+M_ProcessOperation(Operation := E_FakeAxisOperation.Reset, Active := _bResetActive, Done := _bResetDone, InVelocity := _bResetInVelocity, Error := _bResetError, ErrorId := _nResetErrorId);
+M_ProcessOperation(Operation := E_FakeAxisOperation.Halt, Active := _bHaltActive, Done := _bHaltDone, InVelocity := _bHaltInVelocity, Error := _bHaltError, ErrorId := _nHaltErrorId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_GetCall" Id="{94ad7b50-f13b-43b4-a754-adcb1517e88f}">
@@ -155,9 +161,24 @@ VAR_OUTPUT
 	Done : BOOL;
 	Error : BOOL;
 END_VAR
+VAR
+	bAccepted : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[bAccepted := M_IsResourceOwner(OwnerId := OwnerId);
+M_RecordCall(Operation := E_FakeAxisOperation.Halt, OwnerId := OwnerId, Accepted := bAccepted, Execute := Execute, JogForward := FALSE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Direction := MC_Direction.MC_Positive_Direction, Position := 0, Velocity := 0, Acceleration := 0, Deceleration := Deceleration);
+
+M_Halt := bAccepted;
+IF NOT bAccepted THEN
+	Done := FALSE;
+	Error := FALSE;
+	RETURN;
+END_IF
+
+_bHaltActive := Execute;
+Done := _bHaltDone;
+Error := _bHaltError;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_Jog" Id="{5e662ea3-bf75-47da-a7ed-fc6bb775a22a}">
@@ -453,6 +474,7 @@ _bMoveAbsActive := FALSE;
 _bMoveVelActive := FALSE;
 _bStopActive := FALSE;
 _bResetActive := FALSE;
+_bHaltActive := FALSE;
 _bJogDone := FALSE;
 _bJogInVelocity := FALSE;
 _bJogError := FALSE;
@@ -472,7 +494,11 @@ _nStopErrorId := 0;
 _bResetDone := FALSE;
 _bResetInVelocity := FALSE;
 _bResetError := FALSE;
-_nResetErrorId := 0;]]></ST>
+_nResetErrorId := 0;
+_bHaltDone := FALSE;
+_bHaltInVelocity := FALSE;
+_bHaltError := FALSE;
+_nHaltErrorId := 0;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_SetAxisState" Id="{10c2eb70-a53b-4b94-8710-7bc4d3c0b6f3}">
