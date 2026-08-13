@@ -3,12 +3,14 @@
   <POU Name="MAIN" Id="{732eef67-564b-4eae-a87a-e2bb58901008}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
-	GC1_Module : FB_GC_Module;
+	GC1_Module : FB_GC_Module(ModuleId := E_ModuleId.GC1);
 	GC1_SpinAxis_BaseUnit : FB_Axis_BaseUnit;
 	GC1_LiftPinAxis_BaseUnit : FB_Axis_BaseUnit;
 	_GC1 : ST_GC_CtrlStatus;
 	GC1_HwIn :  U_GC_HW_In;
 	GC_HwOut : U_GC_HW_Out;
+	_UtcClock : FB_UtcClock;
+	_SystemContext : ST_SystemContext;
 	
 	_bTest : BOOL;
 END_VAR
@@ -22,12 +24,15 @@ END_VAR
 // 	_GC1 := GVL_CSharp.GC1;
 // END_IF
 
+_UtcClock(UtcDateTime => _SystemContext.UtcDateTime);
+
 GC1_Module(
 	HwInput:= GC1_HwIn.Signal, 
 	HwOutput:= GC_HwOut.Signal, 
 	ModuleCtrl:= _GC1.ModuleCtrl, 
 	ServiceCtrl:= _GC1.ServiceCtrl,
 	ServiceParam:= _GC1.ServiceParam, 
+	SystemContext:= _SystemContext,
 	SpinAxis_BaseUnit:= GC1_SpinAxis_BaseUnit,
 	LiftPinAxis_BaseUnit:= GC1_LiftPinAxis_BaseUnit,
 	ModuleStatus=> _GC1.ModuleStatus,

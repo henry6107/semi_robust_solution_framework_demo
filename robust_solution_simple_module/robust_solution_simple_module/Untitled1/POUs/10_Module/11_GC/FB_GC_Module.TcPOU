@@ -5,11 +5,12 @@
 VAR_INPUT	
 	HwInput : REFERENCE TO ST_GC_Signal_In;
 	HwOutput : REFERENCE TO ST_GC_Signal_Out;
-	
+
 	ModuleCtrl : REFERENCE TO ST_ModuleCtrl;
 	ServiceCtrl : REFERENCE TO ST_GC_ServiceCtrl;
 	ServiceParam : REFERENCE TO ST_GC_ServiceParam;
-	
+	SystemContext : REFERENCE TO ST_SystemContext;
+
 	// Base unit used in GC chamber
 	SpinAxis_BaseUnit : I_Axis_BaseUnit;
 	LiftPinAxis_BaseUnit : I_Axis_BaseUnit;
@@ -36,9 +37,12 @@ VAR
 	_LiftPinAxisMoveVelCCWService : FB_GCLiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_GCLiftPinAxisMoveAbsServices;
 	_SingleProcessService : FB_GCSingleProcessService;
-	
+
 	_CmdRequestOneShot : R_TRIG;
 	_ModeRequestOneShot : R_TRIG;
+
+	_ModuleId : UDINT;
+	_ServiceContext : ST_ServiceContext;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -49,6 +53,10 @@ END_IF
 
 PackMLIn := ModuleCtrl.PackMLIn;
 SUPER^();
+
+_ServiceContext.ModuleId := _ModuleId;
+_ServiceContext.UtcDateTime := SystemContext.UtcDateTime;
+
 A01_UpdateServiceParam();
 A02_SelectServiceControlSource();
 A03_UpdateService();
@@ -107,6 +115,7 @@ END_IF]]></ST>
 
 _SpinAxisMoveAbsService(
 	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveAbs,
+	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveAbs,
 	Status=> _ServiceStatusView.ByName.SpinAxisMoveAbs);
@@ -151,6 +160,22 @@ _SingleProcessService(
 LiftPinAxis_BaseUnit.M_CyclicUpdate();]]></ST>
       </Implementation>
     </Action>
+    <Method Name="FB_Init" Id="{d8bb3a84-1891-43e7-993c-a91b090d4420}">
+      <Declaration><![CDATA[//FB_Init is always available implicitly and it is used primarily for initialization.
+//The return value is not evaluated. For a specific influence, you can also declare the
+//methods explicitly and provide additional code there with the standard initialization
+//code. You can evaluate the return value.
+METHOD FB_Init: BOOL
+VAR_INPUT
+    bInitRetains: BOOL; // TRUE: the retain variables are initialized (reset warm / reset cold)
+    bInCopyCode: BOOL;  // TRUE: the instance will be copied to the copy code afterward (online change)
+
+	ModuleId : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_ModuleId := ModuleId;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="H_OnAborted" Id="{de8d6f56-427f-41df-b4d5-ddd289e1aed8}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnAborted
 VAR_INPUT

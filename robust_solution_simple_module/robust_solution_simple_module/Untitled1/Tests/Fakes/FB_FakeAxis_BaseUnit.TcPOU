@@ -233,6 +233,7 @@ END_VAR
 VAR_OUTPUT
 	Done : BOOL;
 	Error : BOOL;
+	ErrorId : UDINT;
 END_VAR
 VAR
 	bAccepted : BOOL;
@@ -246,12 +247,14 @@ M_MoveAbs := bAccepted;
 IF NOT bAccepted THEN
 	Done := FALSE;
 	Error := FALSE;
+	ErrorId := 0;
 	RETURN;
 END_IF
 
 _bMoveAbsActive := Execute;
 Done := _bMoveAbsDone;
-Error := _bMoveAbsError;]]></ST>
+Error := _bMoveAbsError;
+ErrorId := _nMoveAbsErrorId;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_MoveVel" Id="{0cc6eabc-5d4d-4943-826e-9307a0401b16}">
@@ -432,6 +435,7 @@ END_VAR
 VAR_OUTPUT
 	Done : BOOL;
 	Error : BOOL;
+	ErrorId : UDINT;
 END_VAR
 VAR
 	bAccepted : BOOL;
@@ -445,12 +449,14 @@ M_Reset := bAccepted;
 IF NOT bAccepted THEN
 	Done := FALSE;
 	Error := FALSE;
+	ErrorId := 0;
 	RETURN;
 END_IF
 
 _bResetActive := Execute;
 Done := _bResetDone;
-Error := _bResetError;]]></ST>
+Error := _bResetError;
+ErrorId := _nResetErrorId;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_ResetScenario" Id="{de0840d9-c339-43cb-8bf8-ae01686058c7}">
@@ -523,6 +529,7 @@ END_VAR
 VAR_OUTPUT
 	Done : BOOL;
 	Error : BOOL;
+	ErrorId : UDINT;
 END_VAR
 VAR
 	bAccepted : BOOL;
@@ -536,12 +543,14 @@ M_Stop := bAccepted;
 IF NOT bAccepted THEN
 	Done := FALSE;
 	Error := FALSE;
+	ErrorId := 0;
 	RETURN;
 END_IF
 
 _bStopActive := Execute;
 Done := _bStopDone;
-Error := _bStopError;]]></ST>
+Error := _bStopError;
+ErrorId := _nStopErrorId;]]></ST>
       </Implementation>
     </Method>
     <Property Name="ScriptConfigurationError" Id="{6c11b652-02b9-4680-a22d-45f650b44c03}">

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_UtcClockTests" Id="{a4af874b-7a33-4649-ab81-e7914d143f67}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_UtcClockTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[UtcTimestampUsesCompactMilliseconds();]]></ST>
+    </Implementation>
+    <Method Name="UtcTimestampUsesCompactMilliseconds" Id="{343265b3-2447-4e2b-ad57-d590999a2a61}">
+      <Declaration><![CDATA[METHOD UtcTimestampUsesCompactMilliseconds
+VAR
+	Clock : FB_UtcClock;
+	UtcDateTime : STRING(20);
+	nIndex : UINT;
+	sCharacter : STRING(1);
+	bAllDigits : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('UtcTimestampUsesCompactMilliseconds');
+
+Clock(UtcDateTime => UtcDateTime);
+bAllDigits := LEN(UtcDateTime) = 17;
+FOR nIndex := 1 TO LEN(UtcDateTime) DO
+	sCharacter := MID(UtcDateTime, 1, nIndex);
+	bAllDigits := bAllDigits AND (FIND('0123456789', sCharacter) > 0);
+END_FOR
+
+AssertTrue(Condition := LEN(UtcDateTime) = 17, Message := 'UTC timestamp must use YYYYMMDDHHMMSSUUU.');
+AssertTrue(Condition := bAllDigits, Message := 'UTC timestamp must contain only digits, including three millisecond digits.');
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

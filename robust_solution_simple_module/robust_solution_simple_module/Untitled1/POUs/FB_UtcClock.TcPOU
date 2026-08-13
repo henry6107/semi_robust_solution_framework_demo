@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_UtcClock" Id="{67dd7187-ca8e-4592-a89a-526b61b12667}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_UtcClock
+VAR_OUTPUT
+	UtcDateTime : STRING(20);
+END_VAR
+
+VAR
+	_UtcFileTime : T_FILETIME64;
+	_UtcSystemTime : TIMESTRUCT;
+	_FormattedDateTime : STRING(24);
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[_UtcFileTime := F_GetSystemTime();
+_UtcSystemTime := FILETIME64_TO_SYSTEMTIME(_UtcFileTime);
+_FormattedDateTime := SYSTEMTIME_TO_STRING(_UtcSystemTime);
+
+// SYSTEMTIME_TO_STRING returns YYYY-MM-DD-hh:mm:ss.xxx.
+// Publish a compact, fixed-width UTC timestamp: YYYYMMDDHHMMSSUUU.
+UtcDateTime := CONCAT(LEFT(_FormattedDateTime, 4), MID(_FormattedDateTime, 2, 6));
+UtcDateTime := CONCAT(UtcDateTime, MID(_FormattedDateTime, 2, 9));
+UtcDateTime := CONCAT(UtcDateTime, MID(_FormattedDateTime, 2, 12));
+UtcDateTime := CONCAT(UtcDateTime, MID(_FormattedDateTime, 2, 15));
+UtcDateTime := CONCAT(UtcDateTime, MID(_FormattedDateTime, 2, 18));
+UtcDateTime := CONCAT(UtcDateTime, MID(_FormattedDateTime, 3, 21));]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

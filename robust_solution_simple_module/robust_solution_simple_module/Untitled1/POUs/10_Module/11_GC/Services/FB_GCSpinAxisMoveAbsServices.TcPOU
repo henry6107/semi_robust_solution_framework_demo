@@ -1,10 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GCSpinAxisMoveAbsServices" Id="{9c4945bc-98e0-4f80-811d-303c8e7f09ff}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_PackMLModeSet
+    <Declaration><![CDATA[{attribute 'reflection'}
+FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_PackMLModeSet
 VAR_INPUT
 	Param : ST_GCSpinAxisMoveAbsParam;
 	Ctrl : REFERENCE TO ST_ServiceCtrl;
+	Context : REFERENCE TO ST_ServiceContext;
 	Axis_BaseUnit : I_Axis_BaseUnit;
 	
 	// The Module assigns a unique ID to this Service instance.
@@ -17,6 +19,10 @@ END_VAR
 
 VAR
 	_CmdRequestOneShot : R_TRIG;
+
+	{attribute 'instance-path'}
+    {attribute 'noinit'}
+	_Path : STRING;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[PackMLIn := Ctrl.PackMLIn;
@@ -52,6 +58,7 @@ END_VAR
 VAR
 	bDone : BOOL;
 	bError : BOOL;
+	nErrorId : UDINT;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
@@ -74,7 +81,7 @@ Axis_BaseUnit.M_MoveAbs(
 Axis_BaseUnit.M_Reset(
 	OwnerId := ResourceOwnerId,
 	Execute := TRUE,
-	Done=> bDone, Error=> bError);
+	Done=> bDone, Error=> bError, ErrorId=> nErrorId);
 
 IF bDone THEN
 	Axis_BaseUnit.M_Reset(
@@ -89,7 +96,10 @@ ELSIF bError THEN
 	Axis_BaseUnit.M_Reset(
 		OwnerId := ResourceOwnerId,
 		Execute := FALSE);
-	Status.ServiceErrorId := E_GCServiceErrorCode.Error_While_Reset_Axis;
+	M_AddError(
+		MainErrorId := E_GCServiceErrorCode.Error_While_Reset_Axis,
+		SourceErrorId := nErrorId,
+		Message := 'Axis reset failed while aborting.');
 	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 	H_OnAborting := E_PackMLHookResult.Done;
 END_IF
@@ -154,6 +164,7 @@ END_VAR
 VAR
 	bDone : BOOL;
 	bError : BOOL;
+	nErrorId : UDINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -166,7 +177,7 @@ Axis_BaseUnit.M_MoveAbs(
 	Velocity:= Param.Velocity,
 	Acceleration:= Param.Acceleration,
 	Deceleration:= Param.Deceleration,
-	Done=> bDone, Error=> bError);
+	Done=> bDone, Error=> bError, ErrorId=> nErrorId);
 
 
 IF bDone THEN
@@ -175,7 +186,10 @@ IF bDone THEN
 END_IF
 
 IF bError THEN
-	Status.ServiceErrorId := E_GCServiceErrorCode.Axis_Command_Error_During_Execute;
+	M_AddError(
+		MainErrorId := E_GCServiceErrorCode.Axis_Command_Error_During_Execute,
+		SourceErrorId := nErrorId,
+		Message := 'MoveAbsolute failed during Execute.');
 	RequestCommand(E_PackMLCommand.Stop);
 END_IF
 ]]></ST>
@@ -220,7 +234,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.ServiceErrorId := E_GCServiceErrorCode.None;
+        <ST><![CDATA[MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -236,39 +250,39 @@ END_VAR
 
 // Validate Service-owned data before reserving the shared BaseUnit.
 IF Param.Velocity <= 0 THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
+	M_AddError(MainErrorId := E_GCServiceErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Velocity must be greater than zero.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Acceleration < 0 THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
+	M_AddError(MainErrorId := E_GCServiceErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Acceleration must not be negative.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Deceleration < 0 THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
+	M_AddError(MainErrorId := E_GCServiceErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Deceleration must not be negative.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 // Resource contention is a failed Start, not a wait condition.
 IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
-	Status.ServiceErrorId := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting;
+	M_AddError(MainErrorId := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting, SourceErrorId := 0, Message := 'Axis resource acquisition failed during Starting.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 // Physical checks occur only after this Service owns the BaseUnit.
 IF Axis_BaseUnit.AxisIsDisabled THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting;
+	M_AddError(MainErrorId := E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting, SourceErrorId := 0, Message := 'Axis is not servo on during Starting.');
 	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
 IF Axis_BaseUnit.AxisHasJob THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Is_Busy_During_Starting;
+	M_AddError(MainErrorId := E_GCServiceErrorCode.Axis_Is_Busy_During_Starting, SourceErrorId := 0, Message := 'Axis is busy during Starting.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
@@ -298,6 +312,7 @@ END_VAR
 VAR
 	bDone : BOOL;
 	bError : BOOL;
+	nErrorId : UDINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -322,7 +337,7 @@ Axis_BaseUnit.M_Stop(
 	OwnerId := ResourceOwnerId,
 	Execute := TRUE, 
 	Deceleration:= Param.Deceleration,
-	Done=> bDone, Error=> bError);
+	Done=> bDone, Error=> bError, ErrorId=> nErrorId);
 
 IF bDone THEN
 	Axis_BaseUnit.M_Stop(
@@ -335,7 +350,10 @@ IF bDone THEN
 	
 ELSIF bError THEN
 	// Throw up error
-	Status.ServiceErrorId := E_GCServiceErrorCode.Error_While_Stop_Axis;
+	M_AddError(
+		MainErrorId := E_GCServiceErrorCode.Error_While_Stop_Axis,
+		SourceErrorId := nErrorId,
+		Message := 'Axis stop failed while stopping.');
 	
 	Axis_BaseUnit.M_Stop(
 		OwnerId := ResourceOwnerId,
@@ -400,6 +418,51 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
 H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_AddError" Id="{104bb42c-c60b-448f-8d8a-063d2146e42a}">
+      <Declaration><![CDATA[METHOD PROTECTED M_AddError : BOOL
+VAR_INPUT
+	MainErrorId : UDINT;
+	SourceErrorId : UDINT;
+	Message : STRING;
+END_VAR
+
+VAR
+	nIndex : UINT;
+	nFirstEmpty : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_AddError := FALSE;
+nFirstEmpty := 0;
+
+FOR nIndex := 1 TO Param_Config.MaxServiceError DO
+	IF Status.ErrorList[nIndex].MainErrorId = 0 THEN
+		IF nFirstEmpty = 0 THEN
+			nFirstEmpty := nIndex;
+			EXIT;
+		END_IF
+
+	ELSIF Status.ErrorList[nIndex].MainErrorId = MainErrorId THEN
+		// The same error event is already recorded for this task cycle.
+		RETURN;
+	END_IF
+END_FOR
+
+// Preserve the first ten errors; reject new errors when the list is full.
+IF nFirstEmpty = 0 THEN
+	RETURN;
+END_IF
+
+Status.ErrorList[nFirstEmpty].ModuleId := Context.ModuleId;
+Status.ErrorList[nFirstEmpty].MainErrorId := MainErrorId;
+Status.ErrorList[nFirstEmpty].SourceErrorId := SourceErrorId;
+Status.ErrorList[nFirstEmpty].Message := Message;
+Status.ErrorList[nFirstEmpty].Path := _Path;
+Status.ErrorList[nFirstEmpty].Severity := E_Severity.Alarm;
+Status.ErrorList[nFirstEmpty].DateTime := Context.UtcDateTime;
+M_AddError := TRUE;]]></ST>
       </Implementation>
     </Method>
   </POU>
