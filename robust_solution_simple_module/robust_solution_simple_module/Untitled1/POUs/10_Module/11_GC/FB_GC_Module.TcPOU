@@ -8,7 +8,7 @@ VAR_INPUT
 	
 	ModuleCtrl : REFERENCE TO ST_ModuleCtrl;
 	ServiceCtrl : REFERENCE TO ST_GC_ServiceCtrl;
-	ECID : REFERENCE TO ST_GC_ECID;
+	ServiceParam : REFERENCE TO ST_GC_ServiceParam;
 	
 	// Base unit used in GC chamber
 	SpinAxis_BaseUnit : I_Axis_BaseUnit;
@@ -18,9 +18,9 @@ END_VAR
 VAR_OUTPUT
 	ModuleStatus : ST_ModuleStatus;
 	ServiceStatus : ST_GC_ServiceStatus;
-	ALID : ST_GC_ALID;
-	DVID : ST_GC_DVID;
-	SVID : ST_GC_SVID;
+	ModuleVariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ExtDescriptor;
+	ModuleAlarmList : ARRAY[1..Param_Config.MaxModuleAlarm] OF ST_ExtAlarm; 
+	ServiceDataList : ARRAY[1..Param_Config.MaxServiceData] OF ST_ExtDescriptor;
 END_VAR
 
 VAR
@@ -70,13 +70,13 @@ ServiceStatus := _ServiceStatusView.ByName;
     <Folder Name="StateAction" Id="{92cfe23b-b998-4d76-8aa2-c8089e78aa61}" />
     <Action Name="A01_UpdateServiceParam" Id="{8b66dd3f-2093-4de6-963d-8da3bda49bf6}">
       <Implementation>
-        <ST><![CDATA[_SpinAxisMoveAbsService.Param := ECID.SpinAxisMoveAbs;
-_SpinAxisJogCWService.Param := ECID.SpinAxisJogCW;
-_SpinAxisMoveVelCWService.Param := ECID.SpinAxisMoveVelCW;
-_LiftPinAxisMoveVelCWService.Param := ECID.LiftPinAxisMoveVelCW;
-_LiftPinAxisMoveVelCCWService.Param := ECID.LiftPinAxisMoveVelCCW;
-_LiftPinAxisMoveAbsService.Param := ECID.LiftPinAxisMoveAbs;
-_SingleProcessService.Param := ECID.SingleProcess;]]></ST>
+        <ST><![CDATA[_SpinAxisMoveAbsService.Param := ServiceParam.SpinAxisMoveAbs;
+_SpinAxisJogCWService.Param := ServiceParam.SpinAxisJogCW;
+_SpinAxisMoveVelCWService.Param := ServiceParam.SpinAxisMoveVelCW;
+_LiftPinAxisMoveVelCWService.Param := ServiceParam.LiftPinAxisMoveVelCW;
+_LiftPinAxisMoveVelCCWService.Param := ServiceParam.LiftPinAxisMoveVelCCW;
+_LiftPinAxisMoveAbsService.Param := ServiceParam.LiftPinAxisMoveAbs;
+_SingleProcessService.Param := ServiceParam.SingleProcess;]]></ST>
       </Implementation>
     </Action>
     <Action Name="A02_SelectServiceControlSource" Id="{2f460f0f-4f51-4597-948c-8705f2c24753}">
@@ -141,7 +141,7 @@ _SingleProcessService(
 	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
 	ResourceOwnerId := E_GCResourceOwnerId.SingleProcess,
 	Status => _ServiceStatusView.ByName.SingleProcess,
-	ProcessStatus => SVID.SingleProcess);
+	ProcessStatus => );
 ]]></ST>
       </Implementation>
     </Action>
@@ -172,7 +172,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Aborted THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].PackMLOut.eStateCurrent <> E_PackMLState.Aborted THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -191,7 +191,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].PackMLOut.eStateCurrent <> E_PackMLState.Stopped THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -276,7 +276,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Idle THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].PackMLOut.eStateCurrent <> E_PackMLState.Idle THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -316,7 +316,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].PackMLOut.eStateCurrent <> E_PackMLState.Stopped THEN
 		RETURN;
 	END_IF
 END_FOR

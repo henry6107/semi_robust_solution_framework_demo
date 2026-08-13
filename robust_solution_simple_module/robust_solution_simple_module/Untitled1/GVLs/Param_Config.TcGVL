@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="Param_Config" Id="{aee02a59-14c8-4392-aff7-2b6206c787f0}" ParameterList="True">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+	MaxModuleVariable : UINT := 100;
+	MaxModuleAlarm : UINT := 100;
+	MaxServiceError : UINT := 10;
+	MaxServiceData : UINT := 50;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

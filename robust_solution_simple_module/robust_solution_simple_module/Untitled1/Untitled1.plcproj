@@ -25,6 +25,18 @@
     <Author>BATW</Author>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DUTs\E_DescriptorType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_Severity.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ExtAlarm.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ExtDescriptor.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\ST_ModuleCtrl.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -45,19 +57,23 @@
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
     </Compile>
+    <Compile Include="GVLs\Param_Config.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
     <Compile Include="PlcTask.TcTTO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\00_BaseUnit\FB_Axis_BaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\00_BaseUnit\FB_BaseUnit.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\00_BaseUnit\Interfaces\I_Axis_BaseUnit.TcIO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\00_BaseUnit\Interfaces\I_ResourceLock.TcIO">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\00_BaseUnit\FB_BaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\00_BaseUnit\T_ResourceOwnerId.TcDUT">
@@ -84,19 +100,13 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\U_GC_HW_Out.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_ALID.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_DVID.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_ECID.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\SecsGem\ST_GC_SVID.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\E_GCServiceErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService\ST_GCLiftPinAxisMoveAbsParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveVelService\ST_GCLiftPinAxisMoveVelParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\E_GCSingleProcessAbortPhase.TcDUT">
@@ -138,12 +148,6 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\U_GCSingleProcessStageTimingView.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService\ST_GCLiftPinAxisMoveAbsParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveVelService\ST_GCLiftPinAxisMoveVelParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService\ST_GCSpinAxisJogParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -154,6 +158,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceCtrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceStatus.TcDUT">
@@ -175,6 +182,18 @@
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
     </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveAbsServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveVelCCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveVelCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSingleProcessService.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisJogCWServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -182,18 +201,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveVelCWServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveAbsServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveVelCWServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveVelCCWServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSingleProcessService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\MAIN.TcPOU">
@@ -290,20 +297,20 @@
   <ItemGroup>
     <Folder Include="DUTs" />
     <Folder Include="GVLs" />
+    <Folder Include="POUs" />
     <Folder Include="POUs\00_BaseUnit" />
     <Folder Include="POUs\00_BaseUnit\Interfaces" />
     <Folder Include="POUs\10_Module" />
     <Folder Include="POUs\10_Module\11_GC" />
     <Folder Include="POUs\10_Module\11_GC\DUTs" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Hardware" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\SecsGem" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveVelService" />
+    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService" />
     <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService" />
     <Folder Include="POUs\10_Module\11_GC\GVLs" />
     <Folder Include="POUs\10_Module\11_GC\Services" />
     <Folder Include="POUs\PackML_Base" />
@@ -313,7 +320,6 @@
     <Folder Include="Tests\Suites\BaseUnit" />
     <Folder Include="Tests\Suites\Services" />
     <Folder Include="VISUs" />
-    <Folder Include="POUs" />
     <Folder Include="Tests" />
     <Folder Include="Tests\DUTs" />
     <Folder Include="Tests\Fakes" />
@@ -350,8 +356,8 @@
   <ProjectExtensions>
     <PlcProjectOptions>
       <XmlArchive>
-        <Data>
-          <o xml:space="preserve" t="OptionKey">
+  <Data>
+    <o xml:space="preserve" t="OptionKey">
       <v n="Name">"&lt;ProjectRoot&gt;"</v>
       <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
         <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
@@ -427,14 +433,14 @@
       </d>
       <d n="Values" t="Hashtable" />
     </o>
-        </Data>
-        <TypeList>
-          <Type n="Boolean">System.Boolean</Type>
-          <Type n="Hashtable">System.Collections.Hashtable</Type>
-          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
-          <Type n="String">System.String</Type>
-        </TypeList>
-      </XmlArchive>
+  </Data>
+  <TypeList>
+    <Type n="Boolean">System.Boolean</Type>
+    <Type n="Hashtable">System.Collections.Hashtable</Type>
+    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+    <Type n="String">System.String</Type>
+  </TypeList>
+</XmlArchive>
     </PlcProjectOptions>
   </ProjectExtensions>
 </Project>

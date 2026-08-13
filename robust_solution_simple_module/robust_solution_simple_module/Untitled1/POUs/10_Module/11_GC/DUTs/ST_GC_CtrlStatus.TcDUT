@@ -5,11 +5,13 @@
 STRUCT
 	ModuleCtrl : ST_ModuleCtrl;
 	ServiceCtrl : ST_GC_ServiceCtrl;
-	ECID : ST_GC_ECID;
+	ServiceParam : ST_GC_ServiceParam;
 	
 	ModuleStatus : ST_ModuleStatus;
 	ServiceStatus : ST_GC_ServiceStatus;
-	SVID : ST_GC_SVID;
+	ModuleVariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ExtDescriptor;
+	ModuleAlarmList : ARRAY[1..Param_Config.MaxModuleAlarm] OF ST_ExtAlarm; 
+	ServiceDataList : ARRAY[1..Param_Config.MaxServiceData] OF ST_ExtDescriptor;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

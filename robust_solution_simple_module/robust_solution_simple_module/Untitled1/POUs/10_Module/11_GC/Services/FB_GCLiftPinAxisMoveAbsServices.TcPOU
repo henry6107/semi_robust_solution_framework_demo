@@ -26,13 +26,10 @@ SUPER^();
 _CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
 
 // Updata status
-Status.CommandErrorId := PackMLOut.eStateErrorID;
-
+Status.PackMLOut := PackMLOut;
 IF _CmdRequestOneShot.Q THEN // Acknowledge to upper controller that command received
 	Status.ResponseId := Ctrl.RequestId;
-END_IF
-
-Status.State := PackMLOut.eStateCurrent;]]></ST>
+END_IF]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{a1ab0002-6b2c-4d3e-8f90-a1ab00000002}" />
     <Method Name="H_OnAborted" Id="{a1ab0003-6b2c-4d3e-8f90-a1ab00000003}" FolderPath="StateAction\">
