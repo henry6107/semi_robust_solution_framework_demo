@@ -6,11 +6,109 @@ VAR
 	Module : FB_GC_Module(ModuleId := E_ModuleId.GC1);
 	SpinOnlyModule : FB_GC_Module(ModuleId := E_ModuleId.GC1);
 	LiftOnlyModule : FB_GC_Module(ModuleId := E_ModuleId.GC1);
+	TestModule_1 : FB_TestableGCModule(ModuleId := E_ModuleId.GC1);
+	TestModule_2 : FB_TestableGCModule(ModuleId := E_ModuleId.GC1);
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[UnboundAxisLeavesModuleInert();
-BoundAxisUpdatesOnceAndServicesShareOwnership();]]></ST>
+BoundAxisUpdatesOnceAndServicesShareOwnership();
+AlarmListAggregatesAllServicesInIndexOrder();
+AlarmListCompactsHolesAndClearsStaleEntries();]]></ST>
     </Implementation>
+    <Method Name="AlarmListAggregatesAllServicesInIndexOrder" Id="{6fd8a24e-7cf5-46da-8a37-23fe7470f6e1}">
+      <Declaration><![CDATA[METHOD AlarmListAggregatesAllServicesInIndexOrder
+VAR
+	SourceStatus : ST_GC_ServiceStatus;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('AlarmListAggregatesAllServicesInIndexOrder');
+
+MEMSET(ADR(SourceStatus), 0, SIZEOF(SourceStatus));
+SourceStatus.SpinAxisJogCW.ErrorList[2].ModuleId := 11;
+SourceStatus.SpinAxisJogCW.ErrorList[2].MainErrorId := 101;
+SourceStatus.SpinAxisJogCW.ErrorList[2].SourceErrorId := 1001;
+SourceStatus.SpinAxisJogCW.ErrorList[2].Message := 'Spin jog alarm';
+SourceStatus.SpinAxisJogCW.ErrorList[2].Path := 'GC.SpinAxisJogCW';
+SourceStatus.SpinAxisJogCW.ErrorList[2].Severity := E_Severity.Alarm;
+SourceStatus.SpinAxisJogCW.ErrorList[2].DateTime := '20260814123456001';
+SourceStatus.SpinAxisMoveAbs.ErrorList[1].MainErrorId := 201;
+SourceStatus.SpinAxisMoveVelCW.ErrorList[10].MainErrorId := 301;
+SourceStatus.LiftPinAxisMoveVelCW.ErrorList[3].MainErrorId := 401;
+SourceStatus.LiftPinAxisMoveVelCCW.ErrorList[1].MainErrorId := 501;
+SourceStatus.LiftPinAxisMoveAbs.ErrorList[4].MainErrorId := 601;
+SourceStatus.SingleProcess.ErrorList[2].MainErrorId := 701;
+
+TestModule_1.M_SetTestServiceStatus(TestStatus := SourceStatus);
+TestModule_1.M_UpdateTestAlarmList();
+
+AssertTrue(Condition := (TestModule_1.ModuleAlarmList[1].MainErrorId = 101)
+	AND (TestModule_1.ModuleAlarmList[2].MainErrorId = 201)
+	AND (TestModule_1.ModuleAlarmList[3].MainErrorId = 301)
+	AND (TestModule_1.ModuleAlarmList[4].MainErrorId = 401)
+	AND (TestModule_1.ModuleAlarmList[5].MainErrorId = 501)
+	AND (TestModule_1.ModuleAlarmList[6].MainErrorId = 601)
+	AND (TestModule_1.ModuleAlarmList[7].MainErrorId = 701),
+	Message := 'Module alarms must follow ServiceStatus ByIndex order and each ErrorList index order.');
+AssertTrue(Condition := TestModule_1.ModuleAlarmList[8].MainErrorId = 0, Message := 'The first unused ModuleAlarmList entry must remain empty.');
+AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].ModuleId = 11, Message := 'Aggregation must preserve ModuleId.');
+AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].SourceErrorId = 1001, Message := 'Aggregation must preserve SourceErrorId.');
+AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].Message = 'Spin jog alarm', Message := 'Aggregation must preserve Message.');
+AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].Path = 'GC.SpinAxisJogCW', Message := 'Aggregation must preserve Path.');
+AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].Severity = E_Severity.Alarm, Message := 'Aggregation must preserve Severity.');
+AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].DateTime = '20260814123456001', Message := 'Aggregation must preserve DateTime.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AlarmListCompactsHolesAndClearsStaleEntries" Id="{6fd8a24e-7cf5-46da-8a37-23fe7470f6e2}">
+      <Declaration><![CDATA[METHOD AlarmListCompactsHolesAndClearsStaleEntries
+VAR
+	SourceStatus : ST_GC_ServiceStatus;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('AlarmListCompactsHolesAndClearsStaleEntries');
+
+MEMSET(ADR(SourceStatus), 0, SIZEOF(SourceStatus));
+SourceStatus.SpinAxisJogCW.ErrorList[1].MainErrorId := 11;
+SourceStatus.SpinAxisJogCW.ErrorList[3].MainErrorId := 12;
+SourceStatus.SpinAxisMoveAbs.ErrorList[2].MainErrorId := 21;
+SourceStatus.LiftPinAxisMoveVelCW.ErrorList[1].MainErrorId := 41;
+SourceStatus.SingleProcess.ErrorList[10].MainErrorId := 71;
+
+TestModule_2.M_SetTestServiceStatus(TestStatus := SourceStatus);
+TestModule_2.M_UpdateTestAlarmList();
+AssertTrue(Condition := (TestModule_2.ModuleAlarmList[1].MainErrorId = 11)
+	AND (TestModule_2.ModuleAlarmList[2].MainErrorId = 12)
+	AND (TestModule_2.ModuleAlarmList[3].MainErrorId = 21)
+	AND (TestModule_2.ModuleAlarmList[4].MainErrorId = 41)
+	AND (TestModule_2.ModuleAlarmList[5].MainErrorId = 71),
+	Message := 'Aggregation must skip source holes without terminating the scan.');
+AssertTrue(Condition := TestModule_2.ModuleAlarmList[6].MainErrorId = 0, Message := 'Five alarms must produce a five-entry dense prefix.');
+
+MEMSET(
+	ADR(SourceStatus.SpinAxisJogCW.ErrorList[3]),
+	0,
+	SIZEOF(SourceStatus.SpinAxisJogCW.ErrorList[3]));
+TestModule_2.M_SetTestServiceStatus(TestStatus := SourceStatus);
+TestModule_2.M_UpdateTestAlarmList();
+AssertTrue(Condition := (TestModule_2.ModuleAlarmList[1].MainErrorId = 11)
+	AND (TestModule_2.ModuleAlarmList[2].MainErrorId = 21)
+	AND (TestModule_2.ModuleAlarmList[3].MainErrorId = 41)
+	AND (TestModule_2.ModuleAlarmList[4].MainErrorId = 71),
+	Message := 'Removing the second alarm must shift later alarms forward without gaps.');
+AssertTrue(Condition := TestModule_2.ModuleAlarmList[5].MainErrorId = 0, Message := 'Compaction must clear the stale fifth ModuleAlarmList entry.');
+
+MEMSET(ADR(SourceStatus), 0, SIZEOF(SourceStatus));
+TestModule_2.M_SetTestServiceStatus(TestStatus := SourceStatus);
+TestModule_2.M_UpdateTestAlarmList();
+AssertTrue(Condition := TestModule_2.ModuleAlarmList[1].MainErrorId = 0, Message := 'An empty source must publish an empty ModuleAlarmList.');
+AssertTrue(Condition := TestModule_2.ModuleAlarmList[Param_Config.MaxModuleAlarm].MainErrorId = 0, Message := 'Clearing must remove stale alarms from the entire destination list.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="BoundAxisUpdatesOnceAndServicesShareOwnership" Id="{08f6ebae-7123-48dc-89e6-73b2de80ca9a}">
       <Declaration><![CDATA[METHOD BoundAxisUpdatesOnceAndServicesShareOwnership
 VAR_INST

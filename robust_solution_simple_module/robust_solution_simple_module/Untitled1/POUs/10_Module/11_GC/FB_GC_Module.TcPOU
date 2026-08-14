@@ -303,9 +303,30 @@ END_IF]]></ST>
       <Declaration><![CDATA[METHOD PROTECTED H_UpdateAlarmList
 VAR_INPUT
 END_VAR
+
+VAR
+	nServiceIndex : UINT;
+	nErrorIndex : UINT;
+	nModuleAlarmIndex : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[// Rebuild a dense snapshot every scan so cleared Service errors cannot leave stale gaps.
+MEMSET(ADR(ModuleAlarmList), 0, SIZEOF(ModuleAlarmList));
+nModuleAlarmIndex := 1;
+
+FOR nServiceIndex := 1 TO GVL_GC_Config.cServiceCount DO
+	FOR nErrorIndex := 1 TO Param_Config.MaxServiceError DO
+		IF _ServiceStatusView.ByIndex[nServiceIndex].ErrorList[nErrorIndex].MainErrorId <> 0 THEN
+			IF nModuleAlarmIndex > Param_Config.MaxModuleAlarm THEN
+				RETURN;
+			END_IF
+
+			ModuleAlarmList[nModuleAlarmIndex] := _ServiceStatusView.ByIndex[nServiceIndex].ErrorList[nErrorIndex];
+			nModuleAlarmIndex := nModuleAlarmIndex + 1;
+		END_IF
+	END_FOR
+END_FOR]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_UpdateBaseUnit" Id="{23db425b-9082-4959-8f76-43820da7ead4}" FolderPath="ModuleUpdate\">

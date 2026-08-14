@@ -275,6 +275,9 @@
     <Compile Include="Tests\Fakes\FB_TestableGCSpinAxisMoveAbsService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Fakes\FB_TestableGCModule.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\DUTs\E_FakeAxisOperation.TcDUT">
       <SubType>Code</SubType>
     </Compile>
