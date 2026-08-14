@@ -1,15 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GC_Module" Id="{d2b222b5-592d-46be-8a8e-fa50af509b93}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_GC_Module EXTENDS FB_PackMLModeSet
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GC_Module EXTENDS FB_ModuleBase
 VAR_INPUT	
 	HwInput : REFERENCE TO ST_GC_Signal_In;
 	HwOutput : REFERENCE TO ST_GC_Signal_Out;
 
-	ModuleCtrl : REFERENCE TO ST_ModuleCtrl;
 	ServiceCtrl : REFERENCE TO ST_GC_ServiceCtrl;
 	ServiceParam : REFERENCE TO ST_GC_ServiceParam;
-	SystemContext : REFERENCE TO ST_SystemContext;
 
 	// Base unit used in GC chamber
 	SpinAxis_BaseUnit : I_Axis_BaseUnit;
@@ -17,11 +15,7 @@ VAR_INPUT
 END_VAR
 
 VAR_OUTPUT
-	ModuleStatus : ST_ModuleStatus;
 	ServiceStatus : ST_GC_ServiceStatus;
-	ModuleVariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ExtDescriptor;
-	ModuleAlarmList : ARRAY[1..Param_Config.MaxModuleAlarm] OF ST_ExtAlarm; 
-	ServiceDataList : ARRAY[1..Param_Config.MaxServiceData] OF ST_ExtDescriptor;
 END_VAR
 
 VAR
@@ -37,12 +31,6 @@ VAR
 	_LiftPinAxisMoveVelCCWService : FB_GCLiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_GCLiftPinAxisMoveAbsServices;
 	_SingleProcessService : FB_GCSingleProcessService;
-
-	_CmdRequestOneShot : R_TRIG;
-	_ModeRequestOneShot : R_TRIG;
-
-	_ModuleId : UDINT;
-	_ServiceContext : ST_ServiceContext;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -51,131 +39,14 @@ IF (SpinAxis_BaseUnit = 0) OR (LiftPinAxis_BaseUnit = 0) THEN
 	RETURN;
 END_IF
 
-PackMLIn := ModuleCtrl.PackMLIn;
-SUPER^();
-
-_ServiceContext.ModuleId := _ModuleId;
-_ServiceContext.UtcDateTime := SystemContext.UtcDateTime;
-
-A01_UpdateServiceParam();
-A02_SelectServiceControlSource();
-A03_UpdateService();
-A04_UpdateBaseUnit();
-
-_CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
-_ModeRequestOneShot(CLK:= PackMLIn.bModeChangeRequest, Q=> );
+M_UpdateModule();
 
 // Updata status
-IF _CmdRequestOneShot.Q OR _ModeRequestOneShot.Q THEN
-	ModuleStatus.ResponseId := ModuleCtrl.RequestId;
-END_IF
-
-ModuleStatus.PackMLOut := PackMLOut;
 ServiceStatus := _ServiceStatusView.ByName;
-
 ]]></ST>
     </Implementation>
+    <Folder Name="ModuleUpdate" Id="{a9f2fa3e-34f5-43fc-8823-0e0dbffba0ff}" />
     <Folder Name="StateAction" Id="{92cfe23b-b998-4d76-8aa2-c8089e78aa61}" />
-    <Action Name="A01_UpdateServiceParam" Id="{8b66dd3f-2093-4de6-963d-8da3bda49bf6}">
-      <Implementation>
-        <ST><![CDATA[_SpinAxisMoveAbsService.Param := ServiceParam.SpinAxisMoveAbs;
-_SpinAxisJogCWService.Param := ServiceParam.SpinAxisJogCW;
-_SpinAxisMoveVelCWService.Param := ServiceParam.SpinAxisMoveVelCW;
-_LiftPinAxisMoveVelCWService.Param := ServiceParam.LiftPinAxisMoveVelCW;
-_LiftPinAxisMoveVelCCWService.Param := ServiceParam.LiftPinAxisMoveVelCCW;
-_LiftPinAxisMoveAbsService.Param := ServiceParam.LiftPinAxisMoveAbs;
-_SingleProcessService.Param := ServiceParam.SingleProcess;]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="A02_SelectServiceControlSource" Id="{2f460f0f-4f51-4597-948c-8705f2c24753}">
-      <Implementation>
-        <ST><![CDATA[// Select control source
-IF PackMLOut.eStateCurrent = E_PackMLState.Idle
-	OR PackMLOut.eStateCurrent = E_PackMLState.Starting
-	OR PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
-	// Controlled by external operator
-	_ServiceCtrlView.ByName := ServiceCtrl;
-ELSE
-	// Control by module
-	FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-		_ServiceCtrlView.ByIndex[_nIdx].PackMLIn := ModuleCtrl.PackMLIn;
-		_ServiceCtrlView.ByIndex[_nIdx].RequestId := ModuleCtrl.RequestId;
-	END_FOR
-END_IF]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="A03_UpdateService" Id="{c62275db-aa76-4b4d-95ad-2ecb5851f919}">
-      <Implementation>
-        <ST><![CDATA[_SpinAxisJogCWService(
-	Ctrl:= _ServiceCtrlView.ByName.SpinAxisJogCW,
-	Axis_BaseUnit:= SpinAxis_BaseUnit,
-	// Owner IDs are assigned by the Module so each Service instance is unique.
-	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisJogCW,
-	Status=> _ServiceStatusView.ByName.SpinAxisJogCW);
-
-_SpinAxisMoveAbsService(
-	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveAbs,
-	Context:= _ServiceContext,
-	Axis_BaseUnit:= SpinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveAbs,
-	Status=> _ServiceStatusView.ByName.SpinAxisMoveAbs);
-
-_SpinAxisMoveVelCWService(
-	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveVelCW,
-	Axis_BaseUnit:= SpinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVelCW,
-	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
-
-_LiftPinAxisMoveVelCWService(
-	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCW,
-	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCW,
-	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCW);
-
-_LiftPinAxisMoveVelCCWService(
-	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCCW,
-	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCCW,
-	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCCW);
-
-_LiftPinAxisMoveAbsService(
-	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveAbs,
-	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveAbs,
-	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
-
-_SingleProcessService(
-	Ctrl := _ServiceCtrlView.ByName.SingleProcess,
-	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
-	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
-	ResourceOwnerId := E_GCResourceOwnerId.SingleProcess,
-	Status => _ServiceStatusView.ByName.SingleProcess,
-	ProcessStatus => );
-]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="A04_UpdateBaseUnit" Id="{e32e8cc6-0faf-4aa6-8f04-fdfae785d66d}">
-      <Implementation>
-        <ST><![CDATA[SpinAxis_BaseUnit.M_CyclicUpdate();
-LiftPinAxis_BaseUnit.M_CyclicUpdate();]]></ST>
-      </Implementation>
-    </Action>
-    <Method Name="FB_Init" Id="{d8bb3a84-1891-43e7-993c-a91b090d4420}">
-      <Declaration><![CDATA[//FB_Init is always available implicitly and it is used primarily for initialization.
-//The return value is not evaluated. For a specific influence, you can also declare the
-//methods explicitly and provide additional code there with the standard initialization
-//code. You can evaluate the return value.
-METHOD FB_Init: BOOL
-VAR_INPUT
-    bInitRetains: BOOL; // TRUE: the retain variables are initialized (reset warm / reset cold)
-    bInCopyCode: BOOL;  // TRUE: the instance will be copied to the copy code afterward (online change)
-
-	ModuleId : UDINT;
-END_VAR]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[_ModuleId := ModuleId;]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="H_OnAborted" Id="{de8d6f56-427f-41df-b4d5-ddd289e1aed8}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnAborted
 VAR_INPUT
@@ -401,6 +272,124 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
 H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_SelectServiceControlSource" Id="{4e055faf-6a98-4100-b6ed-93be619c0d1f}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_SelectServiceControlSource
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Select control source
+IF PackMLOut.eStateCurrent = E_PackMLState.Idle
+	OR PackMLOut.eStateCurrent = E_PackMLState.Starting
+	OR PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
+	// Controlled by external operator
+	_ServiceCtrlView.ByName := ServiceCtrl;
+ELSE
+	// Control by module
+	FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
+		_ServiceCtrlView.ByIndex[_nIdx].PackMLIn := ModuleCtrl.PackMLIn;
+		_ServiceCtrlView.ByIndex[_nIdx].RequestId := ModuleCtrl.RequestId;
+	END_FOR
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateAlarmList" Id="{05cb1d79-8999-497c-aa97-eff4f365f571}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateAlarmList
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateBaseUnit" Id="{23db425b-9082-4959-8f76-43820da7ead4}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateBaseUnit
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[SpinAxis_BaseUnit.M_CyclicUpdate();
+LiftPinAxis_BaseUnit.M_CyclicUpdate();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateService" Id="{fa65f410-1990-4021-8134-1329f3f00eeb}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateService
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SpinAxisJogCWService(
+	Ctrl:= _ServiceCtrlView.ByName.SpinAxisJogCW,
+	Axis_BaseUnit:= SpinAxis_BaseUnit,
+	// Owner IDs are assigned by the Module so each Service instance is unique.
+	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisJogCW,
+	Status=> _ServiceStatusView.ByName.SpinAxisJogCW);
+
+_SpinAxisMoveAbsService(
+	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveAbs,
+	Context:= _ServiceContext,
+	Axis_BaseUnit:= SpinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveAbs,
+	Status=> _ServiceStatusView.ByName.SpinAxisMoveAbs);
+
+_SpinAxisMoveVelCWService(
+	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveVelCW,
+	Axis_BaseUnit:= SpinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVelCW,
+	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
+
+_LiftPinAxisMoveVelCWService(
+	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCW,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCW,
+	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCW);
+
+_LiftPinAxisMoveVelCCWService(
+	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCCW,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCCW,
+	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCCW);
+
+_LiftPinAxisMoveAbsService(
+	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveAbs,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveAbs,
+	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
+
+_SingleProcessService(
+	Ctrl := _ServiceCtrlView.ByName.SingleProcess,
+	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
+	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
+	ResourceOwnerId := E_GCResourceOwnerId.SingleProcess,
+	Status => _ServiceStatusView.ByName.SingleProcess,
+	ProcessStatus => );
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateServiceParam" Id="{1a4b35b3-f132-467f-941f-899cd13c7e6b}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceParam
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SpinAxisMoveAbsService.Param := ServiceParam.SpinAxisMoveAbs;
+_SpinAxisJogCWService.Param := ServiceParam.SpinAxisJogCW;
+_SpinAxisMoveVelCWService.Param := ServiceParam.SpinAxisMoveVelCW;
+_LiftPinAxisMoveVelCWService.Param := ServiceParam.LiftPinAxisMoveVelCW;
+_LiftPinAxisMoveVelCCWService.Param := ServiceParam.LiftPinAxisMoveVelCCW;
+_LiftPinAxisMoveAbsService.Param := ServiceParam.LiftPinAxisMoveAbs;
+_SingleProcessService.Param := ServiceParam.SingleProcess;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateVariableList" Id="{53c2178d-7338-435f-85e1-8361520ccf25}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateVariableList
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
   </POU>
