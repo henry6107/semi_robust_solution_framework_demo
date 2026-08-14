@@ -8,7 +8,7 @@ VAR_INPUT
 	Context : REFERENCE TO ST_ServiceContext;
 	
 	// The Module assigns a unique ID to this Service instance.
-	ResourceOwnerId : T_ResourceOwnerId;
+	ServiceId : T_ResourceOwnerId;
 END_VAR
 
 VAR_OUTPUT
@@ -62,7 +62,7 @@ IF nFirstEmpty = 0 THEN
 END_IF
 
 Status.ErrorList[nFirstEmpty].ModuleId := Context.ModuleId;
-Status.ErrorList[nFirstEmpty].ServiceId := ResourceOwnerId;
+Status.ErrorList[nFirstEmpty].ServiceId := ServiceId;
 Status.ErrorList[nFirstEmpty].MainErrorId := MainErrorId;
 Status.ErrorList[nFirstEmpty].SourceErrorId := SourceErrorId;
 Status.ErrorList[nFirstEmpty].Message := Message;

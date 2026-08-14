@@ -23,5 +23,22 @@ END_VAR
         <ST><![CDATA[H_UpdateAlarmList();]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_SetTestSingleProcessStatus" Id="{9c2f828e-112b-4c5e-8dde-b427c89f8b14}">
+      <Declaration><![CDATA[METHOD M_SetTestSingleProcessStatus
+VAR_INPUT
+	TestStatus : ST_GCSingleProcessStatus;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SingleProcessStatus := TestStatus;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateTestServiceDataList" Id="{9c2f828e-112b-4c5e-8dde-b427c89f8b15}">
+      <Declaration><![CDATA[METHOD M_UpdateTestServiceDataList
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_UpdateServiceDataList();]]></ST>
+      </Implementation>
+    </Method>
   </POU>
 </TcPlcObject>

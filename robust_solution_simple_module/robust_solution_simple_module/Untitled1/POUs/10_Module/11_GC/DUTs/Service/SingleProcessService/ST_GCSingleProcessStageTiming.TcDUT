@@ -3,6 +3,8 @@
   <DUT Name="ST_GCSingleProcessStageTiming" Id="{c553a379-09a6-4064-a509-cb15e95859d3}">
     <Declaration><![CDATA[TYPE ST_GCSingleProcessStageTiming :
 STRUCT
+	StartUtc : STRING(20);
+	EndUtc : STRING(20);
 	TargetTime : TIME;
 	ActualTime : TIME;
 	Timeout : TIME;

@@ -531,18 +531,6 @@ _bHaltError := FALSE;
 _nHaltErrorId := 0;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_SetAxisState" Id="{10c2eb70-a53b-4b94-8710-7bc4d3c0b6f3}">
-      <Declaration><![CDATA[METHOD M_SetAxisState
-VAR_INPUT
-	Disabled : BOOL;
-	HasJob : BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[_bAxisIsDisabled := Disabled;
-_bAxisHasJob := HasJob;]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_SetAxisFeedback" Id="{82b4c35c-c729-464f-b941-dd0e760a7934}">
       <Declaration><![CDATA[METHOD M_SetAxisFeedback
 VAR_INPUT
@@ -553,6 +541,18 @@ END_VAR
       <Implementation>
         <ST><![CDATA[_fAxisActualPosition := ActualPosition;
 _fAxisActualVelocity := ActualVelocity;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetAxisState" Id="{10c2eb70-a53b-4b94-8710-7bc4d3c0b6f3}">
+      <Declaration><![CDATA[METHOD M_SetAxisState
+VAR_INPUT
+	Disabled : BOOL;
+	HasJob : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_bAxisIsDisabled := Disabled;
+_bAxisHasJob := HasJob;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_Stop" Id="{51ed3baa-d27d-4af9-9931-fc510a406353}">

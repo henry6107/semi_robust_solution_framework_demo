@@ -35,45 +35,45 @@ CASE nPhase OF
 		Param.Acceleration := 20;
 		Param.Deceleration := 30;
 		AssertTrue(Condition := FakeAxis.M_QueueResult(Operation := E_FakeAxisOperation.Reset, AfterActiveCycles := 1, Done := FALSE, InVelocity := FALSE, Error := TRUE, ErrorId := 16#9999), Message := 'Reset Error script must be accepted.');
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 32);
 		FakeAxis.M_CyclicUpdate();
 		nPhase := 1;
 	1:
 		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
 		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 32);
 		FakeAxis.M_CyclicUpdate();
 		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 32);
 		FakeAxis.M_CyclicUpdate();
 		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
 		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 32);
 		FakeAxis.M_CyclicUpdate();
 		nPhase := 2;
 	2:
 		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 32);
 		FakeAxis.M_CyclicUpdate();
 		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
 		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 32);
 		FakeAxis.M_CyclicUpdate();
 		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 32);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 32), Message := 'Executing MoveVelocity must own the Axis.');
 		nPhase := 3;
 	3:
 		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Abort;
 		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 32);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Aborting, Message := 'Abort must wait for asynchronous Reset feedback.');
 		nPhase := 4;
 	4:
 		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 32);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Reset Error must finish Aborting.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCErrorCode.Error_While_Reset_Axis, Message := 'MoveVelocity Abort must record the shared Reset Error code.');
@@ -114,48 +114,48 @@ CASE nPhase OF
 		Param.Velocity := 10;
 		Param.Acceleration := 20;
 		Param.Deceleration := 30;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		nPhase := 1;
 	1:
 		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
 		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
 		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		nPhase := 2;
 	2:
 		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
 		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
 		nPhase := 3;
 	3:
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => HighCall), Message := 'Initial MoveVelocity command must be recorded.');
 		AssertTrue(Condition := HighCall.Execute AND (HighCall.Velocity = 10), Message := 'Initial velocity must execute once active.');
 		AssertTrue(Condition := HighCall.Direction = MC_Direction.MC_Negative_Direction, Message := 'LiftPin CCW must use the negative direction.');
 		nPhase := 4;
 	4:
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => HighCall), Message := 'Steady MoveVelocity call must be recorded.');
 		AssertTrue(Condition := HighCall.Execute, Message := 'Unchanged velocity must not pulse Execute low.');
 		Param.Velocity := 25;
 		nPhase := 5;
 	5:
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => LowCall), Message := 'Retrigger low call must be recorded.');
 		AssertFalse(Condition := LowCall.Execute, Message := 'Velocity change must pulse Execute low for one scan.');
@@ -163,7 +163,7 @@ CASE nPhase OF
 		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 31), Message := 'Retrigger must retain ownership.');
 		nPhase := 6;
 	6:
-		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 31);
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 31);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => HighCall), Message := 'Retrigger high call must be recorded.');
 		AssertTrue(Condition := HighCall.Execute AND (HighCall.Velocity = 25), Message := 'Execute must rise with the new velocity on the following scan.');

@@ -78,6 +78,15 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
+    <Method Name="H_UpdateServiceDataList" Id="{09acfa8b-205a-4e4b-9f04-1c13883b2574}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceDataList
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="H_UpdateServiceParam" Id="{f8022e96-fc7c-4f3a-b06b-d55e075ed120}" FolderPath="HookMethod\">
       <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceParam
 VAR_INPUT
@@ -112,7 +121,6 @@ H_UpdateServiceParam();
 H_SelectServiceControlSource();
 H_UpdateService();
 H_UpdateBaseUnit();
-H_UpdateVariableList();
 
 _CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
 _ModeRequestOneShot(CLK:= PackMLIn.bModeChangeRequest, Q=> );
@@ -122,7 +130,10 @@ IF _CmdRequestOneShot.Q OR _ModeRequestOneShot.Q THEN
 	ModuleStatus.ResponseId := ModuleCtrl.RequestId;
 END_IF
 ModuleStatus.PackMLOut := PackMLOut;
-H_UpdateAlarmList();]]></ST>
+
+H_UpdateAlarmList();
+H_UpdateServiceDataList();
+H_UpdateVariableList();]]></ST>
       </Implementation>
     </Method>
   </POU>
