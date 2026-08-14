@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_UtcClockTests" Id="{a4af874b-7a33-4649-ab81-e7914d143f67}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_UtcClockTests EXTENDS TcUnit.FB_TestSuite
@@ -11,7 +11,7 @@
 VAR
 	Clock : FB_UtcClock;
 	UtcDateTime : STRING(20);
-	nIndex : UINT;
+	nIndex : INT;
 	sCharacter : STRING(1);
 	bAllDigits : BOOL;
 END_VAR

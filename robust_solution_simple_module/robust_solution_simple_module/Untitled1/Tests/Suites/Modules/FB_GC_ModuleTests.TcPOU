@@ -3,6 +3,7 @@
   <POU Name="FB_GC_ModuleTests" Id="{96672931-1460-48e8-9f48-00c039353553}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_GC_ModuleTests EXTENDS TcUnit.FB_TestSuite
 VAR
+	Module : FB_GC_Module(ModuleId := E_ModuleId.GC1);
 	SpinOnlyModule : FB_GC_Module(ModuleId := E_ModuleId.GC1);
 	LiftOnlyModule : FB_GC_Module(ModuleId := E_ModuleId.GC1);
 END_VAR]]></Declaration>
@@ -13,7 +14,7 @@ BoundAxisUpdatesOnceAndServicesShareOwnership();]]></ST>
     <Method Name="BoundAxisUpdatesOnceAndServicesShareOwnership" Id="{08f6ebae-7123-48dc-89e6-73b2de80ca9a}">
       <Declaration><![CDATA[METHOD BoundAxisUpdatesOnceAndServicesShareOwnership
 VAR_INST
-	Module : FB_GC_Module(ModuleId := E_ModuleId.GC1);
+
 	SpinFakeAxis : FB_FakeAxis_BaseUnit;
 	SpinAxis : I_Axis_BaseUnit;
 	LiftFakeAxis : FB_FakeAxis_BaseUnit;
