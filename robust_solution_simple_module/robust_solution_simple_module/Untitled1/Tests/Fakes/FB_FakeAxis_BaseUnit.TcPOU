@@ -5,6 +5,8 @@
 VAR
 	_bAxisIsDisabled : BOOL;
 	_bAxisHasJob : BOOL;
+	_fAxisActualPosition : LREAL;
+	_fAxisActualVelocity : LREAL;
 	_nCycle : UDINT;
 	_nCallSequence : UDINT;
 
@@ -53,6 +55,26 @@ END_VAR
     <Implementation>
       <ST><![CDATA[M_CyclicUpdate();]]></ST>
     </Implementation>
+    <Property Name="AxisActualPosition" Id="{c803e875-2d0d-4296-9bc7-ab55d60b4a28}">
+      <Declaration><![CDATA[PROPERTY AxisActualPosition : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{bb61b1fe-e7db-4677-a8e6-bd4dbf4da4e1}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AxisActualPosition := _fAxisActualPosition;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AxisActualVelocity" Id="{78b99b62-4a3f-4ce6-bd76-f215a6374ec7}">
+      <Declaration><![CDATA[PROPERTY AxisActualVelocity : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{627ebdf8-75c0-44ee-8666-e67c59e60c18}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AxisActualVelocity := _fAxisActualVelocity;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="AxisHasJob" Id="{28149424-d35b-4967-a2b8-84de1d190c02}">
       <Declaration><![CDATA[PROPERTY AxisHasJob : BOOL
 ]]></Declaration>
@@ -468,6 +490,8 @@ END_VAR
         <ST><![CDATA[_ResourceOwnerId := 0;
 _bAxisIsDisabled := FALSE;
 _bAxisHasJob := FALSE;
+_fAxisActualPosition := 0;
+_fAxisActualVelocity := 0;
 _nCycle := 0;
 _nScriptCount := 0;
 _bScriptOverflowed := FALSE;
@@ -517,6 +541,18 @@ END_VAR
       <Implementation>
         <ST><![CDATA[_bAxisIsDisabled := Disabled;
 _bAxisHasJob := HasJob;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetAxisFeedback" Id="{82b4c35c-c729-464f-b941-dd0e760a7934}">
+      <Declaration><![CDATA[METHOD M_SetAxisFeedback
+VAR_INPUT
+	ActualPosition : LREAL;
+	ActualVelocity : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_fAxisActualPosition := ActualPosition;
+_fAxisActualVelocity := ActualVelocity;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_Stop" Id="{51ed3baa-d27d-4af9-9931-fc510a406353}">

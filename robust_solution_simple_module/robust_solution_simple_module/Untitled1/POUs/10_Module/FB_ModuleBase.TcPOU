@@ -112,6 +112,7 @@ H_UpdateServiceParam();
 H_SelectServiceControlSource();
 H_UpdateService();
 H_UpdateBaseUnit();
+H_UpdateVariableList();
 
 _CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
 _ModeRequestOneShot(CLK:= PackMLIn.bModeChangeRequest, Q=> );

@@ -31,6 +31,10 @@ VAR
 	_LiftPinAxisMoveVelCCWService : FB_GCLiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_GCLiftPinAxisMoveAbsServices;
 	_SingleProcessService : FB_GCSingleProcessService;
+
+	_VariableSimulationTick : DINT;
+	_SimChamberTemperature : REAL;
+	_SimChamberPressure : REAL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -394,7 +398,48 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[// Keep three deterministic values moving so the upper controller can verify live updates.
+IF _VariableSimulationTick >= 5999 THEN
+	_VariableSimulationTick := 0;
+ELSE
+	_VariableSimulationTick := _VariableSimulationTick + 1;
+END_IF
+
+_SimChamberTemperature := 25.0 + (DINT_TO_REAL(_VariableSimulationTick MOD 1000) * 0.005);
+_SimChamberPressure := 100.0 + (DINT_TO_REAL(_VariableSimulationTick MOD 2000) * 0.025);
+
+ModuleVariableList[1].Id := 1;
+ModuleVariableList[1].Name := 'ChamberTemperature';
+ModuleVariableList[1].DataType := E_DescriptorType.Float_32bit;
+ModuleVariableList[1].Unit := 'degC';
+ModuleVariableList[1].Value := REAL_TO_STRING(_SimChamberTemperature);
+
+ModuleVariableList[2].Id := 2;
+ModuleVariableList[2].Name := 'ChamberPressure';
+ModuleVariableList[2].DataType := E_DescriptorType.Float_32bit;
+ModuleVariableList[2].Unit := 'Pa';
+ModuleVariableList[2].Value := REAL_TO_STRING(_SimChamberPressure);
+
+ModuleVariableList[3].Id := 3;
+ModuleVariableList[3].Name := 'SimulationTick';
+ModuleVariableList[3].DataType := E_DescriptorType.Integer_32bit;
+ModuleVariableList[3].Unit := 'count';
+ModuleVariableList[3].Value := DINT_TO_STRING(_VariableSimulationTick);
+
+ModuleVariableList[4].Id := 4;
+ModuleVariableList[4].Name := 'SpinAxisSpeed';
+ModuleVariableList[4].DataType := E_DescriptorType.Float_32bit;
+ModuleVariableList[4].Unit := 'unit/s';
+ModuleVariableList[4].Value := REAL_TO_STRING(LREAL_TO_REAL(SpinAxis_BaseUnit.AxisActualVelocity));
+
+ModuleVariableList[5].Id := 5;
+ModuleVariableList[5].Name := 'LiftPinPosition';
+ModuleVariableList[5].DataType := E_DescriptorType.Float_32bit;
+ModuleVariableList[5].Unit := 'unit';
+ModuleVariableList[5].Value := REAL_TO_STRING(LREAL_TO_REAL(LiftPinAxis_BaseUnit.AxisActualPosition));
+
+// Id zero terminates the valid prefix for consumers that do not scan all 100 entries.
+ModuleVariableList[6].Id := 0;]]></ST>
       </Implementation>
     </Method>
   </POU>

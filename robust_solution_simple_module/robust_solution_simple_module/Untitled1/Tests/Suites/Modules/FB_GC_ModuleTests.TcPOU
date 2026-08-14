@@ -31,6 +31,9 @@ VAR_INST
 	nLiftOwnerCount : UINT;
 	nCallIndex : UINT;
 	bAcceptedCommandFound : BOOL;
+sPreviousSimulationTick : STRING(80);
+sPreviousTemperature : STRING(80);
+sPreviousPressure : STRING(80);
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -42,6 +45,8 @@ CASE nPhase OF
 		SystemContext.UtcDateTime := '20260813123456007';
 		SpinFakeAxis.M_ResetScenario();
 		LiftFakeAxis.M_ResetScenario();
+		SpinFakeAxis.M_SetAxisFeedback(ActualPosition := 12.5, ActualVelocity := 123.5);
+		LiftFakeAxis.M_SetAxisFeedback(ActualPosition := 45.25, ActualVelocity := 67.5);
 		AssertTrue(Condition := GVL_GC_Config.cServiceCount = 7, Message := 'GC service view must include SingleProcess as the seventh Service.');
 		SpinAxis := SpinFakeAxis;
 		LiftAxis := LiftFakeAxis;
@@ -69,6 +74,17 @@ CASE nPhase OF
 		Module(HwInput := HwInput, HwOutput := HwOutput, ModuleCtrl := ModuleCtrl, ServiceCtrl := ServiceCtrl, ServiceParam := ECID, SystemContext := SystemContext, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
 		AssertTrue(Condition := SpinFakeAxis.CurrentCycle = 1, Message := 'Module must update the SpinAxis exactly once in its first scan.');
 		AssertTrue(Condition := LiftFakeAxis.CurrentCycle = 1, Message := 'Module must update the LiftPin Axis exactly once in its first scan.');
+		AssertTrue(Condition := (Module.ModuleVariableList[1].Id = 1) AND (Module.ModuleVariableList[2].Id = 2) AND (Module.ModuleVariableList[3].Id = 3) AND (Module.ModuleVariableList[4].Id = 4) AND (Module.ModuleVariableList[5].Id = 5), Message := 'Module variable descriptors must use stable sequential IDs.');
+		AssertTrue(Condition := (Module.ModuleVariableList[1].Name = 'ChamberTemperature') AND (Module.ModuleVariableList[2].Name = 'ChamberPressure') AND (Module.ModuleVariableList[3].Name = 'SimulationTick') AND (Module.ModuleVariableList[4].Name = 'SpinAxisSpeed') AND (Module.ModuleVariableList[5].Name = 'LiftPinPosition'), Message := 'Module variable descriptor names must identify all five values.');
+		AssertTrue(Condition := (Module.ModuleVariableList[1].DataType = E_DescriptorType.Float_32bit) AND (Module.ModuleVariableList[2].DataType = E_DescriptorType.Float_32bit) AND (Module.ModuleVariableList[3].DataType = E_DescriptorType.Integer_32bit) AND (Module.ModuleVariableList[4].DataType = E_DescriptorType.Float_32bit) AND (Module.ModuleVariableList[5].DataType = E_DescriptorType.Float_32bit), Message := 'Module variable descriptor types must match their serialized values.');
+		AssertTrue(Condition := (Module.ModuleVariableList[1].Unit = 'degC') AND (Module.ModuleVariableList[2].Unit = 'Pa') AND (Module.ModuleVariableList[3].Unit = 'count') AND (Module.ModuleVariableList[4].Unit = 'unit/s') AND (Module.ModuleVariableList[5].Unit = 'unit'), Message := 'Module variable descriptor units must match the published values.');
+		AssertTrue(Condition := (Module.ModuleVariableList[1].Value <> '') AND (Module.ModuleVariableList[2].Value <> '') AND (Module.ModuleVariableList[3].Value <> ''), Message := 'Simulated module values must be serialized every scan.');
+		AssertTrue(Condition := Module.ModuleVariableList[4].Value = REAL_TO_STRING(LREAL_TO_REAL(SpinAxis.AxisActualVelocity)), Message := 'SpinAxisSpeed must use actual SpinAxis velocity feedback.');
+		AssertTrue(Condition := Module.ModuleVariableList[5].Value = REAL_TO_STRING(LREAL_TO_REAL(LiftAxis.AxisActualPosition)), Message := 'LiftPinPosition must use actual LiftPin position feedback.');
+		AssertTrue(Condition := Module.ModuleVariableList[6].Id = 0, Message := 'The first unused module variable descriptor must remain empty.');
+		sPreviousTemperature := Module.ModuleVariableList[1].Value;
+		sPreviousPressure := Module.ModuleVariableList[2].Value;
+		sPreviousSimulationTick := Module.ModuleVariableList[3].Value;
 		nPhase := 1;
 
 	1:
@@ -79,6 +95,9 @@ CASE nPhase OF
 		Module(HwInput := HwInput, HwOutput := HwOutput, ModuleCtrl := ModuleCtrl, ServiceCtrl := ServiceCtrl, ServiceParam := ECID, SystemContext := SystemContext, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
 		AssertTrue(Condition := SpinFakeAxis.CurrentCycle = 2, Message := 'Module must not call SpinAxis cyclic update once per Service.');
 		AssertTrue(Condition := LiftFakeAxis.CurrentCycle = 2, Message := 'Module must not call LiftPin cyclic update once per Service.');
+		AssertTrue(Condition := Module.ModuleVariableList[1].Value <> sPreviousTemperature, Message := 'ChamberTemperature must update on every valid Module scan.');
+		AssertTrue(Condition := Module.ModuleVariableList[2].Value <> sPreviousPressure, Message := 'ChamberPressure must update on every valid Module scan.');
+		AssertTrue(Condition := Module.ModuleVariableList[3].Value <> sPreviousSimulationTick, Message := 'SimulationTick must update on every valid Module scan.');
 		AssertTrue(Condition := Module.ModuleStatus.ResponseId = 123, Message := 'Module ctrl request id must equal to response id.');
 		nPhase := 2;
 

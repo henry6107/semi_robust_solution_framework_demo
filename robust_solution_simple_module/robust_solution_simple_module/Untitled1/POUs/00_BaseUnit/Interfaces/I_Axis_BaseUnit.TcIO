@@ -3,6 +3,20 @@
   <Itf Name="I_Axis_BaseUnit" Id="{6467168b-19d5-4331-8d22-d28396010198}">
     <Declaration><![CDATA[INTERFACE I_Axis_BaseUnit EXTENDS I_ResourceLock
 ]]></Declaration>
+    <Property Name="AxisActualPosition" Id="{eab3f334-68f5-41a8-941d-f2167723f8cf}">
+      <Declaration><![CDATA[PROPERTY AxisActualPosition : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{c87b0730-c36b-45e0-ad8a-c20fe11aeef8}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="AxisActualVelocity" Id="{21e250a2-5522-44f8-b388-4567d023dbfe}">
+      <Declaration><![CDATA[PROPERTY AxisActualVelocity : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{84b28254-08aa-419a-a385-ea8b63e47b57}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="AxisHasJob" Id="{a1938803-7419-476d-8402-590d311440cf}">
       <Declaration><![CDATA[PROPERTY AxisHasJob : BOOL
 ]]></Declaration>

@@ -19,7 +19,8 @@ HaltWithdrawalClearsResultAndPreservesOwnership();
 ScriptAndHistoryOverflowAreExplicit();
 CommandHistoryPreservesParameters();
 ResponseRemainsLatchedUntilCommandWithdrawal();
-JogErrorIsPublishedAfterConfiguredCycles();]]></ST>
+JogErrorIsPublishedAfterConfiguredCycles();
+ActualFeedbackIsAvailableThroughInterface();]]></ST>
     </Implementation>
     <Method Name="AllNonOwnerMotionCommandsAreRejected" Id="{20863985-8ff8-45ca-9090-68f266501456}">
       <Declaration><![CDATA[METHOD AllNonOwnerMotionCommandsAreRejected
@@ -431,6 +432,26 @@ CASE nPhase OF
 		nPhase := 0;
 		TEST_FINISHED();
 END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ActualFeedbackIsAvailableThroughInterface" Id="{2432db4f-f51e-4528-a917-161097c996b2}">
+      <Declaration><![CDATA[METHOD ActualFeedbackIsAvailableThroughInterface
+VAR
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ActualFeedbackIsAvailableThroughInterface');
+
+FakeAxis.M_ResetScenario();
+FakeAxis.M_SetAxisFeedback(ActualPosition := 45.25, ActualVelocity := 123.5);
+Axis := FakeAxis;
+
+AssertTrue(Condition := Axis.AxisActualPosition = 45.25, Message := 'Axis interface must expose actual position feedback.');
+AssertTrue(Condition := Axis.AxisActualVelocity = 123.5, Message := 'Axis interface must expose actual velocity feedback.');
+
+TEST_FINISHED();]]></ST>
       </Implementation>
     </Method>
   </POU>
