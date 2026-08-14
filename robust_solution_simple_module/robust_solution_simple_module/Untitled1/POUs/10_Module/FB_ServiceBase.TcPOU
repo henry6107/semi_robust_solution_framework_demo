@@ -62,6 +62,7 @@ IF nFirstEmpty = 0 THEN
 END_IF
 
 Status.ErrorList[nFirstEmpty].ModuleId := Context.ModuleId;
+Status.ErrorList[nFirstEmpty].ServiceId := ResourceOwnerId;
 Status.ErrorList[nFirstEmpty].MainErrorId := MainErrorId;
 Status.ErrorList[nFirstEmpty].SourceErrorId := SourceErrorId;
 Status.ErrorList[nFirstEmpty].Message := Message;

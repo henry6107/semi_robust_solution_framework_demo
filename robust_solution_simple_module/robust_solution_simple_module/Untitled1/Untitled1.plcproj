@@ -88,7 +88,7 @@
     <Compile Include="POUs\00_BaseUnit\T_ResourceOwnerId.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCResourceOwnerId.TcDUT">
+    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\E_GCServiceId.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Signal_In.TcDUT">
@@ -109,7 +109,7 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\U_GC_HW_Out.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\E_GCServiceErrorCode.TcDUT">
+    <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService\ST_GCLiftPinAxisMoveAbsParam.TcDUT">

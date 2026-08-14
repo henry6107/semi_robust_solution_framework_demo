@@ -79,7 +79,7 @@ ELSIF bError THEN
 		OwnerId := ResourceOwnerId,
 		Execute := FALSE);
 	M_AddError(
-		MainErrorId := E_GCServiceErrorCode.Error_While_Reset_Axis,
+		MainErrorId := E_GCErrorCode.Error_While_Reset_Axis,
 		SourceErrorId := nErrorId,
 		Message := 'Axis reset failed while aborting.');
 	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
@@ -152,7 +152,7 @@ END_VAR
 
 // Parameters can change while Execute is active, so validate them every scan.
 IF (Param.Velocity <= 0) OR (Param.Acceleration < 0) OR (Param.Deceleration < 0) THEN
-	M_AddError(MainErrorId := E_GCServiceErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Motion parameters became invalid during Execute.');
+	M_AddError(MainErrorId := E_GCErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Motion parameters became invalid during Execute.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
@@ -197,7 +197,7 @@ ELSE
 END_IF
 
 IF bError THEN
-	M_AddError(MainErrorId := E_GCServiceErrorCode.Axis_Command_Error_During_Execute, SourceErrorId := 0, Message := 'MoveVelocity failed during Execute.');
+	M_AddError(MainErrorId := E_GCErrorCode.Axis_Command_Error_During_Execute, SourceErrorId := 0, Message := 'MoveVelocity failed during Execute.');
 	RequestCommand(E_PackMLCommand.Stop);
 END_IF
 ]]></ST>
@@ -261,39 +261,39 @@ END_VAR
 
 // Validate Service-owned data before reserving the shared BaseUnit.
 IF Param.Velocity <= 0 THEN
-	M_AddError(MainErrorId := E_GCServiceErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Velocity must be greater than zero.');
+	M_AddError(MainErrorId := E_GCErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Velocity must be greater than zero.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Acceleration < 0 THEN
-	M_AddError(MainErrorId := E_GCServiceErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Acceleration must not be negative.');
+	M_AddError(MainErrorId := E_GCErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Acceleration must not be negative.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Deceleration < 0 THEN
-	M_AddError(MainErrorId := E_GCServiceErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Deceleration must not be negative.');
+	M_AddError(MainErrorId := E_GCErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Deceleration must not be negative.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 // Resource contention is a failed Start, not a wait condition.
 IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
-	M_AddError(MainErrorId := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting, SourceErrorId := 0, Message := 'Axis resource acquisition failed during Starting.');
+	M_AddError(MainErrorId := E_GCErrorCode.Resource_Acquire_Failed_During_Starting, SourceErrorId := 0, Message := 'Axis resource acquisition failed during Starting.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 // Physical checks occur only after this Service owns the BaseUnit.
 IF Axis_BaseUnit.AxisIsDisabled THEN
-	M_AddError(MainErrorId := E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting, SourceErrorId := 0, Message := 'Axis is not servo on during Starting.');
+	M_AddError(MainErrorId := E_GCErrorCode.Axis_Not_Servo_On_During_Starting, SourceErrorId := 0, Message := 'Axis is not servo on during Starting.');
 	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
 IF Axis_BaseUnit.AxisHasJob THEN
-	M_AddError(MainErrorId := E_GCServiceErrorCode.Axis_Is_Busy_During_Starting, SourceErrorId := 0, Message := 'Axis is busy during Starting.');
+	M_AddError(MainErrorId := E_GCErrorCode.Axis_Is_Busy_During_Starting, SourceErrorId := 0, Message := 'Axis is busy during Starting.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
@@ -367,7 +367,7 @@ IF bDone THEN
 ELSIF bError THEN
 	// Throw up error
 	M_AddError(
-		MainErrorId := E_GCServiceErrorCode.Error_While_Stop_Axis,
+		MainErrorId := E_GCErrorCode.Error_While_Stop_Axis,
 		SourceErrorId := nErrorId,
 		Message := 'Axis stop failed while stopping.');
 

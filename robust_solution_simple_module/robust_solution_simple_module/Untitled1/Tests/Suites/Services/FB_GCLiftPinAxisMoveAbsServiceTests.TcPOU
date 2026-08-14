@@ -150,9 +150,11 @@ CASE nPhase OF
 	3:
 		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 22);
 		FakeAxis.M_CyclicUpdate();
-		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCServiceErrorCode.Axis_Command_Error_During_Execute, Message := 'MoveAbs Error must be the first ErrorList entry.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCErrorCode.Axis_Command_Error_During_Execute, Message := 'MoveAbs Error must be the first ErrorList entry.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].SourceErrorId = 1, Message := 'MoveAbs Error must preserve the Axis source error ID.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].ModuleId = Context.ModuleId, Message := 'MoveAbs Error must preserve the injected Module ID.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].ServiceId = 22, Message := 'MoveAbs Error must preserve the assigned Service ID.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].Path <> '', Message := 'MoveAbs Error must preserve the Service instance path.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].DateTime = Context.UtcDateTime, Message := 'MoveAbs Error must preserve the injected UTC timestamp.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].Severity = E_Severity.Alarm, Message := 'MoveAbs Error must use Alarm severity.');
 		AssertTrue(Condition := Service.Status.ServiceErrorId = 0, Message := 'LiftPin MoveAbs must not update ServiceErrorId.');
@@ -174,10 +176,10 @@ CASE nPhase OF
 		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 22);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Reset Error must terminate Aborting at Aborted.');
-		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCServiceErrorCode.Axis_Command_Error_During_Execute, Message := 'MoveAbs Error must remain in the first slot.');
-		AssertTrue(Condition := Service.Status.ErrorList[2].MainErrorId = E_GCServiceErrorCode.Error_While_Stop_Axis, Message := 'Stop Error must be appended to the ErrorList.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCErrorCode.Axis_Command_Error_During_Execute, Message := 'MoveAbs Error must remain in the first slot.');
+		AssertTrue(Condition := Service.Status.ErrorList[2].MainErrorId = E_GCErrorCode.Error_While_Stop_Axis, Message := 'Stop Error must be appended to the ErrorList.');
 		AssertTrue(Condition := Service.Status.ErrorList[2].SourceErrorId = 2, Message := 'Stop Error must preserve the Axis source error ID.');
-		AssertTrue(Condition := Service.Status.ErrorList[3].MainErrorId = E_GCServiceErrorCode.Error_While_Reset_Axis, Message := 'Reset Error must be appended to the ErrorList.');
+		AssertTrue(Condition := Service.Status.ErrorList[3].MainErrorId = E_GCErrorCode.Error_While_Reset_Axis, Message := 'Reset Error must be appended to the ErrorList.');
 		AssertTrue(Condition := Service.Status.ErrorList[3].SourceErrorId = 3, Message := 'Reset Error must preserve the Axis source error ID.');
 		AssertTrue(Condition := Service.Status.ErrorList[4].MainErrorId = 0, Message := 'Repeated state scans must not duplicate ErrorList entries.');
 		AssertTrue(Condition := Service.Status.ServiceErrorId = 0, Message := 'LiftPin MoveAbs must not update ServiceErrorId.');

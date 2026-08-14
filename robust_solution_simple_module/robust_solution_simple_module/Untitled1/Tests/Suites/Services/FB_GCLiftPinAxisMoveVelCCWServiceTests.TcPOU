@@ -76,9 +76,11 @@ CASE nPhase OF
 		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 32);
 		FakeAxis.M_CyclicUpdate();
 		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Reset Error must finish Aborting.');
-		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCServiceErrorCode.Error_While_Reset_Axis, Message := 'MoveVelocity Abort must record the shared Reset Error code.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCErrorCode.Error_While_Reset_Axis, Message := 'MoveVelocity Abort must record the shared Reset Error code.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].SourceErrorId = 16#9999, Message := 'MoveVelocity Reset Error must preserve the Axis source error ID.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].ModuleId = Context.ModuleId, Message := 'MoveVelocity Reset Error must preserve the injected Module ID.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].ServiceId = 32, Message := 'MoveVelocity Reset Error must preserve the assigned Service ID.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].Path <> '', Message := 'MoveVelocity Reset Error must preserve the Service instance path.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].DateTime = Context.UtcDateTime, Message := 'MoveVelocity Reset Error must preserve the injected UTC timestamp.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].Severity = E_Severity.Alarm, Message := 'MoveVelocity Reset Error must use Alarm severity.');
 		AssertTrue(Condition := Service.Status.ErrorList[2].MainErrorId = 0, Message := 'Repeated Aborting scans must not duplicate the Reset Error.');

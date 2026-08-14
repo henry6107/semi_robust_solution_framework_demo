@@ -26,32 +26,48 @@ END_VAR
 
 MEMSET(ADR(SourceStatus), 0, SIZEOF(SourceStatus));
 SourceStatus.SpinAxisJogCW.ErrorList[2].ModuleId := 11;
+SourceStatus.SpinAxisJogCW.ErrorList[2].ServiceId := E_GCServiceId.SpinAxisJogCW;
 SourceStatus.SpinAxisJogCW.ErrorList[2].MainErrorId := 101;
 SourceStatus.SpinAxisJogCW.ErrorList[2].SourceErrorId := 1001;
 SourceStatus.SpinAxisJogCW.ErrorList[2].Message := 'Spin jog alarm';
 SourceStatus.SpinAxisJogCW.ErrorList[2].Path := 'GC.SpinAxisJogCW';
 SourceStatus.SpinAxisJogCW.ErrorList[2].Severity := E_Severity.Alarm;
 SourceStatus.SpinAxisJogCW.ErrorList[2].DateTime := '20260814123456001';
-SourceStatus.SpinAxisMoveAbs.ErrorList[1].MainErrorId := 201;
+SourceStatus.SpinAxisMoveAbs.ErrorList[1].ServiceId := E_GCServiceId.SpinAxisMoveAbs;
+SourceStatus.SpinAxisMoveAbs.ErrorList[1].MainErrorId := 101;
+SourceStatus.SpinAxisMoveVelCW.ErrorList[10].ServiceId := E_GCServiceId.SpinAxisMoveVelCW;
 SourceStatus.SpinAxisMoveVelCW.ErrorList[10].MainErrorId := 301;
+SourceStatus.LiftPinAxisMoveVelCW.ErrorList[3].ServiceId := E_GCServiceId.LiftPinAxisMoveVelCW;
 SourceStatus.LiftPinAxisMoveVelCW.ErrorList[3].MainErrorId := 401;
+SourceStatus.LiftPinAxisMoveVelCCW.ErrorList[1].ServiceId := E_GCServiceId.LiftPinAxisMoveVelCCW;
 SourceStatus.LiftPinAxisMoveVelCCW.ErrorList[1].MainErrorId := 501;
+SourceStatus.LiftPinAxisMoveAbs.ErrorList[4].ServiceId := E_GCServiceId.LiftPinAxisMoveAbs;
 SourceStatus.LiftPinAxisMoveAbs.ErrorList[4].MainErrorId := 601;
+SourceStatus.SingleProcess.ErrorList[2].ServiceId := E_GCServiceId.SingleProcess;
 SourceStatus.SingleProcess.ErrorList[2].MainErrorId := 701;
 
 TestModule_1.M_SetTestServiceStatus(TestStatus := SourceStatus);
 TestModule_1.M_UpdateTestAlarmList();
 
 AssertTrue(Condition := (TestModule_1.ModuleAlarmList[1].MainErrorId = 101)
-	AND (TestModule_1.ModuleAlarmList[2].MainErrorId = 201)
+	AND (TestModule_1.ModuleAlarmList[2].MainErrorId = 101)
 	AND (TestModule_1.ModuleAlarmList[3].MainErrorId = 301)
 	AND (TestModule_1.ModuleAlarmList[4].MainErrorId = 401)
 	AND (TestModule_1.ModuleAlarmList[5].MainErrorId = 501)
 	AND (TestModule_1.ModuleAlarmList[6].MainErrorId = 601)
 	AND (TestModule_1.ModuleAlarmList[7].MainErrorId = 701),
 	Message := 'Module alarms must follow ServiceStatus ByIndex order and each ErrorList index order.');
+AssertTrue(Condition := (TestModule_1.ModuleAlarmList[1].ServiceId = E_GCServiceId.SpinAxisJogCW)
+	AND (TestModule_1.ModuleAlarmList[2].ServiceId = E_GCServiceId.SpinAxisMoveAbs)
+	AND (TestModule_1.ModuleAlarmList[3].ServiceId = E_GCServiceId.SpinAxisMoveVelCW)
+	AND (TestModule_1.ModuleAlarmList[4].ServiceId = E_GCServiceId.LiftPinAxisMoveVelCW)
+	AND (TestModule_1.ModuleAlarmList[5].ServiceId = E_GCServiceId.LiftPinAxisMoveVelCCW)
+	AND (TestModule_1.ModuleAlarmList[6].ServiceId = E_GCServiceId.LiftPinAxisMoveAbs)
+	AND (TestModule_1.ModuleAlarmList[7].ServiceId = E_GCServiceId.SingleProcess),
+	Message := 'Module alarms must preserve the structured ServiceId for every Service.');
 AssertTrue(Condition := TestModule_1.ModuleAlarmList[8].MainErrorId = 0, Message := 'The first unused ModuleAlarmList entry must remain empty.');
 AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].ModuleId = 11, Message := 'Aggregation must preserve ModuleId.');
+AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].ServiceId = E_GCServiceId.SpinAxisJogCW, Message := 'Aggregation must preserve ServiceId.');
 AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].SourceErrorId = 1001, Message := 'Aggregation must preserve SourceErrorId.');
 AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].Message = 'Spin jog alarm', Message := 'Aggregation must preserve Message.');
 AssertTrue(Condition := TestModule_1.ModuleAlarmList[1].Path = 'GC.SpinAxisJogCW', Message := 'Aggregation must preserve Path.');
@@ -72,10 +88,15 @@ END_VAR
 
 MEMSET(ADR(SourceStatus), 0, SIZEOF(SourceStatus));
 SourceStatus.SpinAxisJogCW.ErrorList[1].MainErrorId := 11;
+SourceStatus.SpinAxisJogCW.ErrorList[1].ServiceId := E_GCServiceId.SpinAxisJogCW;
 SourceStatus.SpinAxisJogCW.ErrorList[3].MainErrorId := 12;
+SourceStatus.SpinAxisJogCW.ErrorList[3].ServiceId := E_GCServiceId.SpinAxisJogCW;
 SourceStatus.SpinAxisMoveAbs.ErrorList[2].MainErrorId := 21;
+SourceStatus.SpinAxisMoveAbs.ErrorList[2].ServiceId := E_GCServiceId.SpinAxisMoveAbs;
 SourceStatus.LiftPinAxisMoveVelCW.ErrorList[1].MainErrorId := 41;
+SourceStatus.LiftPinAxisMoveVelCW.ErrorList[1].ServiceId := E_GCServiceId.LiftPinAxisMoveVelCW;
 SourceStatus.SingleProcess.ErrorList[10].MainErrorId := 71;
+SourceStatus.SingleProcess.ErrorList[10].ServiceId := E_GCServiceId.SingleProcess;
 
 TestModule_2.M_SetTestServiceStatus(TestStatus := SourceStatus);
 TestModule_2.M_UpdateTestAlarmList();
@@ -98,6 +119,11 @@ AssertTrue(Condition := (TestModule_2.ModuleAlarmList[1].MainErrorId = 11)
 	AND (TestModule_2.ModuleAlarmList[3].MainErrorId = 41)
 	AND (TestModule_2.ModuleAlarmList[4].MainErrorId = 71),
 	Message := 'Removing the second alarm must shift later alarms forward without gaps.');
+AssertTrue(Condition := (TestModule_2.ModuleAlarmList[1].ServiceId = E_GCServiceId.SpinAxisJogCW)
+	AND (TestModule_2.ModuleAlarmList[2].ServiceId = E_GCServiceId.SpinAxisMoveAbs)
+	AND (TestModule_2.ModuleAlarmList[3].ServiceId = E_GCServiceId.LiftPinAxisMoveVelCW)
+	AND (TestModule_2.ModuleAlarmList[4].ServiceId = E_GCServiceId.SingleProcess),
+	Message := 'Compaction must preserve ServiceId while later alarms shift forward.');
 AssertTrue(Condition := TestModule_2.ModuleAlarmList[5].MainErrorId = 0, Message := 'Compaction must clear the stale fifth ModuleAlarmList entry.');
 
 MEMSET(ADR(SourceStatus), 0, SIZEOF(SourceStatus));
@@ -266,13 +292,13 @@ CASE nPhase OF
 		// Check if only one service get certain base unit resource
 		Module(HwInput := HwInput, HwOutput := HwOutput, ModuleCtrl := ModuleCtrl, ServiceCtrl := ServiceCtrl, ServiceParam := ECID, SystemContext := SystemContext, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
 		nOwnerCount := 0;
-		IF SpinAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisJogCW) THEN nOwnerCount := nOwnerCount + 1; END_IF
-		IF SpinAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisMoveAbs) THEN nOwnerCount := nOwnerCount + 1; END_IF
-		IF SpinAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisMoveVelCW) THEN nOwnerCount := nOwnerCount + 1; END_IF
+		IF SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisJogCW) THEN nOwnerCount := nOwnerCount + 1; END_IF
+		IF SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisMoveAbs) THEN nOwnerCount := nOwnerCount + 1; END_IF
+		IF SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisMoveVelCW) THEN nOwnerCount := nOwnerCount + 1; END_IF
 		nLiftOwnerCount := 0;
-		IF LiftAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.LiftPinAxisMoveVelCW) THEN nLiftOwnerCount := nLiftOwnerCount + 1; END_IF
-		IF LiftAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.LiftPinAxisMoveVelCCW) THEN nLiftOwnerCount := nLiftOwnerCount + 1; END_IF
-		IF LiftAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.LiftPinAxisMoveAbs) THEN nLiftOwnerCount := nLiftOwnerCount + 1; END_IF
+		IF LiftAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.LiftPinAxisMoveVelCW) THEN nLiftOwnerCount := nLiftOwnerCount + 1; END_IF
+		IF LiftAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.LiftPinAxisMoveVelCCW) THEN nLiftOwnerCount := nLiftOwnerCount + 1; END_IF
+		IF LiftAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.LiftPinAxisMoveAbs) THEN nLiftOwnerCount := nLiftOwnerCount + 1; END_IF
 		AssertTrue(Condition := Module.ServiceStatus.SpinAxisJogCW.ResponseId = 123, Message := 'SpinAxisJogCW Service ctrl request id must equal to response id.');
 		AssertTrue(Condition := Module.ServiceStatus.LiftPinAxisMoveVelCW.ResponseId = 456, Message := 'LiftAxisMoveVelCW Service ctrl request id must equal to response id.');
 		
@@ -286,7 +312,7 @@ CASE nPhase OF
 				bAcceptedCommandFound := TRUE;
 				CASE CallRecord.Operation OF
 					E_FakeAxisOperation.Jog:
-						AssertTrue(Condition := (CallRecord.OwnerId = E_GCResourceOwnerId.SpinAxisJogCW) AND (CallRecord.Velocity = ECID.SpinAxisJogCW.Velocity) AND (CallRecord.Acceleration = ECID.SpinAxisJogCW.Acceleration) AND (CallRecord.Deceleration = ECID.SpinAxisJogCW.Deceleration), Message := 'Jog ECID and Owner ID must pass through Module.');
+						AssertTrue(Condition := (CallRecord.OwnerId = E_GCServiceId.SpinAxisJogCW) AND (CallRecord.Velocity = ECID.SpinAxisJogCW.Velocity) AND (CallRecord.Acceleration = ECID.SpinAxisJogCW.Acceleration) AND (CallRecord.Deceleration = ECID.SpinAxisJogCW.Deceleration), Message := 'Jog ECID and Owner ID must pass through Module.');
 					E_FakeAxisOperation.MoveAbs:
 						// Assert something if needed
 					E_FakeAxisOperation.MoveVel:
@@ -351,8 +377,8 @@ CASE nPhase OF
 		Module(HwInput := HwInput, HwOutput := HwOutput, ModuleCtrl := ModuleCtrl, ServiceCtrl := ServiceCtrl, ServiceParam := ECID, SystemContext := SystemContext, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
 		Module(HwInput := HwInput, HwOutput := HwOutput, ModuleCtrl := ModuleCtrl, ServiceCtrl := ServiceCtrl, ServiceParam := ECID, SystemContext := SystemContext, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
 
-		AssertFalse(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisJogCW) OR SpinAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisMoveAbs) OR SpinAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisMoveVelCW), Message := 'Execute-state external ServiceCtrl must stop and release the active Spin Service.');
-		AssertFalse(Condition := LiftAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.LiftPinAxisMoveVelCW) OR LiftAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.LiftPinAxisMoveVelCCW) OR LiftAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.LiftPinAxisMoveAbs), Message := 'Execute-state external ServiceCtrl must stop and release the active LiftPin Service.');
+		AssertFalse(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisJogCW) OR SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisMoveAbs) OR SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisMoveVelCW), Message := 'Execute-state external ServiceCtrl must stop and release the active Spin Service.');
+		AssertFalse(Condition := LiftAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.LiftPinAxisMoveVelCW) OR LiftAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.LiftPinAxisMoveVelCCW) OR LiftAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.LiftPinAxisMoveAbs), Message := 'Execute-state external ServiceCtrl must stop and release the active LiftPin Service.');
 		nPhase := 8;
 
 	8:
@@ -395,7 +421,7 @@ CASE nPhase OF
 		ServiceCtrl.SpinAxisJogCW.PackMLIn.eCommand := E_PackMLCommand.Start;
 		ServiceCtrl.SpinAxisJogCW.PackMLIn.bCommandChangeRequest := TRUE;
 		Module(HwInput := HwInput, HwOutput := HwOutput, ModuleCtrl := ModuleCtrl, ServiceCtrl := ServiceCtrl, ServiceParam := ECID, SystemContext := SystemContext, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		AssertTrue(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisJogCW), Message := 'A deterministic Jog Start must acquire the shared SpinAxis with its assigned Owner ID.');
+		AssertTrue(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisJogCW), Message := 'A deterministic Jog Start must acquire the shared SpinAxis with its assigned Owner ID.');
 		nPhase := 10;
 
 	10:
@@ -403,7 +429,7 @@ CASE nPhase OF
 		ServiceCtrl.SpinAxisJogCW.PackMLIn.bCommandChangeRequest := FALSE;
 		Module(HwInput := HwInput, HwOutput := HwOutput, ModuleCtrl := ModuleCtrl, ServiceCtrl := ServiceCtrl, ServiceParam := ECID, SystemContext := SystemContext, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
 		AssertTrue(Condition := SpinFakeAxis.M_GetCall(Index := SpinFakeAxis.HistoryCount, CallRecord => CallRecord), Message := 'Module-routed Jog command must be recorded.');
-		AssertTrue(Condition := CallRecord.Accepted AND (CallRecord.Operation = E_FakeAxisOperation.Jog) AND (CallRecord.OwnerId = E_GCResourceOwnerId.SpinAxisJogCW), Message := 'Module must route Jog through the shared Interface and assigned Owner ID.');
+		AssertTrue(Condition := CallRecord.Accepted AND (CallRecord.Operation = E_FakeAxisOperation.Jog) AND (CallRecord.OwnerId = E_GCServiceId.SpinAxisJogCW), Message := 'Module must route Jog through the shared Interface and assigned Owner ID.');
 		AssertTrue(Condition := (CallRecord.Velocity = ECID.SpinAxisJogCW.Velocity) AND (CallRecord.Acceleration = ECID.SpinAxisJogCW.Acceleration) AND (CallRecord.Deceleration = ECID.SpinAxisJogCW.Deceleration), Message := 'Module must pass Jog ECID parameters unchanged.');
 		nPhase := 11;
 
@@ -412,7 +438,7 @@ CASE nPhase OF
 		ServiceCtrl.SpinAxisJogCW.PackMLIn.eCommand := E_PackMLCommand.Stop;
 		ServiceCtrl.SpinAxisJogCW.PackMLIn.bCommandChangeRequest := TRUE;
 		Module(HwInput := HwInput, HwOutput := HwOutput, ModuleCtrl := ModuleCtrl, ServiceCtrl := ServiceCtrl, ServiceParam := ECID, SystemContext := SystemContext, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		AssertFalse(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_GCResourceOwnerId.SpinAxisJogCW), Message := 'Final Jog Stop must release the shared SpinAxis.');
+		AssertFalse(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisJogCW), Message := 'Final Jog Stop must release the shared SpinAxis.');
 		nPhase := 0;
 		TEST_FINISHED();
 END_CASE]]></ST>

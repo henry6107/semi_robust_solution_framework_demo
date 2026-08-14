@@ -350,49 +350,49 @@ END_VAR
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	// Owner IDs are assigned by the Module so each Service instance is unique.
-	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisJogCW,
+	ResourceOwnerId:= E_GCServiceId.SpinAxisJogCW,
 	Status=> _ServiceStatusView.ByName.SpinAxisJogCW);
 
 _SpinAxisMoveAbsService(
 	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveAbs,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveAbs,
+	ResourceOwnerId:= E_GCServiceId.SpinAxisMoveAbs,
 	Status=> _ServiceStatusView.ByName.SpinAxisMoveAbs);
 
 _SpinAxisMoveVelCWService(
 	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveVelCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVelCW,
+	ResourceOwnerId:= E_GCServiceId.SpinAxisMoveVelCW,
 	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
 
 _LiftPinAxisMoveVelCWService(
 	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCW,
+	ResourceOwnerId:= E_GCServiceId.LiftPinAxisMoveVelCW,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCW);
 
 _LiftPinAxisMoveVelCCWService(
 	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCCW,
+	ResourceOwnerId:= E_GCServiceId.LiftPinAxisMoveVelCCW,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCCW);
 
 _LiftPinAxisMoveAbsService(
 	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveAbs,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveAbs,
+	ResourceOwnerId:= E_GCServiceId.LiftPinAxisMoveAbs,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
 
 _SingleProcessService(
 	Ctrl := _ServiceCtrlView.ByName.SingleProcess,
 	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
 	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
-	ResourceOwnerId := E_GCResourceOwnerId.SingleProcess,
+	ResourceOwnerId := E_GCServiceId.SingleProcess,
 	Status => _ServiceStatusView.ByName.SingleProcess,
 	ProcessStatus => );
 ]]></ST>

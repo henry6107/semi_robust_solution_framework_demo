@@ -4,6 +4,7 @@
     <Declaration><![CDATA[TYPE ST_ExtAlarm :
 STRUCT
 	ModuleId : UDINT;
+	ServiceId : UDINT;
 	MainErrorId : UDINT;
 	SourceErrorId : UDINT;
 	Message : STRING;

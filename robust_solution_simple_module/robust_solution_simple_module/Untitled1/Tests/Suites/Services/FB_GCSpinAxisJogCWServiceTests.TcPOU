@@ -87,9 +87,11 @@ CASE nPhase OF
 	6:
 		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 11);
 		FakeAxis.M_CyclicUpdate();
-		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCServiceErrorCode.Axis_Command_Error_During_Execute, Message := 'Jog Error must use the shared Service error code.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCErrorCode.Axis_Command_Error_During_Execute, Message := 'Jog Error must use the shared Service error code.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].SourceErrorId = 16#4444, Message := 'Jog Error must preserve the Axis source error ID.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].ModuleId = Context.ModuleId, Message := 'Jog Error must preserve the injected Module ID.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].ServiceId = 11, Message := 'Jog Error must preserve the assigned Service ID.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].Path <> '', Message := 'Jog Error must preserve the Service instance path.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].DateTime = Context.UtcDateTime, Message := 'Jog Error must preserve the injected UTC timestamp.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].Severity = E_Severity.Alarm, Message := 'Jog Error must use Alarm severity.');
 		AssertTrue(Condition := Service.Status.ServiceErrorId = 0, Message := 'Jog must not update ServiceErrorId.');
@@ -150,9 +152,10 @@ CASE nPhase OF
 		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
 		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ResourceOwnerId := 12);
 		FakeAxis.M_CyclicUpdate();
-		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCServiceErrorCode.Invalid_Param, Message := 'Zero Jog velocity must be rejected as Invalid_Param.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_GCErrorCode.Invalid_Param, Message := 'Zero Jog velocity must be rejected as Invalid_Param.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].SourceErrorId = 0, Message := 'Invalid Jog data must use source ID zero.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].ModuleId = Context.ModuleId, Message := 'Invalid Jog data must preserve the injected Module ID.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].ServiceId = 12, Message := 'Invalid Jog data must preserve the assigned Service ID.');
 		AssertTrue(Condition := Service.Status.ErrorList[1].DateTime = Context.UtcDateTime, Message := 'Invalid Jog data must preserve the injected UTC timestamp.');
 		AssertTrue(Condition := Service.Status.ServiceErrorId = 0, Message := 'Invalid Jog data must not update ServiceErrorId.');
 		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 12), Message := 'Parameter validation must occur before ownership.');

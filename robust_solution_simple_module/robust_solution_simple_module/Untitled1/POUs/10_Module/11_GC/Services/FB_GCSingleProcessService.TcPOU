@@ -107,7 +107,7 @@ CASE _AbortPhase OF
 		IF NOT _bSpinStageDone THEN
 			bAccepted := SpinAxis_BaseUnit.M_Stop(ResourceOwnerId, TRUE, _LatchedParam.SpinStopDeceleration, Done => bDone, Error => bError);
 			IF (NOT bAccepted) OR bError THEN
-				M_SetFailure(E_GCServiceErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
+				M_SetFailure(E_GCErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
 				_bSpinStageDone := TRUE;
 			ELSIF bDone THEN
 				SpinAxis_BaseUnit.M_Stop(ResourceOwnerId, FALSE, _LatchedParam.SpinStopDeceleration);
@@ -117,7 +117,7 @@ CASE _AbortPhase OF
 		IF NOT _bLiftStageDone THEN
 			bAccepted := LiftPinAxis_BaseUnit.M_Stop(ResourceOwnerId, TRUE, _LatchedParam.LiftStopDeceleration, Done => bDone, Error => bError);
 			IF (NOT bAccepted) OR bError THEN
-				M_SetFailure(E_GCServiceErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
+				M_SetFailure(E_GCErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
 				_bLiftStageDone := TRUE;
 			ELSIF bDone THEN
 				LiftPinAxis_BaseUnit.M_Stop(ResourceOwnerId, FALSE, _LatchedParam.LiftStopDeceleration);
@@ -126,7 +126,7 @@ CASE _AbortPhase OF
 		END_IF
 		bAdvanceToReset := _bSpinStageDone AND _bLiftStageDone;
 		IF _CleanupTimer.Q THEN
-			M_SetFailure(E_GCServiceErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
+			M_SetFailure(E_GCErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
 			bAdvanceToReset := TRUE;
 		END_IF
 		IF bAdvanceToReset THEN
@@ -141,7 +141,7 @@ CASE _AbortPhase OF
 		IF NOT _bSpinStageDone THEN
 			bAccepted := SpinAxis_BaseUnit.M_Reset(ResourceOwnerId, TRUE, Done => bDone, Error => bError);
 			IF (NOT bAccepted) OR bError THEN
-				M_SetFailure(E_GCServiceErrorCode.Error_While_Reset_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
+				M_SetFailure(E_GCErrorCode.Error_While_Reset_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
 				SpinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
 				_bSpinStageDone := TRUE;
 			ELSIF bDone THEN
@@ -152,7 +152,7 @@ CASE _AbortPhase OF
 		IF NOT _bLiftStageDone THEN
 			bAccepted := LiftPinAxis_BaseUnit.M_Reset(ResourceOwnerId, TRUE, Done => bDone, Error => bError);
 			IF (NOT bAccepted) OR bError THEN
-				M_SetFailure(E_GCServiceErrorCode.Error_While_Reset_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
+				M_SetFailure(E_GCErrorCode.Error_While_Reset_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
 				LiftPinAxis_BaseUnit.M_Reset(ResourceOwnerId, FALSE);
 				_bLiftStageDone := TRUE;
 			ELSIF bDone THEN
@@ -169,7 +169,7 @@ CASE _AbortPhase OF
 			RETURN;
 		END_IF
 		IF _CleanupTimer.Q THEN
-			M_SetFailure(E_GCServiceErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
+			M_SetFailure(E_GCErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
 			SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 			LiftPinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 			M_FinalizeCycle(Result := E_GCSingleProcessResult.Aborted);
@@ -233,7 +233,7 @@ CASE _CurrentStage OF
 			Done => bLiftDone,
 			Error => bLiftError);
 		IF (NOT bAccepted) OR bLiftError THEN
-			M_SetFailure(E_GCServiceErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
+			M_SetFailure(E_GCErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
 			RequestCommand(E_PackMLCommand.Stop);
 			RETURN;
 		END_IF
@@ -254,7 +254,7 @@ CASE _CurrentStage OF
 			Done => bSpinDone,
 			Error => bSpinError);
 		IF (NOT bAccepted) OR bSpinError THEN
-			M_SetFailure(E_GCServiceErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
+			M_SetFailure(E_GCErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
 			RequestCommand(E_PackMLCommand.Stop);
 			RETURN;
 		END_IF
@@ -276,7 +276,7 @@ CASE _CurrentStage OF
 				Done => bSpinDone,
 				Error => bSpinError);
 			IF (NOT bAccepted) OR bSpinError THEN
-				M_SetFailure(E_GCServiceErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
+				M_SetFailure(E_GCErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
 				RequestCommand(E_PackMLCommand.Stop);
 				RETURN;
 			END_IF
@@ -297,7 +297,7 @@ CASE _CurrentStage OF
 				Done => bLiftDone,
 				Error => bLiftError);
 			IF (NOT bAccepted) OR bLiftError THEN
-				M_SetFailure(E_GCServiceErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
+				M_SetFailure(E_GCErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
 				RequestCommand(E_PackMLCommand.Stop);
 				RETURN;
 			END_IF
@@ -323,7 +323,7 @@ CASE _CurrentStage OF
 			InVelocity => bSpinInVelocity,
 			Error => bSpinError);
 		IF (NOT bAccepted) OR bSpinError THEN
-			M_SetFailure(E_GCServiceErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
+			M_SetFailure(E_GCErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
 			RequestCommand(E_PackMLCommand.Stop);
 			RETURN;
 		END_IF
@@ -343,7 +343,7 @@ CASE _CurrentStage OF
 			InVelocity => bSpinInVelocity,
 			Error => bSpinError);
 		IF (NOT bAccepted) OR bSpinError THEN
-			M_SetFailure(E_GCServiceErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
+			M_SetFailure(E_GCErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
 			RequestCommand(E_PackMLCommand.Stop);
 			RETURN;
 		END_IF
@@ -362,7 +362,7 @@ CASE _CurrentStage OF
 				Done => bSpinDone,
 				Error => bSpinError);
 			IF (NOT bAccepted) OR bSpinError THEN
-				M_SetFailure(E_GCServiceErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
+				M_SetFailure(E_GCErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
 				RequestCommand(E_PackMLCommand.Abort);
 				RETURN;
 			END_IF
@@ -383,7 +383,7 @@ CASE _CurrentStage OF
 				Done => bLiftDone,
 				Error => bLiftError);
 			IF (NOT bAccepted) OR bLiftError THEN
-				M_SetFailure(E_GCServiceErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
+				M_SetFailure(E_GCErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
 				RequestCommand(E_PackMLCommand.Stop);
 				RETURN;
 			END_IF
@@ -409,7 +409,7 @@ CASE _CurrentStage OF
 			Done => bSpinDone,
 			Error => bSpinError);
 		IF (NOT bAccepted) OR bSpinError THEN
-			M_SetFailure(E_GCServiceErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
+			M_SetFailure(E_GCErrorCode.Axis_Command_Error_During_Execute, E_GCSingleProcessAxis.SpinAxis, FALSE);
 			RequestCommand(E_PackMLCommand.Stop);
 			RETURN;
 		END_IF
@@ -422,7 +422,7 @@ CASE _CurrentStage OF
 END_CASE
 
 IF _StageTimer.Q THEN
-	M_SetFailure(E_GCServiceErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
+	M_SetFailure(E_GCErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
 	RequestCommand(E_PackMLCommand.Stop);
 END_IF]]></ST>
       </Implementation>
@@ -445,7 +445,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.ServiceErrorId := E_GCServiceErrorCode.None;
+        <ST><![CDATA[Status.ServiceErrorId := E_GCErrorCode.None;
 _CurrentStage := E_GCSingleProcessStage.None;
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -468,7 +468,7 @@ M_UpdateStageTimer();
 
 IF NOT M_ValidateParam() THEN
 	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Invalid_Param,
+		ErrorCode := E_GCErrorCode.Invalid_Param,
 		FailedAxis := E_GCSingleProcessAxis.None,
 		TimedOut := FALSE);
 	RequestCommand(E_PackMLCommand.Stop);
@@ -477,7 +477,7 @@ END_IF
 
 IF NOT SpinAxis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
 	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting,
+		ErrorCode := E_GCErrorCode.Resource_Acquire_Failed_During_Starting,
 		FailedAxis := E_GCSingleProcessAxis.SpinAxis,
 		TimedOut := FALSE);
 	RequestCommand(E_PackMLCommand.Stop);
@@ -487,7 +487,7 @@ END_IF
 IF NOT LiftPinAxis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
 	SpinAxis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
 	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting,
+		ErrorCode := E_GCErrorCode.Resource_Acquire_Failed_During_Starting,
 		FailedAxis := E_GCSingleProcessAxis.LiftPinAxis,
 		TimedOut := FALSE);
 	RequestCommand(E_PackMLCommand.Stop);
@@ -496,7 +496,7 @@ END_IF
 
 IF SpinAxis_BaseUnit.AxisIsDisabled THEN
 	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting,
+		ErrorCode := E_GCErrorCode.Axis_Not_Servo_On_During_Starting,
 		FailedAxis := E_GCSingleProcessAxis.SpinAxis,
 		TimedOut := FALSE);
 	RequestCommand(E_PackMLCommand.Abort);
@@ -505,7 +505,7 @@ END_IF
 
 IF LiftPinAxis_BaseUnit.AxisIsDisabled THEN
 	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting,
+		ErrorCode := E_GCErrorCode.Axis_Not_Servo_On_During_Starting,
 		FailedAxis := E_GCSingleProcessAxis.LiftPinAxis,
 		TimedOut := FALSE);
 	RequestCommand(E_PackMLCommand.Abort);
@@ -514,7 +514,7 @@ END_IF
 
 IF SpinAxis_BaseUnit.AxisHasJob THEN
 	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Axis_Is_Busy_During_Starting,
+		ErrorCode := E_GCErrorCode.Axis_Is_Busy_During_Starting,
 		FailedAxis := E_GCSingleProcessAxis.SpinAxis,
 		TimedOut := FALSE);
 	RequestCommand(E_PackMLCommand.Stop);
@@ -523,7 +523,7 @@ END_IF
 
 IF LiftPinAxis_BaseUnit.AxisHasJob THEN
 	M_SetFailure(
-		ErrorCode := E_GCServiceErrorCode.Axis_Is_Busy_During_Starting,
+		ErrorCode := E_GCErrorCode.Axis_Is_Busy_During_Starting,
 		FailedAxis := E_GCSingleProcessAxis.LiftPinAxis,
 		TimedOut := FALSE);
 	RequestCommand(E_PackMLCommand.Stop);
@@ -572,7 +572,7 @@ _CleanupTimer(IN := TRUE, PT := _LatchedParam.StopTimeout);
 IF NOT _bSpinStageDone THEN
 	bAccepted := SpinAxis_BaseUnit.M_Stop(ResourceOwnerId, TRUE, _LatchedParam.SpinStopDeceleration, Done => bDone, Error => bError);
 	IF (NOT bAccepted) OR bError THEN
-		M_SetFailure(E_GCServiceErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
+		M_SetFailure(E_GCErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.SpinAxis, FALSE);
 		RequestCommand(E_PackMLCommand.Abort);
 		RETURN;
 	END_IF
@@ -585,7 +585,7 @@ END_IF
 IF NOT _bLiftStageDone THEN
 	bAccepted := LiftPinAxis_BaseUnit.M_Stop(ResourceOwnerId, TRUE, _LatchedParam.LiftStopDeceleration, Done => bDone, Error => bError);
 	IF (NOT bAccepted) OR bError THEN
-		M_SetFailure(E_GCServiceErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
+		M_SetFailure(E_GCErrorCode.Error_While_Stop_Axis, E_GCSingleProcessAxis.LiftPinAxis, FALSE);
 		RequestCommand(E_PackMLCommand.Abort);
 		RETURN;
 	END_IF
@@ -605,7 +605,7 @@ IF _bSpinStageDone AND _bLiftStageDone THEN
 END_IF
 
 IF _CleanupTimer.Q THEN
-	M_SetFailure(E_GCServiceErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
+	M_SetFailure(E_GCErrorCode.Stage_Timeout, E_GCSingleProcessAxis.Both, TRUE);
 	RequestCommand(E_PackMLCommand.Abort);
 END_IF]]></ST>
       </Implementation>
@@ -631,7 +631,7 @@ _bCycleFinalized := FALSE;
 _bFailurePending := FALSE;
 _bStageFrozen := FALSE;
 ProcessStatus.CurrentCycle.Result := E_GCSingleProcessResult.Running;
-Status.ServiceErrorId := E_GCServiceErrorCode.None;]]></ST>
+Status.ServiceErrorId := E_GCErrorCode.None;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_CompleteStage" Id="{82c2ba89-3e0f-49ee-82f7-24d710c7fd7b}" FolderPath="PrivateMethods\">
@@ -706,7 +706,7 @@ _StageTimer(IN := FALSE);]]></ST>
     <Method Name="M_SetFailure" Id="{c741ec73-0817-4cc6-8cf3-1d29fb3edf0e}" FolderPath="PrivateMethods\">
       <Declaration><![CDATA[METHOD PRIVATE M_SetFailure
 VAR_INPUT
-	ErrorCode : E_GCServiceErrorCode;
+	ErrorCode : E_GCErrorCode;
 	FailedAxis : E_GCSingleProcessAxis;
 	TimedOut : BOOL;
 END_VAR

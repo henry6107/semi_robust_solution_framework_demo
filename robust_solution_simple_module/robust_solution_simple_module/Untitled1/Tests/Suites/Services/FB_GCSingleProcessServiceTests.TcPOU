@@ -167,7 +167,7 @@ CASE nPhase OF
 		Service(Ctrl := Ctrl, Param := Param, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis, ResourceOwnerId := 32);
 		SpinFake.M_CyclicUpdate();
 		LiftFake.M_CyclicUpdate();
-		AssertTrue(Service.Status.ServiceErrorId = E_GCServiceErrorCode.Invalid_Param, 'Zero-valued parameters must report Invalid_Param.');
+		AssertTrue(Service.Status.ServiceErrorId = E_GCErrorCode.Invalid_Param, 'Zero-valued parameters must report Invalid_Param.');
 		AssertTrue(Service.ProcessStatus.LastCycle.Result = E_GCSingleProcessResult.Failed, 'Invalid parameters must retain a Failed cycle.');
 		AssertTrue(Service.ProcessStatus.LastCycle.FailedStage = E_GCSingleProcessStage.Prepare, 'Invalid parameters must fail in Prepare.');
 		AssertTrue(SpinFake.HistoryCount = 0, 'Invalid parameters must not command SpinAxis.');
@@ -246,7 +246,7 @@ CASE nPhase OF
 			AssertTrue(Service.ProcessStatus.LastCycle.Result = E_GCSingleProcessResult.Failed, 'Timed out cycle must be retained as Failed.');
 			AssertTrue(Service.ProcessStatus.LastCycle.FailedStage = E_GCSingleProcessStage.LiftReady, 'LiftReady timeout must identify LiftReady.');
 			AssertTrue(Service.ProcessStatus.LastCycle.StageTiming.LiftReady.TimedOut, 'LiftReady timing must be marked TimedOut.');
-			AssertTrue(Service.Status.ServiceErrorId = E_GCServiceErrorCode.Stage_Timeout, 'LiftReady timeout must report Stage_Timeout.');
+			AssertTrue(Service.Status.ServiceErrorId = E_GCErrorCode.Stage_Timeout, 'LiftReady timeout must report Stage_Timeout.');
 			AssertFalse(SpinAxis.M_IsResourceOwner(33), 'Timeout cleanup must release SpinAxis.');
 			AssertFalse(LiftAxis.M_IsResourceOwner(33), 'Timeout cleanup must release LiftPinAxis.');
 			nPhase := 0;
