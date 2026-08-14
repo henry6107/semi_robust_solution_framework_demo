@@ -215,6 +215,9 @@
     <Compile Include="POUs\10_Module\FB_ModuleBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\10_Module\FB_ServiceBase.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\MAIN.TcPOU">
       <SubType>Code</SubType>
     </Compile>

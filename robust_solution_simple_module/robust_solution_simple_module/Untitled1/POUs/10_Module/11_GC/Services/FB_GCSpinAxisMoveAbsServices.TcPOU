@@ -1,40 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GCSpinAxisMoveAbsServices" Id="{9c4945bc-98e0-4f80-811d-303c8e7f09ff}" SpecialFunc="None">
-    <Declaration><![CDATA[{attribute 'reflection'}
-FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_PackMLModeSet
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_ServiceBase
 VAR_INPUT
 	Param : ST_GCSpinAxisMoveAbsParam;
-	Ctrl : REFERENCE TO ST_ServiceCtrl;
-	Context : REFERENCE TO ST_ServiceContext;
 	Axis_BaseUnit : I_Axis_BaseUnit;
-	
-	// The Module assigns a unique ID to this Service instance.
-	ResourceOwnerId : T_ResourceOwnerId;
-END_VAR
-
-VAR_OUTPUT
-	Status : ST_ServiceStatus;
-END_VAR
-
-VAR
-	_CmdRequestOneShot : R_TRIG;
-
-	{attribute 'instance-path'}
-    {attribute 'noinit'}
-	_Path : STRING;
 END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[PackMLIn := Ctrl.PackMLIn;
-SUPER^();
-
-_CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
-
-// Updata status
-Status.PackMLOut := PackMLOut;
-IF _CmdRequestOneShot.Q THEN // Acknowledge to upper controller that command received
-	Status.ResponseId := Ctrl.RequestId;
-END_IF
+      <ST><![CDATA[M_UpdateService();
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{ca59d4b8-ca7f-493a-9fc5-3adf146e1d0b}" />
@@ -418,51 +391,6 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
 H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_AddError" Id="{104bb42c-c60b-448f-8d8a-063d2146e42a}">
-      <Declaration><![CDATA[METHOD PROTECTED M_AddError : BOOL
-VAR_INPUT
-	MainErrorId : UDINT;
-	SourceErrorId : UDINT;
-	Message : STRING;
-END_VAR
-
-VAR
-	nIndex : UINT;
-	nFirstEmpty : UINT;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[M_AddError := FALSE;
-nFirstEmpty := 0;
-
-FOR nIndex := 1 TO Param_Config.MaxServiceError DO
-	IF Status.ErrorList[nIndex].MainErrorId = 0 THEN
-		IF nFirstEmpty = 0 THEN
-			nFirstEmpty := nIndex;
-			EXIT;
-		END_IF
-
-	ELSIF Status.ErrorList[nIndex].MainErrorId = MainErrorId THEN
-		// The same error event is already recorded for this task cycle.
-		RETURN;
-	END_IF
-END_FOR
-
-// Preserve the first ten errors; reject new errors when the list is full.
-IF nFirstEmpty = 0 THEN
-	RETURN;
-END_IF
-
-Status.ErrorList[nFirstEmpty].ModuleId := Context.ModuleId;
-Status.ErrorList[nFirstEmpty].MainErrorId := MainErrorId;
-Status.ErrorList[nFirstEmpty].SourceErrorId := SourceErrorId;
-Status.ErrorList[nFirstEmpty].Message := Message;
-Status.ErrorList[nFirstEmpty].Path := _Path;
-Status.ErrorList[nFirstEmpty].Severity := E_Severity.Alarm;
-Status.ErrorList[nFirstEmpty].DateTime := Context.UtcDateTime;
-M_AddError := TRUE;]]></ST>
       </Implementation>
     </Method>
   </POU>
