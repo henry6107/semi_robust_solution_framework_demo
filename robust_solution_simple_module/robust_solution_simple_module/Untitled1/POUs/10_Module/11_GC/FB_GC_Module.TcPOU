@@ -322,6 +322,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[_SpinAxisJogCWService(
 	Ctrl:= _ServiceCtrlView.ByName.SpinAxisJogCW,
+	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	// Owner IDs are assigned by the Module so each Service instance is unique.
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisJogCW,
@@ -336,24 +337,28 @@ _SpinAxisMoveAbsService(
 
 _SpinAxisMoveVelCWService(
 	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveVelCW,
+	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVelCW,
 	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
 
 _LiftPinAxisMoveVelCWService(
 	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCW,
+	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCW,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCW);
 
 _LiftPinAxisMoveVelCCWService(
 	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCCW,
+	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCCW,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCCW);
 
 _LiftPinAxisMoveAbsService(
 	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveAbs,
+	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveAbs,
 	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
