@@ -13,6 +13,7 @@ VAR
 	_SystemContext : ST_SystemContext;
 	
 	_bTest : BOOL;
+	_bTestHearbeat : BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -26,9 +27,14 @@ END_VAR
 
 _UtcClock(UtcDateTime => _SystemContext.UtcDateTime);
 
+IF _bTestHearbeat THEN
+	_GC1.HeartbeatIndex := _GC1.HeartbeatIndex + 1;
+END_IF
+
 GC1_Module(
 	HwInput:= GC1_HwIn.Signal, 
-	HwOutput:= GC_HwOut.Signal, 
+	HwOutput:= GC_HwOut.Signal,
+	HeartbeatIndex := _GC1.HeartbeatIndex,
 	ModuleCtrl:= _GC1.ModuleCtrl, 
 	ServiceCtrl:= _GC1.ServiceCtrl,
 	ServiceParam:= _GC1.ServiceParam, 

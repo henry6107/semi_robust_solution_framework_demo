@@ -7,6 +7,7 @@ VAR_GLOBAL CONSTANT
 	MaxModuleAlarm : UINT := 100;
 	MaxServiceError : UINT := 10;
 	MaxModuleData : UINT := 50;
+	ModuleHeartbeat_Timout : TIME := T#10S;
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

@@ -21,6 +21,10 @@ VAR
 	
 	_ModuleId : UDINT;
 	_ServiceContext : ST_ServiceContext;
+	
+	_HeartbeatTimer : TON;
+	_LastHeartbeatIndex : UDINT;
+	_IsControlSourceAlive : BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -106,15 +110,37 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_CheckHeartbeat" Id="{95356be4-c779-4a0a-84d9-ca5fd7d93bc1}">
+      <Declaration><![CDATA[METHOD PRIVATE M_CheckHeartbeat
+VAR_INPUT
+END_VAR
+
+VAR
+	bLooseHeartbeat : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Heartbeats check
+bLooseHeartbeat := _LastHeartbeatIndex = HeartbeatIndex;
+IF bLooseHeartbeat THEN
+	_HeartbeatTimer( IN:= TRUE, PT:= Param_Config.ModuleHeartbeat_Timout);
+ELSE
+	_HeartbeatTimer( IN:= FALSE, PT:= Param_Config.ModuleHeartbeat_Timout);
+END_IF
+
+// Update Last Heartbeat Index
+_LastHeartbeatIndex := HeartbeatIndex;
+
+// Update Is ControlSource Alive status
+_IsControlSourceAlive := NOT _HeartbeatTimer.Q;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_UpdateModule" Id="{a3ee927e-c27b-49bf-8f5e-1ddb1a222fc5}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateModule
 VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Heartbeats check
-
-
+        <ST><![CDATA[M_CheckHeartbeat();
 
 PackMLIn := ModuleCtrl.PackMLIn;
 SUPER^();

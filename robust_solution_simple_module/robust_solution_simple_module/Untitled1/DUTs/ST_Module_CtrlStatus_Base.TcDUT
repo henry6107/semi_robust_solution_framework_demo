@@ -3,6 +3,7 @@
   <DUT Name="ST_Module_CtrlStatus_Base" Id="{fb4253f3-2644-4b9d-bb36-cb86132b772d}">
     <Declaration><![CDATA[TYPE ST_Module_CtrlStatus_Base :
 STRUCT
+	HeartbeatIndex : UDINT;
 	ModuleCtrl : ST_ModuleCtrl;
 	ModuleStatus : ST_ModuleStatus;
 	ModuleVariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ExtDescriptor;
