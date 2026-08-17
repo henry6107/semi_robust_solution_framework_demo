@@ -137,102 +137,6 @@ AssertTrue(Condition := TestModule_2.ModuleAlarmList[Param_Config.MaxModuleAlarm
 TEST_FINISHED();]]></ST>
       </Implementation>
     </Method>
-    <Method Name="ServiceDataListPublishesOnlyCompleteSuccessfulCycle" Id="{aa9d69b5-c7fc-44c9-b995-5613339fcc2f}">
-      <Declaration><![CDATA[METHOD ServiceDataListPublishesOnlyCompleteSuccessfulCycle
-VAR
-	SourceStatus : ST_GCSingleProcessStatus;
-	TimingView : U_GCSingleProcessStageTimingView;
-	StageNames : ARRAY[1..8] OF STRING(22);
-	nStageIndex : UINT;
-	nStartIndex : UINT;
-	sRetainedStart : STRING(80);
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[TEST('ServiceDataListPublishesOnlyCompleteSuccessfulCycle');
-
-MEMSET(ADR(SourceStatus), 0, SIZEOF(SourceStatus));
-TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
-TestModule_3.M_UpdateTestServiceDataList();
-AssertTrue(TestModule_3.ServiceDataList[1].Id = 0, 'No successful cycle must leave ServiceDataList empty.');
-
-SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Completed;
-TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
-TestModule_3.M_UpdateTestServiceDataList();
-AssertTrue(TestModule_3.ServiceDataList[1].Id = 0, 'An incomplete Completed record must not be published.');
-
-StageNames[1] := 'Prepare';
-StageNames[2] := 'LiftReady';
-StageNames[3] := 'SpinAlign';
-StageNames[4] := 'ConcurrentProcessEntry';
-StageNames[5] := 'SpinRampUp';
-StageNames[6] := 'ProcessHold';
-StageNames[7] := 'ConcurrentProcessExit';
-StageNames[8] := 'SpinStandby';
-FOR nStageIndex := 1 TO 8 DO
-	TimingView.ByIndex[nStageIndex].StartUtc := '20260814130000001';
-	TimingView.ByIndex[nStageIndex].EndUtc := '20260814130000002';
-	TimingView.ByIndex[nStageIndex].ActualTime := T#123MS;
-	TimingView.ByIndex[nStageIndex].Completed := TRUE;
-END_FOR
-SourceStatus.LastCycle.StageTiming := TimingView.ByName;
-TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
-TestModule_3.M_UpdateTestServiceDataList();
-
-FOR nStageIndex := 1 TO 8 DO
-	nStartIndex := ((nStageIndex - 1) * 3) + 1;
-	AssertTrue(TestModule_3.ServiceDataList[nStartIndex].Id = 700 + nStartIndex, 'Start descriptor IDs must use the reserved SingleProcess range.');
-	AssertTrue(TestModule_3.ServiceDataList[nStartIndex + 1].Id = 701 + nStartIndex, 'End descriptor IDs must follow the Start descriptor.');
-	AssertTrue(TestModule_3.ServiceDataList[nStartIndex + 2].Id = 702 + nStartIndex, 'ActualMs descriptor IDs must follow the End descriptor.');
-	AssertTrue(TestModule_3.ServiceDataList[nStartIndex].Name = CONCAT(StageNames[nStageIndex], 'StartUtc'), 'Every Start descriptor name must identify its stage.');
-	AssertTrue(TestModule_3.ServiceDataList[nStartIndex + 1].Name = CONCAT(StageNames[nStageIndex], 'EndUtc'), 'Every End descriptor name must identify its stage.');
-	AssertTrue(TestModule_3.ServiceDataList[nStartIndex + 2].Name = CONCAT(StageNames[nStageIndex], 'ActualMs'), 'Every duration descriptor name must identify its stage.');
-	AssertTrue((TestModule_3.ServiceDataList[nStartIndex].DataType = E_DescriptorType.DateTime)
-		AND (TestModule_3.ServiceDataList[nStartIndex + 1].DataType = E_DescriptorType.DateTime)
-		AND (TestModule_3.ServiceDataList[nStartIndex + 2].DataType = E_DescriptorType.Integer_32bit),
-		'Descriptor data types must match UTC and millisecond values.');
-	AssertTrue((TestModule_3.ServiceDataList[nStartIndex].Unit = 'UTC')
-		AND (TestModule_3.ServiceDataList[nStartIndex + 1].Unit = 'UTC')
-		AND (TestModule_3.ServiceDataList[nStartIndex + 2].Unit = 'ms'),
-		'Descriptor units must identify UTC and milliseconds.');
-	AssertTrue((TestModule_3.ServiceDataList[nStartIndex].Value = '20260814130000001')
-		AND (TestModule_3.ServiceDataList[nStartIndex + 1].Value = '20260814130000002')
-		AND (TestModule_3.ServiceDataList[nStartIndex + 2].Value = DINT_TO_STRING(TIME_TO_DINT(T#123MS))),
-		'Every completed stage must serialize its StartUtc, EndUtc, and ActualMs values.');
-END_FOR
-AssertTrue(TestModule_3.ServiceDataList[25].Id = 0, 'The first unused ServiceDataList entry must remain empty.');
-
-sRetainedStart := TestModule_3.ServiceDataList[1].Value;
-SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Running;
-TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
-TestModule_3.M_UpdateTestServiceDataList();
-SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Failed;
-TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
-TestModule_3.M_UpdateTestServiceDataList();
-SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Stopped;
-TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
-TestModule_3.M_UpdateTestServiceDataList();
-SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Aborted;
-TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
-TestModule_3.M_UpdateTestServiceDataList();
-AssertTrue(TestModule_3.ServiceDataList[1].Value = sRetainedStart, 'Non-successful cycles must retain the most recent successful snapshot.');
-
-SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Completed;
-FOR nStageIndex := 1 TO 8 DO
-	TimingView.ByIndex[nStageIndex].StartUtc := '20260814140000001';
-	TimingView.ByIndex[nStageIndex].EndUtc := '20260814140000002';
-	TimingView.ByIndex[nStageIndex].ActualTime := T#456MS;
-END_FOR
-SourceStatus.LastCycle.StageTiming := TimingView.ByName;
-TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
-TestModule_3.M_UpdateTestServiceDataList();
-AssertTrue(TestModule_3.ServiceDataList[1].Value = '20260814140000001', 'A later successful cycle must replace the retained snapshot.');
-AssertTrue(TestModule_3.ServiceDataList[24].Value = DINT_TO_STRING(TIME_TO_DINT(T#456MS)), 'The replacement must update all 24 descriptors in one scan.');
-AssertTrue(TestModule_3.ServiceDataList[25].Id = 0, 'Replacing a snapshot must keep unused entries clear.');
-
-TEST_FINISHED();]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="BoundAxisUpdatesOnceAndServicesShareOwnership" Id="{08f6ebae-7123-48dc-89e6-73b2de80ca9a}">
       <Declaration><![CDATA[METHOD BoundAxisUpdatesOnceAndServicesShareOwnership
 VAR_INST
@@ -540,6 +444,102 @@ CASE nPhase OF
 		nPhase := 0;
 		TEST_FINISHED();
 END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ServiceDataListPublishesOnlyCompleteSuccessfulCycle" Id="{aa9d69b5-c7fc-44c9-b995-5613339fcc2f}">
+      <Declaration><![CDATA[METHOD ServiceDataListPublishesOnlyCompleteSuccessfulCycle
+VAR
+	SourceStatus : ST_GCSingleProcessStatus;
+	TimingView : U_GCSingleProcessStageTimingView;
+	StageNames : ARRAY[1..8] OF STRING(22);
+	nStageIndex : UINT;
+	nStartIndex : UINT;
+	sRetainedStart : STRING(80);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ServiceDataListPublishesOnlyCompleteSuccessfulCycle');
+
+MEMSET(ADR(SourceStatus), 0, SIZEOF(SourceStatus));
+TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
+TestModule_3.M_UpdateTestServiceDataList();
+AssertTrue(TestModule_3.ModuleDataList[1].Id = 0, 'No successful cycle must leave ServiceDataList empty.');
+
+SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Completed;
+TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
+TestModule_3.M_UpdateTestServiceDataList();
+AssertTrue(TestModule_3.ModuleDataList[1].Id = 0, 'An incomplete Completed record must not be published.');
+
+StageNames[1] := 'Prepare';
+StageNames[2] := 'LiftReady';
+StageNames[3] := 'SpinAlign';
+StageNames[4] := 'ConcurrentProcessEntry';
+StageNames[5] := 'SpinRampUp';
+StageNames[6] := 'ProcessHold';
+StageNames[7] := 'ConcurrentProcessExit';
+StageNames[8] := 'SpinStandby';
+FOR nStageIndex := 1 TO 8 DO
+	TimingView.ByIndex[nStageIndex].StartUtc := '20260814130000001';
+	TimingView.ByIndex[nStageIndex].EndUtc := '20260814130000002';
+	TimingView.ByIndex[nStageIndex].ActualTime := T#123MS;
+	TimingView.ByIndex[nStageIndex].Completed := TRUE;
+END_FOR
+SourceStatus.LastCycle.StageTiming := TimingView.ByName;
+TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
+TestModule_3.M_UpdateTestServiceDataList();
+
+FOR nStageIndex := 1 TO 8 DO
+	nStartIndex := ((nStageIndex - 1) * 3) + 1;
+	AssertTrue(TestModule_3.ModuleDataList[nStartIndex].Id = 700 + nStartIndex, 'Start descriptor IDs must use the reserved SingleProcess range.');
+	AssertTrue(TestModule_3.ModuleDataList[nStartIndex + 1].Id = 701 + nStartIndex, 'End descriptor IDs must follow the Start descriptor.');
+	AssertTrue(TestModule_3.ModuleDataList[nStartIndex + 2].Id = 702 + nStartIndex, 'ActualMs descriptor IDs must follow the End descriptor.');
+	AssertTrue(TestModule_3.ModuleDataList[nStartIndex].Name = CONCAT(StageNames[nStageIndex], 'StartUtc'), 'Every Start descriptor name must identify its stage.');
+	AssertTrue(TestModule_3.ModuleDataList[nStartIndex + 1].Name = CONCAT(StageNames[nStageIndex], 'EndUtc'), 'Every End descriptor name must identify its stage.');
+	AssertTrue(TestModule_3.ModuleDataList[nStartIndex + 2].Name = CONCAT(StageNames[nStageIndex], 'ActualMs'), 'Every duration descriptor name must identify its stage.');
+	AssertTrue((TestModule_3.ModuleDataList[nStartIndex].DataType = E_DescriptorType.DateTime)
+		AND (TestModule_3.ModuleDataList[nStartIndex + 1].DataType = E_DescriptorType.DateTime)
+		AND (TestModule_3.ModuleDataList[nStartIndex + 2].DataType = E_DescriptorType.Integer_32bit),
+		'Descriptor data types must match UTC and millisecond values.');
+	AssertTrue((TestModule_3.ModuleDataList[nStartIndex].Unit = 'UTC')
+		AND (TestModule_3.ModuleDataList[nStartIndex + 1].Unit = 'UTC')
+		AND (TestModule_3.ModuleDataList[nStartIndex + 2].Unit = 'ms'),
+		'Descriptor units must identify UTC and milliseconds.');
+	AssertTrue((TestModule_3.ModuleDataList[nStartIndex].Value = '20260814130000001')
+		AND (TestModule_3.ModuleDataList[nStartIndex + 1].Value = '20260814130000002')
+		AND (TestModule_3.ModuleDataList[nStartIndex + 2].Value = DINT_TO_STRING(TIME_TO_DINT(T#123MS))),
+		'Every completed stage must serialize its StartUtc, EndUtc, and ActualMs values.');
+END_FOR
+AssertTrue(TestModule_3.ModuleDataList[25].Id = 0, 'The first unused ServiceDataList entry must remain empty.');
+
+sRetainedStart := TestModule_3.ModuleDataList[1].Value;
+SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Running;
+TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
+TestModule_3.M_UpdateTestServiceDataList();
+SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Failed;
+TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
+TestModule_3.M_UpdateTestServiceDataList();
+SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Stopped;
+TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
+TestModule_3.M_UpdateTestServiceDataList();
+SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Aborted;
+TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
+TestModule_3.M_UpdateTestServiceDataList();
+AssertTrue(TestModule_3.ModuleDataList[1].Value = sRetainedStart, 'Non-successful cycles must retain the most recent successful snapshot.');
+
+SourceStatus.LastCycle.Result := E_GCSingleProcessResult.Completed;
+FOR nStageIndex := 1 TO 8 DO
+	TimingView.ByIndex[nStageIndex].StartUtc := '20260814140000001';
+	TimingView.ByIndex[nStageIndex].EndUtc := '20260814140000002';
+	TimingView.ByIndex[nStageIndex].ActualTime := T#456MS;
+END_FOR
+SourceStatus.LastCycle.StageTiming := TimingView.ByName;
+TestModule_3.M_SetTestSingleProcessStatus(TestStatus := SourceStatus);
+TestModule_3.M_UpdateTestServiceDataList();
+AssertTrue(TestModule_3.ModuleDataList[1].Value = '20260814140000001', 'A later successful cycle must replace the retained snapshot.');
+AssertTrue(TestModule_3.ModuleDataList[24].Value = DINT_TO_STRING(TIME_TO_DINT(T#456MS)), 'The replacement must update all 24 descriptors in one scan.');
+AssertTrue(TestModule_3.ModuleDataList[25].Id = 0, 'Replacing a snapshot must keep unused entries clear.');
+
+TEST_FINISHED();]]></ST>
       </Implementation>
     </Method>
     <Method Name="UnboundAxisLeavesModuleInert" Id="{78647b77-734a-4eb9-b53f-950502397826}">

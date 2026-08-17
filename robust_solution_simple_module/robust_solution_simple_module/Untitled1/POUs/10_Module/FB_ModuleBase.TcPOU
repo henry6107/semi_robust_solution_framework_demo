@@ -5,13 +5,14 @@
 VAR_INPUT
 	ModuleCtrl : REFERENCE TO ST_ModuleCtrl;
 	SystemContext : REFERENCE TO ST_SystemContext;
+	HeartbeatIndex : UDINT;
 END_VAR
 
 VAR_OUTPUT
 	ModuleStatus : ST_ModuleStatus;
 	ModuleVariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ExtDescriptor;
 	ModuleAlarmList : ARRAY[1..Param_Config.MaxModuleAlarm] OF ST_ExtAlarm; 
-	ServiceDataList : ARRAY[1..Param_Config.MaxServiceData] OF ST_ExtDescriptor;
+	ModuleDataList : ARRAY[1..Param_Config.MaxModuleData] OF ST_ExtDescriptor;
 END_VAR
 
 VAR
@@ -111,7 +112,11 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[PackMLIn := ModuleCtrl.PackMLIn;
+        <ST><![CDATA[// Heartbeats check
+
+
+
+PackMLIn := ModuleCtrl.PackMLIn;
 SUPER^();
 
 _ServiceContext.ModuleId := _ModuleId;

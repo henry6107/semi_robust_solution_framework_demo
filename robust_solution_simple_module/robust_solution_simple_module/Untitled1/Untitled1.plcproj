@@ -46,6 +46,9 @@
     <Compile Include="DUTs\ST_ModuleStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\ST_Module_CtrlStatus_Base.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\ST_ServiceCtrl.TcDUT">
       <SubType>Code</SubType>
     </Compile>

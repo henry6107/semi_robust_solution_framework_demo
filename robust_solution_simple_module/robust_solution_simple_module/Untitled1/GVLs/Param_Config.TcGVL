@@ -6,7 +6,7 @@ VAR_GLOBAL CONSTANT
 	MaxModuleVariable : UINT := 100;
 	MaxModuleAlarm : UINT := 100;
 	MaxServiceError : UINT := 10;
-	MaxServiceData : UINT := 50;
+	MaxModuleData : UINT := 50;
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

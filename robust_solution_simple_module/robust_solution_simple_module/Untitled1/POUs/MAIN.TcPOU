@@ -38,7 +38,7 @@ GC1_Module(
 	ModuleStatus=> _GC1.ModuleStatus,
 	ServiceStatus=> _GC1.ServiceStatus, 
 	ModuleAlarmList=> _GC1.ModuleAlarmList , 
-	ServiceDataList=> _GC1.ServiceDataList, 
+	ModuleDataList=> _GC1.ModuleDataList, 
 	ModuleVariableList=> _GC1.ModuleVariableList);
 	
 IF _bTest THEN

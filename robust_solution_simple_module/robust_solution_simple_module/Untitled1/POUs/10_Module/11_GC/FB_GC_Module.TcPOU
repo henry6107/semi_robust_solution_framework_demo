@@ -422,7 +422,7 @@ FOR nIndex := 1 TO 8 DO
 END_FOR
 
 // Replace the published snapshot only after a complete successful cycle.
-MEMSET(ADR(ServiceDataList), 0, SIZEOF(ServiceDataList));
+MEMSET(ADR(ModuleDataList), 0, SIZEOF(ModuleDataList));
 M_WriteStageServiceData(1, 'Prepare', TimingView.ByName.Prepare);
 M_WriteStageServiceData(2, 'LiftReady', TimingView.ByName.LiftReady);
 M_WriteStageServiceData(3, 'SpinAlign', TimingView.ByName.SpinAlign);
@@ -516,23 +516,23 @@ END_VAR
 nEndIndex := nStartIndex + 1;
 nActualIndex := nStartIndex + 2;
 
-ServiceDataList[nStartIndex].Id := 700 + nStartIndex;
-ServiceDataList[nStartIndex].Name := CONCAT(StageName, 'StartUtc');
-ServiceDataList[nStartIndex].DataType := E_DescriptorType.DateTime;
-ServiceDataList[nStartIndex].Unit := 'UTC';
-ServiceDataList[nStartIndex].Value := StageTiming.StartUtc;
+ModuleDataList[nStartIndex].Id := 700 + nStartIndex;
+ModuleDataList[nStartIndex].Name := CONCAT(StageName, 'StartUtc');
+ModuleDataList[nStartIndex].DataType := E_DescriptorType.DateTime;
+ModuleDataList[nStartIndex].Unit := 'UTC';
+ModuleDataList[nStartIndex].Value := StageTiming.StartUtc;
 
-ServiceDataList[nEndIndex].Id := 700 + nEndIndex;
-ServiceDataList[nEndIndex].Name := CONCAT(StageName, 'EndUtc');
-ServiceDataList[nEndIndex].DataType := E_DescriptorType.DateTime;
-ServiceDataList[nEndIndex].Unit := 'UTC';
-ServiceDataList[nEndIndex].Value := StageTiming.EndUtc;
+ModuleDataList[nEndIndex].Id := 700 + nEndIndex;
+ModuleDataList[nEndIndex].Name := CONCAT(StageName, 'EndUtc');
+ModuleDataList[nEndIndex].DataType := E_DescriptorType.DateTime;
+ModuleDataList[nEndIndex].Unit := 'UTC';
+ModuleDataList[nEndIndex].Value := StageTiming.EndUtc;
 
-ServiceDataList[nActualIndex].Id := 700 + nActualIndex;
-ServiceDataList[nActualIndex].Name := CONCAT(StageName, 'ActualMs');
-ServiceDataList[nActualIndex].DataType := E_DescriptorType.Integer_32bit;
-ServiceDataList[nActualIndex].Unit := 'ms';
-ServiceDataList[nActualIndex].Value := DINT_TO_STRING(TIME_TO_DINT(StageTiming.ActualTime));]]></ST>
+ModuleDataList[nActualIndex].Id := 700 + nActualIndex;
+ModuleDataList[nActualIndex].Name := CONCAT(StageName, 'ActualMs');
+ModuleDataList[nActualIndex].DataType := E_DescriptorType.Integer_32bit;
+ModuleDataList[nActualIndex].Unit := 'ms';
+ModuleDataList[nActualIndex].Value := DINT_TO_STRING(TIME_TO_DINT(StageTiming.ActualTime));]]></ST>
       </Implementation>
     </Method>
   </POU>

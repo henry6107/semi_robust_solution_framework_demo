@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_Module_CtrlStatus_Base" Id="{fb4253f3-2644-4b9d-bb36-cb86132b772d}">
+    <Declaration><![CDATA[TYPE ST_Module_CtrlStatus_Base :
+STRUCT
+	ModuleCtrl : ST_ModuleCtrl;
+	ModuleStatus : ST_ModuleStatus;
+	ModuleVariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ExtDescriptor;
+	ModuleAlarmList : ARRAY[1..Param_Config.MaxModuleAlarm] OF ST_ExtAlarm; 
+	ModuleDataList : ARRAY[1..Param_Config.MaxModuleData] OF ST_ExtDescriptor;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
