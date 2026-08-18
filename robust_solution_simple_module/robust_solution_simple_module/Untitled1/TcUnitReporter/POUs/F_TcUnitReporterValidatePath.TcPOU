@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_TcUnitReporterValidatePath" Id="{47df31b2-8fe6-49f2-85ac-fc8257d89165}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_TcUnitReporterValidatePath : BOOL
+VAR_INPUT
+	FilePath : T_MaxString;
+END_VAR
+VAR_OUTPUT
+	OpenPath : E_OpenPath;
+END_VAR
+VAR
+	LowerExtension : STRING(5);
+	IsAbsolutePath : BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Keep path policy in one place so the Reporter and its tests use identical rules.
+F_TcUnitReporterValidatePath := FALSE;
+OpenPath := PATH_BOOTPATH;
+
+IF (LEN(FilePath) = 0) OR (LEN(FilePath) > 250) THEN
+	RETURN;
+END_IF
+
+// TwinCAT file function blocks cannot access UNC or network paths.
+IF (LEFT(FilePath, 2) = '\\') OR (LEFT(FilePath, 1) = '\') OR (LEFT(FilePath, 1) = '/') THEN
+	RETURN;
+END_IF
+
+IF (FIND(FilePath, '*') > 0) OR (FIND(FilePath, '?') > 0) OR (FIND(FilePath, '..') > 0) THEN
+	RETURN;
+END_IF
+
+LowerExtension := F_ToLCase(in := RIGHT(FilePath, 5));
+IF LowerExtension <> '.json' THEN
+	RETURN;
+END_IF
+
+// A drive-qualified path must contain a separator after the drive letter.
+IsAbsolutePath := (LEN(FilePath) >= 3) AND (MID(FilePath, 1, 2) = ':') AND
+	((MID(FilePath, 1, 3) = '\') OR (MID(FilePath, 1, 3) = '/'));
+
+IF FIND(FilePath, ':') > 0 THEN
+	IF NOT IsAbsolutePath THEN
+		RETURN;
+	END_IF
+	OpenPath := PATH_GENERIC;
+ELSE
+	OpenPath := PATH_BOOTPATH;
+END_IF
+
+F_TcUnitReporterValidatePath := TRUE;]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

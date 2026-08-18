@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_TcUnitReporterTests" Id="{ac786a70-8583-48b5-8376-d1272bc696df}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TcUnitReporterTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RelativePathUsesBootPath();
+AbsolutePathUsesGenericPath();
+UnsafePathsAreRejected();
+JsonStringIsEscaped();
+JsonBufferOverflowIsExplicit();]]></ST>
+    </Implementation>
+    <Method Name="AbsolutePathUsesGenericPath" Id="{78db5269-8711-4e4e-af2e-17c2c1750740}">
+      <Declaration><![CDATA[METHOD AbsolutePathUsesGenericPath
+VAR
+	OpenPath : E_OpenPath;
+	Valid : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('AbsolutePathUsesGenericPath');
+
+Valid := F_TcUnitReporterValidatePath(FilePath := 'D:\TcUnitReports\result.json', OpenPath => OpenPath);
+AssertTrue(Condition := Valid, Message := 'A local drive-qualified JSON path must be accepted.');
+AssertTrue(Condition := OpenPath = PATH_GENERIC, Message := 'An absolute path must use PATH_GENERIC.');
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="JsonBufferOverflowIsExplicit" Id="{f4636b1c-c3ea-4cf7-9157-be1c83e7f41a}">
+      <Declaration><![CDATA[METHOD JsonBufferOverflowIsExplicit
+VAR
+	Buffer : FB_TcUnitJsonBuffer;
+	Index : UINT;
+	AppendResult : BOOL;
+	Chunk : T_MaxString := 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('JsonBufferOverflowIsExplicit');
+
+Buffer.Clear();
+AppendResult := TRUE;
+FOR Index := 1 TO 520 DO
+	AppendResult := Buffer.AppendRaw(Chunk);
+END_FOR
+
+AssertFalse(Condition := AppendResult, Message := 'Appending past the fixed buffer must fail.');
+AssertTrue(Condition := Buffer.HasOverflowed(), Message := 'Overflow must be observable and must not truncate silently.');
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="JsonStringIsEscaped" Id="{55fa0441-f475-4ba3-ab62-ba5a336304fd}">
+      <Declaration><![CDATA[METHOD JsonStringIsEscaped
+VAR
+	Buffer : FB_TcUnitJsonBuffer;
+	AppendResult : BOOL;
+	Source : T_MaxString;
+	Expected : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('JsonStringIsEscaped');
+
+Source := CONCAT('quote"\path', '$Nline');
+Expected := '"quote\"\\path\nline"';
+Buffer.Clear();
+AppendResult := Buffer.AppendEscaped(Source);
+
+AssertTrue(Condition := AppendResult, Message := 'A bounded source string must fit in the JSON buffer.');
+AssertEquals_STRING(Expected := Expected, Actual := Buffer.GetPreview(), Message := 'JSON special characters must be escaped.');
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RelativePathUsesBootPath" Id="{7d1d9602-af05-4fb0-a2aa-904d44c7a265}">
+      <Declaration><![CDATA[METHOD RelativePathUsesBootPath
+VAR
+	OpenPath : E_OpenPath;
+	Valid : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('RelativePathUsesBootPath');
+
+Valid := F_TcUnitReporterValidatePath(FilePath := 'test-report.json', OpenPath => OpenPath);
+AssertTrue(Condition := Valid, Message := 'The default report name must be valid.');
+AssertTrue(Condition := OpenPath = PATH_BOOTPATH, Message := 'A relative path must use PATH_BOOTPATH.');
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="UnsafePathsAreRejected" Id="{f6e7b507-3690-4d88-b3aa-199f26f0ef3e}">
+      <Declaration><![CDATA[METHOD UnsafePathsAreRejected
+VAR
+	OpenPath : E_OpenPath;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('UnsafePathsAreRejected');
+
+AssertFalse(Condition := F_TcUnitReporterValidatePath(FilePath := '', OpenPath => OpenPath), Message := 'An empty path must be rejected.');
+AssertFalse(Condition := F_TcUnitReporterValidatePath(FilePath := '\\server\share\result.json', OpenPath => OpenPath), Message := 'A UNC path must be rejected.');
+AssertFalse(Condition := F_TcUnitReporterValidatePath(FilePath := 'result.txt', OpenPath => OpenPath), Message := 'A non-JSON extension must be rejected.');
+AssertFalse(Condition := F_TcUnitReporterValidatePath(FilePath := '..\result.json', OpenPath => OpenPath), Message := 'Relative traversal must be rejected.');
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

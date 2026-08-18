@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generator": { "name": "TcUnitJsonReporter", "version": "0.1.0" },
+  "generatedAtUtc": "2026-08-18T02:58:51.000Z",
+  "durationSeconds": 0.012,
+  "suites": [
+    {
+      "id": 0,
+      "name": "FB_ReporterLayoutTests_WithAnIntentionallyLongSuiteNameThatMustWrapWithoutBreakingTheResponsiveReportLayout",
+      "durationSeconds": 0.012,
+      "tests": [
+        {
+          "name": "A_Very_Long_Test_Case_Name_That_Exercises_Wrapping_Instead_Of_Overflowing_The_Viewport_On_Narrow_Screens",
+          "className": "FB_ReporterLayoutTests_WithAnIntentionallyLongSuiteNameThatMustWrapWithoutBreakingTheResponsiveReportLayout",
+          "status": "passed",
+          "durationSeconds": 0.012,
+          "assertionCount": 1,
+          "failure": null
+        }
+      ]
+    }
+  ]
+}

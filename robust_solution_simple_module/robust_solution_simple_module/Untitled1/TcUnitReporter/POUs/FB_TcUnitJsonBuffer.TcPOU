@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_TcUnitJsonBuffer" Id="{dd567e3d-3403-4d6f-86e9-c10ec1592d39}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TcUnitJsonBuffer
+VAR
+	_Buffer : ARRAY[0..GVL_TcUnitReporter.JsonBufferSize - 1] OF BYTE;
+	_Length : UDINT;
+	_Overflowed : BOOL;
+	_EncodingFailed : BOOL;
+	{attribute 'TcEncoding' := 'UTF-8'}
+	_Utf8Scratch : STRING(GVL_TcUnitReporter.Utf8ScratchBufferSize - 1);
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="AppendByte" Id="{93f8f60e-c4e4-490f-af13-d1fed37c6b3a}">
+      <Declaration><![CDATA[METHOD PRIVATE AppendByte : BOOL
+VAR_INPUT
+	Value : BYTE;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AppendByte := FALSE;
+IF _Length >= GVL_TcUnitReporter.JsonBufferSize THEN
+	_Overflowed := TRUE;
+	RETURN;
+END_IF
+
+_Buffer[_Length] := Value;
+_Length := _Length + 1;
+AppendByte := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AppendEscaped" Id="{9ffa8152-5e7d-467b-ad1f-9ab119c2c7e2}">
+      <Declaration><![CDATA[METHOD PUBLIC AppendEscaped : BOOL
+VAR_INPUT
+	Value : T_MaxString;
+END_VAR
+VAR
+	SourceLength : UDINT;
+	Index : UDINT;
+	ValueByte : BYTE;
+	SourceBytes : POINTER TO BYTE;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// JSON strings are emitted as UTF-8 and escaped byte-by-byte without truncation.
+AppendEscaped := FALSE;
+MEMSET(ADR(_Utf8Scratch), 0, SIZEOF(_Utf8Scratch));
+IF NOT STRING_TO_UTF8(pDstUTF8 := ADR(_Utf8Scratch), pSrcSTRING := ADR(Value), nDstSize := SIZEOF(_Utf8Scratch)) THEN
+	_EncodingFailed := TRUE;
+	RETURN;
+END_IF
+
+IF NOT AppendByte(Value := 34) THEN // Opening double quote
+	RETURN;
+END_IF
+
+SourceLength := TO_UDINT(LEN(_Utf8Scratch));
+SourceBytes := ADR(_Utf8Scratch);
+IF SourceLength > 0 THEN
+	FOR Index := 0 TO SourceLength - 1 DO
+		ValueByte := SourceBytes[Index];
+		CASE ValueByte OF
+			8: // Backspace
+				IF NOT AppendByte(92) OR NOT AppendByte(98) THEN RETURN; END_IF
+			9: // Tab
+				IF NOT AppendByte(92) OR NOT AppendByte(116) THEN RETURN; END_IF
+			10: // Line feed
+				IF NOT AppendByte(92) OR NOT AppendByte(110) THEN RETURN; END_IF
+			12: // Form feed
+				IF NOT AppendByte(92) OR NOT AppendByte(102) THEN RETURN; END_IF
+			13: // Carriage return
+				IF NOT AppendByte(92) OR NOT AppendByte(114) THEN RETURN; END_IF
+			34: // Double quote
+				IF NOT AppendByte(92) OR NOT AppendByte(34) THEN RETURN; END_IF
+			92: // Backslash
+				IF NOT AppendByte(92) OR NOT AppendByte(92) THEN RETURN; END_IF
+		ELSE
+			IF ValueByte < 32 THEN
+				// Encode remaining JSON control bytes as a four-digit Unicode escape.
+				IF NOT AppendByte(92) OR NOT AppendByte(117) OR NOT AppendByte(48) OR NOT AppendByte(48) OR
+					NOT AppendByte(NibbleToHex(SHR(ValueByte, 4))) OR NOT AppendByte(NibbleToHex(ValueByte AND 16#0F)) THEN
+					RETURN;
+				END_IF
+			ELSIF NOT AppendByte(ValueByte) THEN
+				RETURN;
+			END_IF
+		END_CASE
+	END_FOR
+END_IF
+
+IF NOT AppendByte(Value := 34) THEN // Closing double quote
+	RETURN;
+END_IF
+AppendEscaped := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AppendLreal" Id="{8624345d-8978-476d-80de-324157dcb91b}">
+      <Declaration><![CDATA[METHOD PUBLIC AppendLreal : BOOL
+VAR_INPUT
+	Value : LREAL;
+END_VAR
+VAR
+	Text : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Text := LREAL_TO_STRING(Value);
+AppendLreal := AppendRaw(Value := Text);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AppendRaw" Id="{25e7e92c-47c0-4193-9edf-82887f9eb861}">
+      <Declaration><![CDATA[METHOD PUBLIC AppendRaw : BOOL
+VAR_INPUT
+	Value : T_MaxString;
+END_VAR
+VAR
+	ValueLength : UDINT;
+	Index : UDINT;
+	ValueBytes : POINTER TO BYTE;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AppendRaw := FALSE;
+ValueLength := TO_UDINT(LEN(Value));
+ValueBytes := ADR(Value);
+IF ValueLength > 0 THEN
+	FOR Index := 0 TO ValueLength - 1 DO
+		IF NOT AppendByte(ValueBytes[Index]) THEN
+			RETURN;
+		END_IF
+	END_FOR
+END_IF
+AppendRaw := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AppendUint" Id="{d9375d91-3614-4b50-836c-91c79555f9e1}">
+      <Declaration><![CDATA[METHOD PUBLIC AppendUint : BOOL
+VAR_INPUT
+	Value : UINT;
+END_VAR
+VAR
+	Text : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Text := UINT_TO_STRING(Value);
+AppendUint := AppendRaw(Value := Text);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Clear" Id="{42cccdd7-e2b0-4a75-aecd-fa25e9a30239}">
+      <Declaration><![CDATA[METHOD PUBLIC Clear
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Clearing the logical length is sufficient because file writes use the exact byte count.
+_Length := 0;
+_Overflowed := FALSE;
+_EncodingFailed := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="GetAddress" Id="{54d8e3d7-a08f-4d73-899f-b0f02008e5d4}">
+      <Declaration><![CDATA[METHOD PUBLIC GetAddress : PVOID
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[GetAddress := ADR(_Buffer);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="GetLength" Id="{ed24b39c-e6f7-47f6-94f3-c62029d39e56}">
+      <Declaration><![CDATA[METHOD PUBLIC GetLength : UDINT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[GetLength := _Length;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="GetPreview" Id="{3c06c2d7-c83b-4bb4-bbec-fe8b56accdf3}">
+      <Declaration><![CDATA[METHOD PUBLIC GetPreview : T_MaxString
+VAR
+	CopyLength : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// This bounded preview exists only for small deterministic unit-test assertions.
+MEMSET(ADR(GetPreview), 0, SIZEOF(GetPreview));
+CopyLength := MIN(_Length, SIZEOF(GetPreview) - 1);
+IF CopyLength > 0 THEN
+	MEMCPY(ADR(GetPreview), ADR(_Buffer), CopyLength);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HasEncodingError" Id="{3ce1b318-3539-4f5f-b6f3-4aca3dc6a047}">
+      <Declaration><![CDATA[METHOD PUBLIC HasEncodingError : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[HasEncodingError := _EncodingFailed;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HasOverflowed" Id="{f6e6efd0-0fa0-4ec6-8e1e-aae3be236030}">
+      <Declaration><![CDATA[METHOD PUBLIC HasOverflowed : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[HasOverflowed := _Overflowed;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="NibbleToHex" Id="{8e8f20e3-db12-444e-92a8-8235633474b5}">
+      <Declaration><![CDATA[METHOD PRIVATE NibbleToHex : BYTE
+VAR_INPUT
+	Value : BYTE;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Value < 10 THEN
+	NibbleToHex := Value + 48;
+ELSE
+	NibbleToHex := Value - 10 + 65;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

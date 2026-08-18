@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_TcUnitReporter" Id="{24a3c182-d96e-4344-a9a7-31bcbe485fce}" ParameterList="True">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+	DefaultReportFilePath : T_MaxString := 'test-report.json';
+	TemporaryFileSuffix : STRING(4) := '.tmp';
+	SchemaVersion : STRING(8) := '1.0.0';
+	GeneratorVersion : STRING(8) := '0.1.0';
+	JsonBufferSize : UDINT := 131072;
+	Utf8ScratchBufferSize : UDINT := 768;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

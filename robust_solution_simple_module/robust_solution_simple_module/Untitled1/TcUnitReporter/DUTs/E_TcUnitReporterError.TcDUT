@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_TcUnitReporterError" Id="{40a4dd78-9620-4f01-ad79-5ea45893df83}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_TcUnitReporterError :
+(
+	None := 0,
+	InvalidPath,
+	EncodingFailed,
+	BufferOverflow,
+	FileOpenFailed,
+	FileWriteFailed,
+	ShortWrite,
+	FileCloseFailed,
+	FileDeleteFailed,
+	FileRenameFailed
+);
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

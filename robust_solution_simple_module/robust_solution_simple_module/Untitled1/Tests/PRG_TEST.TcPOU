@@ -13,10 +13,19 @@ VAR
 	SingleProcessServiceTests : FB_GCSingleProcessServiceTests;
 	GCModuleTests : FB_GC_ModuleTests;
 	UtcClockTests : FB_UtcClockTests;
+	Reporter : FB_TcUnitJsonReporter;
+
+	bInit : BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[TcUnit.RUN();]]></ST>
+      <ST><![CDATA[IF NOT bInit THEN
+	bInit := TRUE;
+	Reporter.ReportFilePath := 'D:\TcUnitReports\gc-test-report.json';
+END_IF
+
+TcUnit.RUN();
+Reporter();]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

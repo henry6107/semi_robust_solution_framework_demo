@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_TcUnitJsonReporter" Id="{4718d460-e7c9-4a35-ab61-431993db2570}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TcUnitJsonReporter
+VAR_OUTPUT
+	Busy : BOOL;
+	Done : BOOL;
+	Error : BOOL;
+	ErrorCode : E_TcUnitReporterError := E_TcUnitReporterError.None;
+	NativeErrorId : UDINT;
+END_VAR
+VAR
+	_ReportFilePath : T_MaxString := GVL_TcUnitReporter.DefaultReportFilePath;
+	_EffectiveFilePath : T_MaxString;
+	_TemporaryFilePath : T_MaxString;
+	_OpenPath : E_OpenPath := PATH_BOOTPATH;
+	_State : E_TcUnitReporterState := E_TcUnitReporterState.WaitForResults;
+	_Json : FB_TcUnitJsonBuffer;
+	_ResultsProvider : TcUnit.I_TestResults;
+	_Results : REFERENCE TO TcUnit.ST_TestSuiteResults;
+	_SuiteIndex : UINT;
+	_TestIndex : UINT;
+	_FileHandle : UINT;
+	_ErrorLogged : BOOL;
+	_AdsLogResult : DWORD;
+
+	_FileOpen : FB_FileOpen;
+	_FileWrite : FB_FileWrite;
+	_FileClose : FB_FileClose;
+	_FileDelete : FB_FileDelete;
+	_FileRename : FB_FileRename;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE _State OF
+	E_TcUnitReporterState.WaitForResults:
+		// TcUnit owns execution; the Reporter starts only after the immutable result snapshot is ready.
+		_ResultsProvider := TcUnit.GVL_TcUnit.TcUnitRunner.TestResults;
+		IF _ResultsProvider.GetAreTestResultsAvailable() THEN
+			_EffectiveFilePath := _ReportFilePath;
+			IF NOT F_TcUnitReporterValidatePath(FilePath := _EffectiveFilePath, OpenPath => _OpenPath) THEN
+				M_SetError(Code := E_TcUnitReporterError.InvalidPath, NativeId := 0);
+			ELSE
+				_TemporaryFilePath := CONCAT(_EffectiveFilePath, GVL_TcUnitReporter.TemporaryFileSuffix);
+				_Results REF= _ResultsProvider.GetTestSuiteResults();
+				_Json.Clear();
+				_SuiteIndex := 1;
+				_TestIndex := 1;
+				Busy := TRUE;
+				_State := E_TcUnitReporterState.BuildHeader;
+			END_IF
+		END_IF
+
+	E_TcUnitReporterState.BuildHeader:
+		IF NOT M_BuildHeader() THEN
+			M_SetJsonError();
+		ELSIF _Results.NumberOfTestSuites = 0 THEN
+			_State := E_TcUnitReporterState.BuildFooter;
+		ELSE
+			_State := E_TcUnitReporterState.BuildSuite;
+		END_IF
+
+	E_TcUnitReporterState.BuildSuite:
+		IF NOT M_BuildSuite() THEN
+			M_SetJsonError();
+		ELSE
+			_TestIndex := 1;
+			IF _Results.TestSuiteResults[_SuiteIndex].NumberOfTests = 0 THEN
+				_State := E_TcUnitReporterState.BuildSuiteFooter;
+			ELSE
+				_State := E_TcUnitReporterState.BuildTest;
+			END_IF
+		END_IF
+
+	E_TcUnitReporterState.BuildTest:
+		IF NOT M_BuildTest() THEN
+			M_SetJsonError();
+		ELSIF _TestIndex >= _Results.TestSuiteResults[_SuiteIndex].NumberOfTests THEN
+			_State := E_TcUnitReporterState.BuildSuiteFooter;
+		ELSE
+			_TestIndex := _TestIndex + 1;
+		END_IF
+
+	E_TcUnitReporterState.BuildSuiteFooter:
+		IF NOT _Json.AppendRaw(']}') THEN
+			M_SetJsonError();
+		ELSIF _SuiteIndex >= _Results.NumberOfTestSuites THEN
+			_State := E_TcUnitReporterState.BuildFooter;
+		ELSE
+			_SuiteIndex := _SuiteIndex + 1;
+			_State := E_TcUnitReporterState.BuildSuite;
+		END_IF
+
+	E_TcUnitReporterState.BuildFooter:
+		IF NOT _Json.AppendRaw(']}') THEN
+			M_SetJsonError();
+		ELSE
+			_State := E_TcUnitReporterState.StartOpen;
+		END_IF
+
+	E_TcUnitReporterState.StartOpen:
+		// FOPEN_MODEWRITE truncates a stale temporary file from an interrupted prior run.
+		_FileOpen(bExecute := FALSE);
+		_FileOpen(sNetId := '',
+				sPathName := _TemporaryFilePath,
+				nMode := FOPEN_MODEWRITE OR FOPEN_MODEBINARY,
+				ePath := _OpenPath,
+				bExecute := TRUE,
+				tTimeout := DEFAULT_ADS_TIMEOUT);
+		_State := E_TcUnitReporterState.WaitOpen;
+
+	E_TcUnitReporterState.WaitOpen:
+		_FileOpen(bExecute := FALSE);
+		IF NOT _FileOpen.bBusy THEN
+			IF _FileOpen.bError THEN
+				M_SetError(E_TcUnitReporterError.FileOpenFailed, _FileOpen.nErrId);
+			ELSE
+				_FileHandle := _FileOpen.hFile;
+				_State := E_TcUnitReporterState.StartWrite;
+			END_IF
+		END_IF
+
+	E_TcUnitReporterState.StartWrite:
+		_FileWrite(bExecute := FALSE);
+		_FileWrite(sNetId := '',
+				hFile := _FileHandle,
+				pWriteBuff := _Json.GetAddress(),
+				cbWriteLen := _Json.GetLength(),
+				bExecute := TRUE,
+				tTimeout := DEFAULT_ADS_TIMEOUT);
+		_State := E_TcUnitReporterState.WaitWrite;
+
+	E_TcUnitReporterState.WaitWrite:
+		_FileWrite(bExecute := FALSE);
+		IF NOT _FileWrite.bBusy THEN
+			IF _FileWrite.bError THEN
+				M_SetError(E_TcUnitReporterError.FileWriteFailed, _FileWrite.nErrId);
+			ELSIF _FileWrite.cbWrite <> _Json.GetLength() THEN
+				// FB_FileWrite reports a short write only through cbWrite, not through bError.
+				M_SetError(E_TcUnitReporterError.ShortWrite, _FileWrite.cbWrite);
+			ELSE
+				_State := E_TcUnitReporterState.StartClose;
+			END_IF
+		END_IF
+
+	E_TcUnitReporterState.StartClose:
+		_FileClose(bExecute := FALSE);
+		_FileClose(sNetId := '', hFile := _FileHandle, bExecute := TRUE, tTimeout := DEFAULT_ADS_TIMEOUT);
+		_State := E_TcUnitReporterState.WaitClose;
+
+	E_TcUnitReporterState.WaitClose:
+		_FileClose(bExecute := FALSE);
+		IF NOT _FileClose.bBusy THEN
+			_FileHandle := 0;
+			IF _FileClose.bError THEN
+				M_SetError(E_TcUnitReporterError.FileCloseFailed, _FileClose.nErrId);
+			ELSE
+				_State := E_TcUnitReporterState.StartDelete;
+			END_IF
+		END_IF
+
+	E_TcUnitReporterState.StartDelete:
+		// Publish only a complete file: remove the old final name after the temporary file is closed.
+		_FileDelete(bExecute := FALSE);
+		_FileDelete(sNetId := '', sPathName := _EffectiveFilePath, ePath := _OpenPath,
+				bExecute := TRUE, tTimeout := DEFAULT_ADS_TIMEOUT);
+		_State := E_TcUnitReporterState.WaitDelete;
+
+	E_TcUnitReporterState.WaitDelete:
+		_FileDelete(bExecute := FALSE);
+		IF NOT _FileDelete.bBusy THEN
+			IF _FileDelete.bError AND (_FileDelete.nErrId <> 16#70C) THEN
+				M_SetError(E_TcUnitReporterError.FileDeleteFailed, _FileDelete.nErrId);
+			ELSE
+				// Missing final output is expected on the first successful report.
+				_State := E_TcUnitReporterState.StartRename;
+			END_IF
+		END_IF
+
+	E_TcUnitReporterState.StartRename:
+		_FileRename(bExecute := FALSE);
+		_FileRename(sNetId := '', sOldName := _TemporaryFilePath, sNewName := _EffectiveFilePath,
+				ePath := _OpenPath, bExecute := TRUE, tTimeout := DEFAULT_ADS_TIMEOUT);
+		_State := E_TcUnitReporterState.WaitRename;
+
+	E_TcUnitReporterState.WaitRename:
+		_FileRename(bExecute := FALSE);
+		IF NOT _FileRename.bBusy THEN
+			IF _FileRename.bError THEN
+				M_SetError(E_TcUnitReporterError.FileRenameFailed, _FileRename.nErrId);
+			ELSE
+				_State := E_TcUnitReporterState.Completed;
+			END_IF
+		END_IF
+
+	E_TcUnitReporterState.StartErrorClose:
+		// Best-effort cleanup prevents a failed write from leaking a file handle.
+		_FileClose(bExecute := FALSE);
+		_FileClose(sNetId := '', hFile := _FileHandle, bExecute := TRUE, tTimeout := DEFAULT_ADS_TIMEOUT);
+		_State := E_TcUnitReporterState.WaitErrorClose;
+
+	E_TcUnitReporterState.WaitErrorClose:
+		_FileClose(bExecute := FALSE);
+		IF NOT _FileClose.bBusy THEN
+			_FileHandle := 0;
+			_State := E_TcUnitReporterState.Failed;
+		END_IF
+
+	E_TcUnitReporterState.Completed:
+		Busy := FALSE;
+		Done := TRUE;
+
+	E_TcUnitReporterState.Failed:
+		Busy := FALSE;
+		Error := TRUE;
+		IF NOT _ErrorLogged THEN
+			_AdsLogResult := ADSLOGSTR(ADSLOG_MSGTYPE_ERROR,
+				'TcUnit JSON Reporter failed. Inspect ErrorCode and NativeErrorId.', '');
+			_ErrorLogged := TRUE;
+		END_IF
+END_CASE]]></ST>
+    </Implementation>
+    <Method Name="M_BuildHeader" Id="{5019ba91-8239-4124-be94-4a19c8778b93}">
+      <Declaration><![CDATA[METHOD PRIVATE M_BuildHeader : BOOL
+VAR
+	GeneratedAtUtc : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[GeneratedAtUtc := M_GetUtcTimestamp();
+M_BuildHeader := _Json.AppendRaw('{"schemaVersion":') AND_THEN
+	_Json.AppendEscaped(GVL_TcUnitReporter.SchemaVersion) AND_THEN
+	_Json.AppendRaw(',"generator":{"name":"TcUnitJsonReporter","version":') AND_THEN
+	_Json.AppendEscaped(GVL_TcUnitReporter.GeneratorVersion) AND_THEN
+	_Json.AppendRaw('},"generatedAtUtc":') AND_THEN
+	_Json.AppendEscaped(GeneratedAtUtc) AND_THEN
+	_Json.AppendRaw(',"durationSeconds":') AND_THEN
+	_Json.AppendLreal(_Results.Duration) AND_THEN
+	_Json.AppendRaw(',"suites":[');]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_BuildSuite" Id="{cb46a990-229a-49a4-b42c-3478f6802cdc}">
+      <Declaration><![CDATA[METHOD PRIVATE M_BuildSuite : BOOL
+VAR
+	PrefixOk : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[PrefixOk := TRUE;
+IF _SuiteIndex > 1 THEN
+	PrefixOk := _Json.AppendRaw(',');
+END_IF
+
+M_BuildSuite := PrefixOk AND_THEN
+	_Json.AppendRaw('{"id":') AND_THEN
+	_Json.AppendUint(_Results.TestSuiteResults[_SuiteIndex].Identity) AND_THEN
+	_Json.AppendRaw(',"name":') AND_THEN
+	_Json.AppendEscaped(_Results.TestSuiteResults[_SuiteIndex].Name) AND_THEN
+	_Json.AppendRaw(',"durationSeconds":') AND_THEN
+	_Json.AppendLreal(_Results.TestSuiteResults[_SuiteIndex].Duration) AND_THEN
+	_Json.AppendRaw(',"tests":[');]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_BuildTest" Id="{46bfaaa9-77df-443e-a8a8-daa189fe4919}">
+      <Declaration><![CDATA[METHOD PRIVATE M_BuildTest : BOOL
+VAR
+	PrefixOk : BOOL;
+	TestResult : REFERENCE TO TcUnit.ST_TestCaseResult;
+	Status : T_MaxString;
+	FailureType : T_MaxString;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TestResult REF= _Results.TestSuiteResults[_SuiteIndex].TestCaseResults[_TestIndex];
+PrefixOk := TRUE;
+IF _TestIndex > 1 THEN
+	PrefixOk := _Json.AppendRaw(',');
+END_IF
+
+IF TestResult.TestIsFailed THEN
+	Status := 'failed';
+ELSIF TestResult.TestIsSkipped THEN
+	Status := 'skipped';
+ELSE
+	Status := 'passed';
+END_IF
+
+M_BuildTest := PrefixOk AND_THEN
+	_Json.AppendRaw('{"name":') AND_THEN
+	_Json.AppendEscaped(TestResult.TestName) AND_THEN
+	_Json.AppendRaw(',"className":') AND_THEN
+	_Json.AppendEscaped(TestResult.TestClassName) AND_THEN
+	_Json.AppendRaw(',"status":') AND_THEN
+	_Json.AppendEscaped(Status) AND_THEN
+	_Json.AppendRaw(',"durationSeconds":') AND_THEN
+	_Json.AppendLreal(TestResult.Duration) AND_THEN
+	_Json.AppendRaw(',"assertionCount":') AND_THEN
+	_Json.AppendUint(TestResult.NumberOfAsserts) AND_THEN
+	_Json.AppendRaw(',"failure":');
+
+IF NOT M_BuildTest THEN
+	RETURN;
+END_IF
+
+IF TestResult.TestIsFailed THEN
+	FailureType := TcUnit.F_AssertionTypeToString(TestResult.FailureType);
+	M_BuildTest := _Json.AppendRaw('{"type":') AND_THEN
+		_Json.AppendEscaped(FailureType) AND_THEN
+		_Json.AppendRaw(',"message":') AND_THEN
+		_Json.AppendEscaped(TestResult.FailureMessage) AND_THEN
+		_Json.AppendRaw('}}');
+ELSE
+	M_BuildTest := _Json.AppendRaw('null}');
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_GetUtcTimestamp" Id="{2b2aafd1-de9a-4062-92c9-309ed161b49f}">
+      <Declaration><![CDATA[METHOD PRIVATE M_GetUtcTimestamp : T_MaxString
+VAR
+	UtcFileTime : T_FILETIME64;
+	UtcSystemTime : TIMESTRUCT;
+	Formatted : STRING(24);
+	DatePart : STRING(10);
+	TimePart : STRING(12);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[UtcFileTime := F_GetSystemTime();
+UtcSystemTime := FILETIME64_TO_SYSTEMTIME(UtcFileTime);
+Formatted := SYSTEMTIME_TO_STRING(UtcSystemTime);
+
+// SYSTEMTIME_TO_STRING returns YYYY-MM-DD-hh:mm:ss.xxx; JSON uses ISO-8601 UTC.
+DatePart := LEFT(Formatted, 10);
+TimePart := MID(Formatted, 12, 12);
+M_GetUtcTimestamp := CONCAT(CONCAT(DatePart, 'T'), CONCAT(TimePart, 'Z'));]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetError" Id="{07ff83cc-80d0-41ed-8df9-ccf551d19724}">
+      <Declaration><![CDATA[METHOD PRIVATE M_SetError
+VAR_INPUT
+	Code : E_TcUnitReporterError;
+	NativeId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Preserve the first failure because it is closest to the original cause.
+IF NOT Error THEN
+	Error := TRUE;
+	ErrorCode := Code;
+	NativeErrorId := NativeId;
+END_IF
+
+IF _FileHandle <> 0 THEN
+	_State := E_TcUnitReporterState.StartErrorClose;
+ELSE
+	_State := E_TcUnitReporterState.Failed;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetJsonError" Id="{0742e083-78dd-41c6-b2e5-ffcdd40a7f81}">
+      <Declaration><![CDATA[METHOD PRIVATE M_SetJsonError
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _Json.HasEncodingError() THEN
+	M_SetError(E_TcUnitReporterError.EncodingFailed, 0);
+ELSE
+	M_SetError(E_TcUnitReporterError.BufferOverflow, _Json.GetLength());
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ReportFilePath" Id="{ffeeb46d-bc9c-4b26-b2b5-6397c4eb66c4}">
+      <Declaration><![CDATA[PROPERTY PUBLIC ReportFilePath : T_MaxString
+]]></Declaration>
+      <Get Name="Get" Id="{8aa4eb70-6e96-41bf-a8db-72aced557203}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ReportFilePath := _ReportFilePath;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{65b251e9-03a9-4f53-8d54-17b87093333a}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[// The active run uses the path snapshot captured when TcUnit results become available.
+_ReportFilePath := ReportFilePath;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+  </POU>
+</TcPlcObject>

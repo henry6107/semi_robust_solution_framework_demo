@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_TcUnitReporterState" Id="{61b3522a-6c8c-4ffc-82c9-6461886ee21f}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_TcUnitReporterState :
+(
+	WaitForResults := 0,
+	BuildHeader,
+	BuildSuite,
+	BuildTest,
+	BuildSuiteFooter,
+	BuildFooter,
+	StartOpen,
+	WaitOpen,
+	StartWrite,
+	WaitWrite,
+	StartClose,
+	WaitClose,
+	StartDelete,
+	WaitDelete,
+	StartRename,
+	WaitRename,
+	StartErrorClose,
+	WaitErrorClose,
+	Completed,
+	Failed
+);
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

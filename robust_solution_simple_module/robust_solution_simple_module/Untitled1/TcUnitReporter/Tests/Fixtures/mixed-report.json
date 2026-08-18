@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "generator": { "name": "TcUnitJsonReporter", "version": "0.1.0" },
+  "generatedAtUtc": "2026-08-18T02:58:51.000Z",
+  "durationSeconds": 2.851,
+  "suites": [
+    {
+      "id": 0,
+      "name": "FB_FakeAxis_BaseUnitTests",
+      "durationSeconds": 1.42,
+      "tests": [
+        { "name": "ResourceCanBeAcquiredAndReleased", "className": "FB_FakeAxis_BaseUnitTests", "status": "passed", "durationSeconds": 0.42, "assertionCount": 4, "failure": null },
+        { "name": "OwnerZeroAndNonOwnerStopAreRejected", "className": "FB_FakeAxis_BaseUnitTests", "status": "failed", "durationSeconds": 0.8, "assertionCount": 6, "failure": { "type": "BOOL", "message": "Expected TRUE but received FALSE.\nThe owner must retain the resource." } },
+        { "name": "Disabled_LongRunningScenario", "className": "FB_FakeAxis_BaseUnitTests", "status": "skipped", "durationSeconds": 0.2, "assertionCount": 0, "failure": null }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "FB_SafeRenderingTests <script>alert('unsafe')</script>",
+      "durationSeconds": 1.431,
+      "tests": [
+        { "name": "Quotes_反斜線_與中文", "className": "FB_SafeRenderingTests", "status": "failed", "durationSeconds": 1.431, "assertionCount": 1, "failure": { "type": "STRING", "message": "<img src=x onerror=alert('unsafe')> must remain plain text." } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TcUnit 測試報告</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --line: #dce2ea;
+      --text: #18212f;
+      --muted: #6d7888;
+      --primary: #2563eb;
+      --primary-soft: #eaf1ff;
+      --pass: #16835d;
+      --pass-soft: #e8f7f1;
+      --fail: #c53c3c;
+      --fail-soft: #fff0f0;
+      --skip: #a26611;
+      --skip-soft: #fff6df;
+      --shadow: 0 12px 32px rgba(26, 36, 51, .08);
+      font-family: Inter, "Segoe UI", "Noto Sans TC", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 5% -10%, #e9f1ff 0, transparent 26rem),
+        var(--bg);
+    }
+
+    button, input { font: inherit; }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      padding: .68rem 1rem;
+      transition: border-color .15s, background .15s, transform .15s;
+    }
+
+    button:hover:not(:disabled) { border-color: #aeb8c7; background: var(--surface-soft); }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    button.primary { border-color: var(--primary); background: var(--primary); color: white; }
+    button.primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.25rem clamp(1rem, 3vw, 2.25rem);
+      background: rgba(255, 255, 255, .9);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    h1 { margin: 0; font-size: clamp(1.15rem, 2vw, 1.55rem); letter-spacing: -.02em; }
+    .subtitle { color: var(--muted); font-family: Consolas, monospace; font-size: .86rem; margin-top: .25rem; }
+    .header-actions { display: flex; gap: .65rem; flex-wrap: wrap; justify-content: flex-end; }
+
+    main { width: min(1280px, calc(100% - 2rem)); margin: 1.4rem auto 3rem; }
+
+    .drop-zone {
+      min-height: 55vh;
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+      border: 2px dashed #b9c5d5;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, .72);
+      box-shadow: var(--shadow);
+      text-align: center;
+      transition: border-color .15s, background .15s, transform .15s;
+    }
+
+    .drop-zone.dragging { border-color: var(--primary); background: var(--primary-soft); transform: scale(1.005); }
+    .drop-icon { width: 64px; height: 64px; margin: 0 auto 1.15rem; border-radius: 18px; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); font-size: 1.8rem; }
+    .drop-zone h2 { margin: 0 0 .45rem; font-size: 1.25rem; }
+    .drop-zone p { margin: 0 0 1.4rem; color: var(--muted); }
+
+    .notice { margin-bottom: 1rem; border-radius: 10px; padding: .9rem 1rem; border: 1px solid; }
+    .notice.error { color: #8f2727; background: var(--fail-soft); border-color: #f0baba; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: .8rem;
+      margin-bottom: 1rem;
+    }
+
+    .summary-card { background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 1rem; box-shadow: 0 4px 16px rgba(26, 36, 51, .04); }
+    .summary-label { color: var(--muted); font-size: .82rem; margin-bottom: .45rem; }
+    .summary-value { font: 700 clamp(1.18rem, 2.2vw, 1.65rem)/1 Consolas, monospace; }
+    .summary-card.fail .summary-value { color: var(--fail); }
+    .summary-card.skip .summary-value { color: var(--skip); }
+    .summary-card.pass .summary-value { color: var(--pass); }
+
+    .toolbar {
+      display: flex;
+      gap: .75rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: .8rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .search {
+      flex: 1;
+      min-width: 12rem;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: .72rem .85rem;
+      color: var(--text);
+      outline: none;
+    }
+    .search:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+    .filters { display: flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+    .filters button { border: 0; border-right: 1px solid var(--line); border-radius: 0; padding: .65rem .85rem; }
+    .filters button:last-child { border-right: 0; }
+    .filters button.active { background: var(--primary); color: white; }
+
+    .results { display: grid; gap: .8rem; }
+    details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: clip; }
+    details[open] { box-shadow: 0 7px 22px rgba(26, 36, 51, .06); }
+    summary { list-style: none; cursor: pointer; }
+    summary::-webkit-details-marker { display: none; }
+
+    .suite-summary {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: .8rem;
+      padding: .9rem 1rem;
+      background: var(--surface-soft);
+      font-weight: 650;
+    }
+
+    .chevron { color: #94a0af; transition: transform .15s; }
+    details[open] > summary .chevron { transform: rotate(90deg); }
+    .suite-meta, .test-meta { color: var(--muted); font: .82rem Consolas, monospace; white-space: nowrap; }
+
+    .tests { border-top: 1px solid var(--line); }
+    .test { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none !important; }
+    .test:last-child { border-bottom: 0; }
+    .test-summary { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; align-items: center; gap: .75rem; padding: .78rem 1rem; }
+    .test-summary:hover { background: #fbfcfe; }
+    .test-name { min-width: 0; overflow-wrap: anywhere; font-family: Consolas, monospace; }
+
+    .status-dot { width: .68rem; height: .68rem; border-radius: 50%; background: var(--pass); }
+    .status-dot.failed { background: var(--fail); }
+    .status-dot.skipped { background: var(--skip); }
+    .badge { border-radius: 999px; padding: .25rem .55rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+    .badge.passed { color: var(--pass); background: var(--pass-soft); }
+    .badge.failed { color: var(--fail); background: var(--fail-soft); }
+    .badge.skipped { color: var(--skip); background: var(--skip-soft); }
+
+    .failure-detail { margin: 0 1rem 1rem 3.35rem; padding: .85rem 1rem; border-left: 3px solid var(--fail); border-radius: 0 8px 8px 0; background: var(--fail-soft); }
+    .failure-type { color: var(--fail); font: 700 .78rem Consolas, monospace; margin-bottom: .35rem; }
+    .failure-message { white-space: pre-wrap; overflow-wrap: anywhere; font-family: Consolas, monospace; font-size: .86rem; }
+    .empty-state { padding: 3rem 1rem; text-align: center; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 900px) {
+      .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .filters { overflow-x: auto; }
+      .filters button { flex: 1; }
+    }
+
+    @media (max-width: 600px) {
+      .app-header { align-items: flex-start; flex-direction: column; }
+      .header-actions { width: 100%; }
+      .header-actions button { flex: 1; }
+      main { width: min(100% - 1rem, 1280px); margin-top: .6rem; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .suite-summary { grid-template-columns: auto minmax(0, 1fr) auto; }
+      .suite-summary .suite-duration { display: none; }
+      .test-summary { grid-template-columns: auto auto minmax(0, 1fr) auto; }
+      .test-summary .assert-count { display: none; }
+      .failure-detail { margin-left: 2.75rem; }
+    }
+
+    @media print {
+      @page { margin: 12mm; }
+      body { background: white; }
+      .app-header { position: static; padding: 0 0 1rem; border-bottom: 2px solid #333; }
+      .header-actions, .toolbar, .drop-zone, .notice { display: none !important; }
+      main { width: 100%; margin: 1rem 0 0; }
+      .summary-grid { grid-template-columns: repeat(6, 1fr); break-inside: avoid; }
+      .summary-card, details { box-shadow: none !important; }
+      details, .test { break-inside: avoid; }
+      .suite-summary, .test-summary { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>TcUnit 測試報告</h1>
+      <div id="subtitle" class="subtitle">尚未載入報告</div>
+    </div>
+    <div class="header-actions">
+      <button id="openButton" class="primary" type="button">開啟報告</button>
+      <button id="printButton" type="button" disabled>列印／輸出 PDF</button>
+    </div>
+  </header>
+
+  <main>
+    <input id="fileInput" class="hidden" type="file" accept=".json,application/json">
+    <div id="notice" class="notice error hidden" role="alert"></div>
+
+    <section id="dropZone" class="drop-zone" aria-label="載入 TcUnit JSON 報告">
+      <div>
+        <div class="drop-icon" aria-hidden="true">⇩</div>
+        <h2>將 test-report.json 拖放至此</h2>
+        <p>或從本機選取由 FB_TcUnitJsonReporter 產生的報告。</p>
+        <button id="dropOpenButton" class="primary" type="button">選擇 JSON 報告</button>
+      </div>
+    </section>
+
+    <section id="report" class="hidden" aria-live="polite">
+      <div id="summary" class="summary-grid"></div>
+      <div class="toolbar">
+        <input id="searchInput" class="search" type="search" placeholder="搜尋 suite、測試名稱或失敗訊息…" aria-label="搜尋測試結果">
+        <div id="filters" class="filters" aria-label="狀態篩選">
+          <button type="button" data-status="all" class="active">全部</button>
+          <button type="button" data-status="failed">失敗</button>
+          <button type="button" data-status="skipped">略過</button>
+          <button type="button" data-status="passed">通過</button>
+        </div>
+      </div>
+      <div id="results" class="results"></div>
+    </section>
+  </main>
+
+  <script>
+    'use strict';
+
+    const elements = {
+      fileInput: document.querySelector('#fileInput'),
+      openButton: document.querySelector('#openButton'),
+      dropOpenButton: document.querySelector('#dropOpenButton'),
+      printButton: document.querySelector('#printButton'),
+      dropZone: document.querySelector('#dropZone'),
+      report: document.querySelector('#report'),
+      notice: document.querySelector('#notice'),
+      subtitle: document.querySelector('#subtitle'),
+      summary: document.querySelector('#summary'),
+      searchInput: document.querySelector('#searchInput'),
+      filters: document.querySelector('#filters'),
+      results: document.querySelector('#results')
+    };
+
+    const state = { report: null, fileName: '', status: 'all', query: '' };
+    const validStatuses = new Set(['passed', 'failed', 'skipped']);
+
+    function isObject(value) {
+      return value !== null && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function requireCondition(condition, message) {
+      if (!condition) throw new Error(message);
+    }
+
+    function requireNonNegativeNumber(value, path) {
+      requireCondition(typeof value === 'number' && Number.isFinite(value) && value >= 0, `${path} 必須是非負數。`);
+    }
+
+    function validateReport(report) {
+      requireCondition(isObject(report), '報告根節點必須是 JSON object。');
+      requireCondition(typeof report.schemaVersion === 'string', '缺少 schemaVersion。');
+      const major = Number.parseInt(report.schemaVersion.split('.')[0], 10);
+      requireCondition(major === 1, `不支援 schemaVersion ${report.schemaVersion}。`);
+      requireCondition(isObject(report.generator), '缺少 generator。');
+      requireCondition(typeof report.generator.name === 'string' && typeof report.generator.version === 'string', 'generator 格式無效。');
+      requireCondition(typeof report.generatedAtUtc === 'string' && !Number.isNaN(Date.parse(report.generatedAtUtc)), 'generatedAtUtc 格式無效。');
+      requireNonNegativeNumber(report.durationSeconds, 'durationSeconds');
+      requireCondition(Array.isArray(report.suites), 'suites 必須是 array。');
+
+      report.suites.forEach((suite, suiteIndex) => {
+        const suitePath = `suites[${suiteIndex}]`;
+        requireCondition(isObject(suite), `${suitePath} 必須是 object。`);
+        requireCondition(Number.isInteger(suite.id) && suite.id >= 0, `${suitePath}.id 必須是非負整數。`);
+        requireCondition(typeof suite.name === 'string', `${suitePath}.name 必須是 string。`);
+        requireNonNegativeNumber(suite.durationSeconds, `${suitePath}.durationSeconds`);
+        requireCondition(Array.isArray(suite.tests), `${suitePath}.tests 必須是 array。`);
+
+        suite.tests.forEach((test, testIndex) => {
+          const testPath = `${suitePath}.tests[${testIndex}]`;
+          requireCondition(isObject(test), `${testPath} 必須是 object。`);
+          requireCondition(typeof test.name === 'string' && typeof test.className === 'string', `${testPath} 名稱格式無效。`);
+          requireCondition(validStatuses.has(test.status), `${testPath}.status 無效。`);
+          requireNonNegativeNumber(test.durationSeconds, `${testPath}.durationSeconds`);
+          requireCondition(Number.isInteger(test.assertionCount) && test.assertionCount >= 0, `${testPath}.assertionCount 必須是非負整數。`);
+          if (test.status === 'failed') {
+            requireCondition(isObject(test.failure), `${testPath}.failure 必須存在。`);
+            requireCondition(typeof test.failure.type === 'string' && typeof test.failure.message === 'string', `${testPath}.failure 格式無效。`);
+          } else {
+            requireCondition(test.failure === null, `${testPath}.failure 必須是 null。`);
+          }
+        });
+      });
+
+      return report;
+    }
+
+    function deriveSummary(report) {
+      const tests = report.suites.flatMap(suite => suite.tests);
+      const counts = { passed: 0, failed: 0, skipped: 0 };
+      tests.forEach(test => { counts[test.status] += 1; });
+      return { suites: report.suites.length, tests: tests.length, ...counts };
+    }
+
+    function formatDuration(seconds) {
+      if (seconds < 1) return `${Math.round(seconds * 1000)} ms`;
+      if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 3 : 2)} s`;
+      const minutes = Math.floor(seconds / 60);
+      const remainder = seconds % 60;
+      return `${minutes}m ${remainder.toFixed(1)}s`;
+    }
+
+    function createElement(tag, className, text) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (text !== undefined) element.textContent = text;
+      return element;
+    }
+
+    function renderSummary(report) {
+      const summary = deriveSummary(report);
+      const passRate = summary.tests === 0 ? 0 : (summary.passed / summary.tests) * 100;
+      const cards = [
+        ['執行時間', formatDuration(report.durationSeconds), ''],
+        ['Test suites', String(summary.suites), ''],
+        ['測試案例', String(summary.tests), ''],
+        ['通過率', `${passRate.toFixed(1)}%`, 'pass'],
+        ['失敗案例', String(summary.failed), 'fail'],
+        ['略過案例', String(summary.skipped), 'skip']
+      ];
+
+      elements.summary.replaceChildren(...cards.map(([label, value, tone]) => {
+        const card = createElement('div', `summary-card ${tone}`.trim());
+        card.append(createElement('div', 'summary-label', label), createElement('div', 'summary-value', value));
+        return card;
+      }));
+    }
+
+    function matchesTest(test, suiteName) {
+      if (state.status !== 'all' && test.status !== state.status) return false;
+      if (!state.query) return true;
+      const haystack = [suiteName, test.name, test.className, test.failure?.type, test.failure?.message]
+        .filter(Boolean).join('\n').toLocaleLowerCase();
+      return haystack.includes(state.query);
+    }
+
+    function renderTest(test) {
+      const details = createElement('details', 'test');
+      if (test.status === 'failed') details.open = true;
+      const summary = createElement('summary', 'test-summary');
+      summary.append(
+        createElement('span', 'chevron', '›'),
+        createElement('span', `status-dot ${test.status}`),
+        createElement('span', 'test-name', test.name),
+        createElement('span', 'assert-count test-meta', `${test.assertionCount} asserts`),
+        createElement('span', `badge ${test.status}`, test.status)
+      );
+      details.append(summary);
+
+      if (test.failure) {
+        const failure = createElement('div', 'failure-detail');
+        failure.append(
+          createElement('div', 'failure-type', test.failure.type || 'UNDEFINED'),
+          createElement('div', 'failure-message', test.failure.message || 'No failure message was recorded.'),
+          createElement('div', 'test-meta', `Duration: ${formatDuration(test.durationSeconds)} · Class: ${test.className}`)
+        );
+        details.append(failure);
+      }
+      return details;
+    }
+
+    function renderResults() {
+      const nodes = [];
+      state.report.suites.forEach(suite => {
+        const tests = suite.tests.filter(test => matchesTest(test, suite.name));
+        if (tests.length === 0) return;
+
+        const details = createElement('details', 'suite');
+        if (tests.some(test => test.status === 'failed')) details.open = true;
+        const summary = createElement('summary', 'suite-summary');
+        summary.append(
+          createElement('span', 'chevron', '›'),
+          createElement('span', 'suite-name', suite.name),
+          createElement('span', 'suite-duration suite-meta', formatDuration(suite.durationSeconds)),
+          createElement('span', 'suite-meta', `${tests.length} cases`)
+        );
+        const testList = createElement('div', 'tests');
+        tests.forEach(test => testList.append(renderTest(test)));
+        details.append(summary, testList);
+        nodes.push(details);
+      });
+
+      if (nodes.length === 0) nodes.push(createElement('div', 'empty-state', '沒有符合目前條件的測試案例。'));
+      elements.results.replaceChildren(...nodes);
+    }
+
+    function showError(message) {
+      elements.notice.textContent = message;
+      elements.notice.classList.remove('hidden');
+    }
+
+    function clearError() {
+      elements.notice.textContent = '';
+      elements.notice.classList.add('hidden');
+    }
+
+    async function loadFile(file) {
+      clearError();
+      try {
+        requireCondition(file && file.name.toLocaleLowerCase().endsWith('.json'), '請選擇 .json 報告檔。');
+        const report = validateReport(JSON.parse(await file.text()));
+        state.report = report;
+        state.fileName = file.name;
+        state.status = 'all';
+        state.query = '';
+        elements.searchInput.value = '';
+        elements.filters.querySelectorAll('button').forEach(button => button.classList.toggle('active', button.dataset.status === 'all'));
+        elements.dropZone.classList.add('hidden');
+        elements.report.classList.remove('hidden');
+        elements.printButton.disabled = false;
+        elements.subtitle.textContent = `${file.name} · ${new Date(report.generatedAtUtc).toLocaleString('zh-TW')}`;
+        renderSummary(report);
+        renderResults();
+      } catch (error) {
+        showError(`無法載入報告：${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        elements.fileInput.value = '';
+      }
+    }
+
+    function openFilePicker() { elements.fileInput.click(); }
+    elements.openButton.addEventListener('click', openFilePicker);
+    elements.dropOpenButton.addEventListener('click', openFilePicker);
+    elements.fileInput.addEventListener('change', event => loadFile(event.target.files[0]));
+    elements.printButton.addEventListener('click', () => window.print());
+
+    elements.searchInput.addEventListener('input', event => {
+      state.query = event.target.value.trim().toLocaleLowerCase();
+      renderResults();
+    });
+
+    elements.filters.addEventListener('click', event => {
+      const button = event.target.closest('button[data-status]');
+      if (!button) return;
+      state.status = button.dataset.status;
+      elements.filters.querySelectorAll('button').forEach(item => item.classList.toggle('active', item === button));
+      renderResults();
+    });
+
+    for (const eventName of ['dragenter', 'dragover']) {
+      document.addEventListener(eventName, event => {
+        event.preventDefault();
+        elements.dropZone.classList.add('dragging');
+      });
+    }
+
+    for (const eventName of ['dragleave', 'drop']) {
+      document.addEventListener(eventName, event => {
+        event.preventDefault();
+        elements.dropZone.classList.remove('dragging');
+      });
+    }
+
+    document.addEventListener('drop', event => loadFile(event.dataTransfer.files[0]));
+
+    let printOpenState = [];
+    window.addEventListener('beforeprint', () => {
+      printOpenState = [...document.querySelectorAll('#results details')].map(details => details.open);
+      document.querySelectorAll('#results details').forEach(details => { details.open = true; });
+    });
+    window.addEventListener('afterprint', () => {
+      document.querySelectorAll('#results details').forEach((details, index) => { details.open = printOpenState[index] ?? details.open; });
+    });
+  </script>
+</body>
+</html>

@@ -320,6 +320,28 @@
     <Compile Include="Tests\Suites\FB_UtcClockTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="TcUnitReporter\DUTs\E_TcUnitReporterError.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TcUnitReporter\DUTs\E_TcUnitReporterState.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TcUnitReporter\GVLs\GVL_TcUnitReporter.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="TcUnitReporter\POUs\F_TcUnitReporterValidatePath.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TcUnitReporter\POUs\FB_TcUnitJsonBuffer.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TcUnitReporter\POUs\FB_TcUnitJsonReporter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TcUnitReporter\Tests\FB_TcUnitReporterTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="TestTask.TcTTO">
       <SubType>Code</SubType>
     </Compile>
@@ -354,6 +376,13 @@
     <Folder Include="Tests\DUTs" />
     <Folder Include="Tests\Fakes" />
     <Folder Include="Tests\Suites" />
+    <Folder Include="TcUnitReporter" />
+    <Folder Include="TcUnitReporter\DUTs" />
+    <Folder Include="TcUnitReporter\GVLs" />
+    <Folder Include="TcUnitReporter\POUs" />
+    <Folder Include="TcUnitReporter\Tests" />
+    <Folder Include="TcUnitReporter\Tests\Fixtures" />
+    <Folder Include="TcUnitReporter\Viewer" />
   </ItemGroup>
   <ItemGroup>
     <PlaceholderReference Include="Tc2_MC2">
@@ -384,6 +413,30 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Untitled1.tmc">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TcUnitReporter\README.md">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TcUnitReporter\Viewer\index.html">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TcUnitReporter\Tests\Fixtures\all-pass.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TcUnitReporter\Tests\Fixtures\mixed-report.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TcUnitReporter\Tests\Fixtures\empty-report.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TcUnitReporter\Tests\Fixtures\long-name.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TcUnitReporter\Tests\Fixtures\unsupported-version.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TcUnitReporter\Tests\Fixtures\malformed.json">
       <SubType>Content</SubType>
     </None>
   </ItemGroup>

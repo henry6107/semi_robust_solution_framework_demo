@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "generator": { "name": "TcUnitJsonReporter", "version": "0.1.0" },
+  "generatedAtUtc": "2026-08-18T02:58:51.000Z",
+  "durationSeconds": 0.842,
+  "suites": [
+    {
+      "id": 0,
+      "name": "FB_ResourceTests",
+      "durationSeconds": 0.842,
+      "tests": [
+        { "name": "ResourceCanBeAcquiredAndReleased", "className": "FB_ResourceTests", "status": "passed", "durationSeconds": 0.42, "assertionCount": 4, "failure": null },
+        { "name": "OwnerZeroIsRejected", "className": "FB_ResourceTests", "status": "passed", "durationSeconds": 0.422, "assertionCount": 3, "failure": null }
+      ]
+    }
+  ]
+}
