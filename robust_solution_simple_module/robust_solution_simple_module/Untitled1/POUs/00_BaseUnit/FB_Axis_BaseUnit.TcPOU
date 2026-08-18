@@ -24,6 +24,19 @@ END_VAR
     <Implementation>
       <ST><![CDATA[M_CyclicUpdate();]]></ST>
     </Implementation>
+    <Property Name="AxisActualPosition" Id="{d413c499-3527-4d46-8307-9bcc428376af}">
+      <Declaration><![CDATA[PROPERTY PUBLIC AxisActualPosition : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{e49c8c55-87cd-48d4-819f-17286b1c5059}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[// Expose motion feedback without exposing AXIS_REF to Services.
+AxisActualPosition := _Axis.NcToPlc.ActPos;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="AxisActualVelocity" Id="{777cc680-8953-4809-acb4-3307920aad6a}">
       <Declaration><![CDATA[PROPERTY PUBLIC AxisActualVelocity : LREAL
 ]]></Declaration>
@@ -172,6 +185,7 @@ END_VAR
 VAR_OUTPUT
 	Done : BOOL;
 	Error : BOOL;
+	ErrorId : UDINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -179,6 +193,7 @@ END_VAR
 M_MoveAbs := FALSE;
 Done := FALSE;
 Error := FALSE;
+ErrorId := 0;
 IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
 	RETURN;
 END_IF
@@ -191,6 +206,7 @@ _MCMoveAbs.Deceleration := Deceleration;
 
 Done := _MCMoveAbs.Done;
 Error := _MCMoveAbs.Error;
+ErrorId := _MCMoveAbs.ErrorId;
 M_MoveAbs := TRUE;]]></ST>
       </Implementation>
     </Method>
@@ -262,6 +278,7 @@ END_VAR
 VAR_OUTPUT
 	Done : BOOL;
 	Error : BOOL;
+	ErrorId : UDINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -269,6 +286,7 @@ END_VAR
 M_Reset := FALSE;
 Done := FALSE;
 Error := FALSE;
+ErrorId := 0;
 IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
 	RETURN;
 END_IF
@@ -277,6 +295,7 @@ _MCReset.Execute := Execute;
 
 Done := _MCReset.Done;
 Error := _MCReset.Error;
+ErrorId := _MCReset.ErrorId;
 M_Reset := TRUE;]]></ST>
       </Implementation>
     </Method>
@@ -291,11 +310,13 @@ END_VAR
 VAR_OUTPUT
 	Done : BOOL;
 	Error : BOOL;
+	ErrorId : UDINT;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[M_Stop := FALSE;
 Done := FALSE;
 Error := FALSE;
+ErrorId := 0;
 IF NOT M_IsResourceOwner(OwnerId := OwnerId) THEN
 	RETURN;
 END_IF
@@ -305,6 +326,7 @@ _MCStop.Deceleration := Deceleration;
 
 Done := _MCStop.Done;
 Error := _MCStop.Error;
+ErrorId := _MCStop.ErrorId;
 M_Stop := TRUE;
 
 ]]></ST>

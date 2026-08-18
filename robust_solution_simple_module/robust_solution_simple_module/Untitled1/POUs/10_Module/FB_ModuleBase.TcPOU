@@ -1,0 +1,171 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ModuleBase" Id="{6193009a-0dba-45cf-9862-8c04373cb73b}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleBase EXTENDS FB_PackMLModeSet
+VAR_INPUT
+	ModuleCtrl : REFERENCE TO ST_ModuleCtrl;
+	SystemContext : REFERENCE TO ST_SystemContext;
+	HeartbeatIndex : UDINT;
+END_VAR
+
+VAR_OUTPUT
+	ModuleStatus : ST_ModuleStatus;
+	ModuleVariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ExtDescriptor;
+	ModuleAlarmList : ARRAY[1..Param_Config.MaxModuleAlarm] OF ST_ExtAlarm; 
+	ModuleDataList : ARRAY[1..Param_Config.MaxModuleData] OF ST_ExtDescriptor;
+END_VAR
+
+VAR
+	_CmdRequestOneShot : R_TRIG;
+	_ModeRequestOneShot : R_TRIG;
+	
+	_ModuleId : UDINT;
+	_ServiceContext : ST_ServiceContext;
+	
+	_HeartbeatTimer : TON;
+	_LastHeartbeatIndex : UDINT;
+	_IsControlSourceAlive : BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="HookMethod" Id="{0b542957-3892-4df2-b0e7-9c93700d86b5}" />
+    <Method Name="FB_Init" Id="{54bcf0cd-3243-4b00-b0fe-48dc66400739}">
+      <Declaration><![CDATA[//FB_Init is always available implicitly and it is used primarily for initialization.
+//The return value is not evaluated. For a specific influence, you can also declare the
+//methods explicitly and provide additional code there with the standard initialization
+//code. You can evaluate the return value.
+METHOD FB_Init: BOOL
+VAR_INPUT
+    bInitRetains: BOOL; // TRUE: the retain variables are initialized (reset warm / reset cold)
+    bInCopyCode: BOOL;  // TRUE: the instance will be copied to the copy code afterward (online change)
+
+	ModuleId : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_ModuleId := ModuleId;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_SelectServiceControlSource" Id="{64c4ffc3-20ab-48f6-9187-96b7127a8944}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_SelectServiceControlSource
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateAlarmList" Id="{1fa94b87-c1b3-4d82-ad65-41d1be8293f7}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateAlarmList
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateBaseUnit" Id="{cce9c8f5-b668-43c6-ab47-4d2999638c8f}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateBaseUnit
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateService" Id="{d906a778-6b57-49b8-9e25-ec7461c4759a}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateService
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateServiceDataList" Id="{09acfa8b-205a-4e4b-9f04-1c13883b2574}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceDataList
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateServiceParam" Id="{f8022e96-fc7c-4f3a-b06b-d55e075ed120}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceParam
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateVariableList" Id="{2dfb38df-bde7-4ba2-95ef-7b6de0147db6}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateVariableList
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_CheckHeartbeat" Id="{95356be4-c779-4a0a-84d9-ca5fd7d93bc1}">
+      <Declaration><![CDATA[METHOD PRIVATE M_CheckHeartbeat
+VAR_INPUT
+END_VAR
+
+VAR
+	bLooseHeartbeat : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Heartbeats check
+bLooseHeartbeat := _LastHeartbeatIndex = HeartbeatIndex;
+IF bLooseHeartbeat THEN
+	_HeartbeatTimer( IN:= TRUE, PT:= Param_Config.ModuleHeartbeat_Timout);
+ELSE
+	_HeartbeatTimer( IN:= FALSE, PT:= Param_Config.ModuleHeartbeat_Timout);
+END_IF
+
+// Update Last Heartbeat Index
+_LastHeartbeatIndex := HeartbeatIndex;
+
+// Update Is ControlSource Alive status
+_IsControlSourceAlive := NOT _HeartbeatTimer.Q;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateModule" Id="{a3ee927e-c27b-49bf-8f5e-1ddb1a222fc5}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateModule
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_CheckHeartbeat();
+
+PackMLIn := ModuleCtrl.PackMLIn;
+SUPER^();
+
+_ServiceContext.ModuleId := _ModuleId;
+_ServiceContext.UtcDateTime := SystemContext.UtcDateTime;
+
+H_UpdateServiceParam();
+H_SelectServiceControlSource();
+H_UpdateService();
+H_UpdateBaseUnit();
+
+_CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
+_ModeRequestOneShot(CLK:= PackMLIn.bModeChangeRequest, Q=> );
+
+// Updata status
+IF _CmdRequestOneShot.Q OR _ModeRequestOneShot.Q THEN
+	ModuleStatus.ResponseId := ModuleCtrl.RequestId;
+END_IF
+ModuleStatus.PackMLOut := PackMLOut;
+
+H_UpdateAlarmList();
+H_UpdateServiceDataList();
+H_UpdateVariableList();]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

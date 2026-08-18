@@ -1,37 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GCSpinAxisMoveAbsServices" Id="{9c4945bc-98e0-4f80-811d-303c8e7f09ff}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_PackMLModeSet
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GCSpinAxisMoveAbsServices EXTENDS FB_ServiceBase
 VAR_INPUT
 	Param : ST_GCSpinAxisMoveAbsParam;
-	Ctrl : REFERENCE TO ST_ServiceCtrl;
 	Axis_BaseUnit : I_Axis_BaseUnit;
-	
-	// The Module assigns a unique ID to this Service instance.
-	ResourceOwnerId : T_ResourceOwnerId;
-END_VAR
-
-VAR_OUTPUT
-	Status : ST_ServiceStatus;
-END_VAR
-
-VAR
-	_CmdRequestOneShot : R_TRIG;
 END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[PackMLIn := Ctrl.PackMLIn;
-SUPER^();
-
-_CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
-
-// Updata status
-Status.CommandErrorId := PackMLOut.eStateErrorID;
-
-IF _CmdRequestOneShot.Q THEN // Acknowledge to upper controller that command received
-	Status.ResponseId := Ctrl.RequestId;
-END_IF
-
-Status.State := PackMLOut.eStateCurrent;
+      <ST><![CDATA[M_UpdateService();
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{ca59d4b8-ca7f-493a-9fc5-3adf146e1d0b}" />
@@ -43,7 +19,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Release defensively in case an unexpected transition skipped cleanup.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnAborting" Id="{7f59724d-ad68-477a-b362-0b33ca5b585d}" FolderPath="StateAction\">
@@ -55,19 +31,20 @@ END_VAR
 VAR
 	bDone : BOOL;
 	bError : BOOL;
+	nErrorId : UDINT;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
 
 // A Service that never acquired the Resource must not reset its Owner's Axis.
-IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId) THEN
+IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ServiceId) THEN
 	H_OnAborting := E_PackMLHookResult.Done;
 	RETURN;
 END_IF
 
 // Withdraw MoveAbsolute before resetting the Axis.
 Axis_BaseUnit.M_MoveAbs(
-	OwnerId := ResourceOwnerId,
+	OwnerId := ServiceId,
 	Execute := FALSE,
 	Position:= Param.Position,
 	Velocity:= Param.Velocity,
@@ -75,25 +52,28 @@ Axis_BaseUnit.M_MoveAbs(
 	Deceleration:= Param.Deceleration);
 	
 Axis_BaseUnit.M_Reset(
-	OwnerId := ResourceOwnerId,
+	OwnerId := ServiceId,
 	Execute := TRUE,
-	Done=> bDone, Error=> bError);
+	Done=> bDone, Error=> bError, ErrorId=> nErrorId);
 
 IF bDone THEN
 	Axis_BaseUnit.M_Reset(
-		OwnerId := ResourceOwnerId,
+		OwnerId := ServiceId,
 		Execute := FALSE);
 	// Keep ownership until the asynchronous Reset has completed.
-	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+	Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
 	H_OnAborting := E_PackMLHookResult.Done;
 
 ELSIF bError THEN
 	// A failed Reset is terminal for this Abort sequence; do not remain in Aborting.
 	Axis_BaseUnit.M_Reset(
-		OwnerId := ResourceOwnerId,
+		OwnerId := ServiceId,
 		Execute := FALSE);
-	Status.ServiceErrorId := E_GCServiceErrorCode.Error_While_Reset_Axis;
-	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+	M_AddError(
+		MainErrorId := E_GCErrorCode.Error_While_Reset_Axis,
+		SourceErrorId := nErrorId,
+		Message := 'Axis reset failed while aborting.');
+	Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
 	H_OnAborting := E_PackMLHookResult.Done;
 END_IF
 ]]></ST>
@@ -125,7 +105,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Completing normally releases first; this is an idempotent safety net.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnCompleting" Id="{fad53e77-c59e-413e-b31d-29b3c546dd6e}" FolderPath="StateAction\">
@@ -136,7 +116,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[Axis_BaseUnit.M_MoveAbs(
-	OwnerId:= ResourceOwnerId,
+	OwnerId:= ServiceId,
 	Execute:= FALSE,
 	Position:= Param.Position,
 	Velocity:= Param.Velocity,
@@ -144,7 +124,7 @@ END_VAR
 	Deceleration:= Param.Deceleration);
 
 // Release only after the active MoveAbsolute request has been withdrawn.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
 H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
@@ -157,19 +137,20 @@ END_VAR
 VAR
 	bDone : BOOL;
 	bError : BOOL;
+	nErrorId : UDINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
 
 Axis_BaseUnit.M_MoveAbs(
-	OwnerId:= ResourceOwnerId,
+	OwnerId:= ServiceId,
 	Execute:= TRUE,
 	Position:= Param.Position,
 	Velocity:= Param.Velocity,
 	Acceleration:= Param.Acceleration,
 	Deceleration:= Param.Deceleration,
-	Done=> bDone, Error=> bError);
+	Done=> bDone, Error=> bError, ErrorId=> nErrorId);
 
 
 IF bDone THEN
@@ -178,7 +159,10 @@ IF bDone THEN
 END_IF
 
 IF bError THEN
-	Status.ServiceErrorId := E_GCServiceErrorCode.Axis_Command_Error_During_Execute;
+	M_AddError(
+		MainErrorId := E_GCErrorCode.Axis_Command_Error_During_Execute,
+		SourceErrorId := nErrorId,
+		Message := 'MoveAbsolute failed during Execute.');
 	RequestCommand(E_PackMLCommand.Stop);
 END_IF
 ]]></ST>
@@ -213,7 +197,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Idle Services must not retain a Resource from an earlier operation.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);]]></ST>
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{9fac3a5f-72e3-4249-a638-a9be1f5d5fde}" FolderPath="StateAction\">
@@ -223,7 +207,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.ServiceErrorId := E_GCServiceErrorCode.None;
+        <ST><![CDATA[MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
 
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -239,39 +223,39 @@ END_VAR
 
 // Validate Service-owned data before reserving the shared BaseUnit.
 IF Param.Velocity <= 0 THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
+	M_AddError(MainErrorId := E_GCErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Velocity must be greater than zero.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Acceleration < 0 THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
+	M_AddError(MainErrorId := E_GCErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Acceleration must not be negative.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 IF Param.Deceleration < 0 THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Invalid_Param;
+	M_AddError(MainErrorId := E_GCErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Deceleration must not be negative.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 // Resource contention is a failed Start, not a wait condition.
-IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ResourceOwnerId) THEN
-	Status.ServiceErrorId := E_GCServiceErrorCode.Resource_Acquire_Failed_During_Starting;
+IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ServiceId) THEN
+	M_AddError(MainErrorId := E_GCErrorCode.Resource_Acquire_Failed_During_Starting, SourceErrorId := 0, Message := 'Axis resource acquisition failed during Starting.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
 
 // Physical checks occur only after this Service owns the BaseUnit.
 IF Axis_BaseUnit.AxisIsDisabled THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Not_Servo_On_During_Starting;
+	M_AddError(MainErrorId := E_GCErrorCode.Axis_Not_Servo_On_During_Starting, SourceErrorId := 0, Message := 'Axis is not servo on during Starting.');
 	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
 IF Axis_BaseUnit.AxisHasJob THEN
-	Status.ServiceErrorId:= E_GCServiceErrorCode.Axis_Is_Busy_During_Starting;
+	M_AddError(MainErrorId := E_GCErrorCode.Axis_Is_Busy_During_Starting, SourceErrorId := 0, Message := 'Axis is busy during Starting.');
 	RequestCommand(E_PackMLCommand.Stop);
 	RETURN;
 END_IF
@@ -288,7 +272,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Release defensively after every Stop path.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
 ]]></ST>
       </Implementation>
     </Method>
@@ -301,20 +285,21 @@ END_VAR
 VAR
 	bDone : BOOL;
 	bError : BOOL;
+	nErrorId : UDINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Busy;
 
 // Resource acquisition failures enter Stopping without owning the Axis.
-IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ResourceOwnerId) THEN
+IF NOT Axis_BaseUnit.M_IsResourceOwner(OwnerId := ServiceId) THEN
 	H_OnStopping := E_PackMLHookResult.Done;
 	RETURN;
 END_IF
 
 // Withdraw MoveAbsolute before issuing the physical Stop.
 Axis_BaseUnit.M_MoveAbs(
-	OwnerId := ResourceOwnerId,
+	OwnerId := ServiceId,
 	Execute := FALSE,
 	Position:= Param.Position,
 	Velocity:= Param.Velocity,
@@ -322,26 +307,29 @@ Axis_BaseUnit.M_MoveAbs(
 	Deceleration:= Param.Deceleration);
 	
 Axis_BaseUnit.M_Stop(
-	OwnerId := ResourceOwnerId,
+	OwnerId := ServiceId,
 	Execute := TRUE, 
 	Deceleration:= Param.Deceleration,
-	Done=> bDone, Error=> bError);
+	Done=> bDone, Error=> bError, ErrorId=> nErrorId);
 
 IF bDone THEN
 	Axis_BaseUnit.M_Stop(
-		OwnerId := ResourceOwnerId,
+		OwnerId := ServiceId,
 		Execute := FALSE, 
 		Deceleration:= Param.Deceleration);
 	// Ownership is released only after the asynchronous Stop has completed.
-	Axis_BaseUnit.M_ReleaseResource(OwnerId := ResourceOwnerId);
+	Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
 	H_OnStopping := E_PackMLHookResult.Done;
 	
 ELSIF bError THEN
 	// Throw up error
-	Status.ServiceErrorId := E_GCServiceErrorCode.Error_While_Stop_Axis;
+	M_AddError(
+		MainErrorId := E_GCErrorCode.Error_While_Stop_Axis,
+		SourceErrorId := nErrorId,
+		Message := 'Axis stop failed while stopping.');
 	
 	Axis_BaseUnit.M_Stop(
-		OwnerId := ResourceOwnerId,
+		OwnerId := ServiceId,
 		Execute := FALSE, 
 		Deceleration:= Param.Deceleration);
 		

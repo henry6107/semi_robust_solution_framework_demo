@@ -4,9 +4,9 @@
     <Declaration><![CDATA[TYPE ST_ServiceStatus :
 STRUCT
 	ResponseId : UDINT;
-	CommandErrorId : UDINT;
+	PackMLOut : ST_PML_Base_Out;
+	ErrorList : ARRAY[1..Param_Config.MaxServiceError] OF ST_ExtAlarm;
 	ServiceErrorId : UDINT;
-	State : E_PackMLState;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

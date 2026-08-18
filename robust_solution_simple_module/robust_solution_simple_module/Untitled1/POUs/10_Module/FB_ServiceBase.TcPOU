@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ServiceBase" Id="{db0b22da-7303-4462-851a-679b64cb7da9}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'reflection'}
+FUNCTION_BLOCK FB_ServiceBase EXTENDS FB_PackMLModeSet
+VAR_INPUT
+	Ctrl : REFERENCE TO ST_ServiceCtrl;
+	Context : REFERENCE TO ST_ServiceContext;
+	
+	// The Module assigns a unique ID to this Service instance.
+	ServiceId : T_ResourceOwnerId;
+END_VAR
+
+VAR_OUTPUT
+	Status : ST_ServiceStatus;
+END_VAR
+
+VAR
+	_CmdRequestOneShot : R_TRIG;
+	
+	{attribute 'instance-path'}
+    {attribute 'noinit'}
+	_Path : STRING;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="M_AddError" Id="{4e62615f-0e50-466e-9f56-aa0713d5e3ab}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_AddError : BOOL
+VAR_INPUT
+	MainErrorId : UDINT;
+	SourceErrorId : UDINT;
+	Message : STRING;
+END_VAR
+
+VAR
+	nIndex : UINT;
+	nFirstEmpty : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_AddError := FALSE;
+nFirstEmpty := 0;
+
+FOR nIndex := 1 TO Param_Config.MaxServiceError DO
+	IF Status.ErrorList[nIndex].MainErrorId = 0 THEN
+		IF nFirstEmpty = 0 THEN
+			nFirstEmpty := nIndex;
+			EXIT;
+		END_IF
+
+	ELSIF Status.ErrorList[nIndex].MainErrorId = MainErrorId THEN
+		// The same error event is already recorded for this task cycle.
+		RETURN;
+	END_IF
+END_FOR
+
+// Preserve the first ten errors; reject new errors when the list is full.
+IF nFirstEmpty = 0 THEN
+	RETURN;
+END_IF
+
+Status.ErrorList[nFirstEmpty].ModuleId := Context.ModuleId;
+Status.ErrorList[nFirstEmpty].ServiceId := ServiceId;
+Status.ErrorList[nFirstEmpty].MainErrorId := MainErrorId;
+Status.ErrorList[nFirstEmpty].SourceErrorId := SourceErrorId;
+Status.ErrorList[nFirstEmpty].Message := Message;
+Status.ErrorList[nFirstEmpty].Path := _Path;
+Status.ErrorList[nFirstEmpty].Severity := E_Severity.Alarm;
+Status.ErrorList[nFirstEmpty].DateTime := Context.UtcDateTime;
+M_AddError := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateService" Id="{8ae05b1d-81f7-4b0b-9f3f-42116c68a842}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateService
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[PackMLIn := Ctrl.PackMLIn;
+SUPER^();
+
+_CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
+
+// Updata status
+Status.PackMLOut := PackMLOut;
+IF _CmdRequestOneShot.Q THEN // Acknowledge to upper controller that command received
+	Status.ResponseId := Ctrl.RequestId;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,26 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GC_Module" Id="{d2b222b5-592d-46be-8a8e-fa50af509b93}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_GC_Module EXTENDS FB_PackMLModeSet
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GC_Module EXTENDS FB_ModuleBase
 VAR_INPUT	
 	HwInput : REFERENCE TO ST_GC_Signal_In;
 	HwOutput : REFERENCE TO ST_GC_Signal_Out;
-	
-	ModuleCtrl : REFERENCE TO ST_ModuleCtrl;
+
 	ServiceCtrl : REFERENCE TO ST_GC_ServiceCtrl;
-	ECID : REFERENCE TO ST_GC_ECID;
-	
+	ServiceParam : REFERENCE TO ST_GC_ServiceParam;
+
 	// Base unit used in GC chamber
 	SpinAxis_BaseUnit : I_Axis_BaseUnit;
 	LiftPinAxis_BaseUnit : I_Axis_BaseUnit;
 END_VAR
 
 VAR_OUTPUT
-	ModuleStatus : ST_ModuleStatus;
 	ServiceStatus : ST_GC_ServiceStatus;
-	ALID : ST_GC_ALID;
-	DVID : ST_GC_DVID;
-	SVID : ST_GC_SVID;
 END_VAR
 
 VAR
@@ -36,9 +31,11 @@ VAR
 	_LiftPinAxisMoveVelCCWService : FB_GCLiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_GCLiftPinAxisMoveAbsServices;
 	_SingleProcessService : FB_GCSingleProcessService;
-	
-	_CmdRequestOneShot : R_TRIG;
-	_ModeRequestOneShot : R_TRIG;
+	_SingleProcessStatus : ST_GCSingleProcessStatus;
+
+	_VariableSimulationTick : DINT;
+	_SimChamberTemperature : REAL;
+	_SimChamberPressure : REAL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -47,110 +44,14 @@ IF (SpinAxis_BaseUnit = 0) OR (LiftPinAxis_BaseUnit = 0) THEN
 	RETURN;
 END_IF
 
-PackMLIn := ModuleCtrl.PackMLIn;
-SUPER^();
-A01_UpdateServiceParam();
-A02_SelectServiceControlSource();
-A03_UpdateService();
-A04_UpdateBaseUnit();
-
-_CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
-_ModeRequestOneShot(CLK:= PackMLIn.bModeChangeRequest, Q=> );
+M_UpdateModule();
 
 // Updata status
-IF _CmdRequestOneShot.Q OR _ModeRequestOneShot.Q THEN
-	ModuleStatus.ResponseId := ModuleCtrl.RequestId;
-END_IF
-
-ModuleStatus.PackMLOut := PackMLOut;
 ServiceStatus := _ServiceStatusView.ByName;
-
 ]]></ST>
     </Implementation>
+    <Folder Name="ModuleUpdate" Id="{a9f2fa3e-34f5-43fc-8823-0e0dbffba0ff}" />
     <Folder Name="StateAction" Id="{92cfe23b-b998-4d76-8aa2-c8089e78aa61}" />
-    <Action Name="A01_UpdateServiceParam" Id="{8b66dd3f-2093-4de6-963d-8da3bda49bf6}">
-      <Implementation>
-        <ST><![CDATA[_SpinAxisMoveAbsService.Param := ECID.SpinAxisMoveAbs;
-_SpinAxisJogCWService.Param := ECID.SpinAxisJogCW;
-_SpinAxisMoveVelCWService.Param := ECID.SpinAxisMoveVelCW;
-_LiftPinAxisMoveVelCWService.Param := ECID.LiftPinAxisMoveVelCW;
-_LiftPinAxisMoveVelCCWService.Param := ECID.LiftPinAxisMoveVelCCW;
-_LiftPinAxisMoveAbsService.Param := ECID.LiftPinAxisMoveAbs;
-_SingleProcessService.Param := ECID.SingleProcess;]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="A02_SelectServiceControlSource" Id="{2f460f0f-4f51-4597-948c-8705f2c24753}">
-      <Implementation>
-        <ST><![CDATA[// Select control source
-IF PackMLOut.eStateCurrent = E_PackMLState.Idle
-	OR PackMLOut.eStateCurrent = E_PackMLState.Starting
-	OR PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
-	// Controlled by external operator
-	_ServiceCtrlView.ByName := ServiceCtrl;
-ELSE
-	// Control by module
-	FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-		_ServiceCtrlView.ByIndex[_nIdx].PackMLIn := ModuleCtrl.PackMLIn;
-		_ServiceCtrlView.ByIndex[_nIdx].RequestId := ModuleCtrl.RequestId;
-	END_FOR
-END_IF]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="A03_UpdateService" Id="{c62275db-aa76-4b4d-95ad-2ecb5851f919}">
-      <Implementation>
-        <ST><![CDATA[_SpinAxisJogCWService(
-	Ctrl:= _ServiceCtrlView.ByName.SpinAxisJogCW,
-	Axis_BaseUnit:= SpinAxis_BaseUnit,
-	// Owner IDs are assigned by the Module so each Service instance is unique.
-	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisJogCW,
-	Status=> _ServiceStatusView.ByName.SpinAxisJogCW);
-
-_SpinAxisMoveAbsService(
-	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveAbs,
-	Axis_BaseUnit:= SpinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveAbs,
-	Status=> _ServiceStatusView.ByName.SpinAxisMoveAbs);
-
-_SpinAxisMoveVelCWService(
-	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveVelCW,
-	Axis_BaseUnit:= SpinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.SpinAxisMoveVelCW,
-	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
-
-_LiftPinAxisMoveVelCWService(
-	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCW,
-	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCW,
-	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCW);
-
-_LiftPinAxisMoveVelCCWService(
-	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCCW,
-	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveVelCCW,
-	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCCW);
-
-_LiftPinAxisMoveAbsService(
-	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveAbs,
-	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ResourceOwnerId:= E_GCResourceOwnerId.LiftPinAxisMoveAbs,
-	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
-
-_SingleProcessService(
-	Ctrl := _ServiceCtrlView.ByName.SingleProcess,
-	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
-	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
-	ResourceOwnerId := E_GCResourceOwnerId.SingleProcess,
-	Status => _ServiceStatusView.ByName.SingleProcess,
-	ProcessStatus => SVID.SingleProcess);
-]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="A04_UpdateBaseUnit" Id="{e32e8cc6-0faf-4aa6-8f04-fdfae785d66d}">
-      <Implementation>
-        <ST><![CDATA[SpinAxis_BaseUnit.M_CyclicUpdate();
-LiftPinAxis_BaseUnit.M_CyclicUpdate();]]></ST>
-      </Implementation>
-    </Action>
     <Method Name="H_OnAborted" Id="{de8d6f56-427f-41df-b4d5-ddd289e1aed8}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnAborted
 VAR_INPUT
@@ -172,7 +73,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Aborted THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].PackMLOut.eStateCurrent <> E_PackMLState.Aborted THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -191,7 +92,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].PackMLOut.eStateCurrent <> E_PackMLState.Stopped THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -276,7 +177,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Idle THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].PackMLOut.eStateCurrent <> E_PackMLState.Idle THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -316,7 +217,7 @@ END_VAR
 
 // Wait cmd finished
 FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
-	IF _ServiceStatusView.ByIndex[_nIdx].State <> E_PackMLState.Stopped THEN
+	IF _ServiceStatusView.ByIndex[_nIdx].PackMLOut.eStateCurrent <> E_PackMLState.Stopped THEN
 		RETURN;
 	END_IF
 END_FOR
@@ -376,6 +277,262 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
 H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_SelectServiceControlSource" Id="{4e055faf-6a98-4100-b6ed-93be619c0d1f}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_SelectServiceControlSource
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Select control source
+IF PackMLOut.eStateCurrent = E_PackMLState.Idle
+	OR PackMLOut.eStateCurrent = E_PackMLState.Starting
+	OR PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
+	// Controlled by external operator
+	_ServiceCtrlView.ByName := ServiceCtrl;
+ELSE
+	// Control by module
+	FOR _nIdx := 1 TO GVL_GC_Config.cServiceCount DO
+		_ServiceCtrlView.ByIndex[_nIdx].PackMLIn := ModuleCtrl.PackMLIn;
+		_ServiceCtrlView.ByIndex[_nIdx].RequestId := ModuleCtrl.RequestId;
+	END_FOR
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateAlarmList" Id="{05cb1d79-8999-497c-aa97-eff4f365f571}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateAlarmList
+VAR_INPUT
+END_VAR
+
+VAR
+	nServiceIndex : UINT;
+	nErrorIndex : UINT;
+	nModuleAlarmIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Rebuild a dense snapshot every scan so cleared Service errors cannot leave stale gaps.
+MEMSET(ADR(ModuleAlarmList), 0, SIZEOF(ModuleAlarmList));
+nModuleAlarmIndex := 1;
+
+FOR nServiceIndex := 1 TO GVL_GC_Config.cServiceCount DO
+	FOR nErrorIndex := 1 TO Param_Config.MaxServiceError DO
+		IF _ServiceStatusView.ByIndex[nServiceIndex].ErrorList[nErrorIndex].MainErrorId <> 0 THEN
+			IF nModuleAlarmIndex > Param_Config.MaxModuleAlarm THEN
+				RETURN;
+			END_IF
+
+			ModuleAlarmList[nModuleAlarmIndex] := _ServiceStatusView.ByIndex[nServiceIndex].ErrorList[nErrorIndex];
+			nModuleAlarmIndex := nModuleAlarmIndex + 1;
+		END_IF
+	END_FOR
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateBaseUnit" Id="{23db425b-9082-4959-8f76-43820da7ead4}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateBaseUnit
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[SpinAxis_BaseUnit.M_CyclicUpdate();
+LiftPinAxis_BaseUnit.M_CyclicUpdate();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateService" Id="{fa65f410-1990-4021-8134-1329f3f00eeb}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateService
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SpinAxisJogCWService(
+	Ctrl:= _ServiceCtrlView.ByName.SpinAxisJogCW,
+	Context:= _ServiceContext,
+	Axis_BaseUnit:= SpinAxis_BaseUnit,
+	// Owner IDs are assigned by the Module so each Service instance is unique.
+	ServiceId:= E_GCServiceId.SpinAxisJogCW,
+	Status=> _ServiceStatusView.ByName.SpinAxisJogCW);
+
+_SpinAxisMoveAbsService(
+	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveAbs,
+	Context:= _ServiceContext,
+	Axis_BaseUnit:= SpinAxis_BaseUnit,
+	ServiceId:= E_GCServiceId.SpinAxisMoveAbs,
+	Status=> _ServiceStatusView.ByName.SpinAxisMoveAbs);
+
+_SpinAxisMoveVelCWService(
+	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveVelCW,
+	Context:= _ServiceContext,
+	Axis_BaseUnit:= SpinAxis_BaseUnit,
+	ServiceId:= E_GCServiceId.SpinAxisMoveVelCW,
+	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
+
+_LiftPinAxisMoveVelCWService(
+	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCW,
+	Context:= _ServiceContext,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ServiceId:= E_GCServiceId.LiftPinAxisMoveVelCW,
+	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCW);
+
+_LiftPinAxisMoveVelCCWService(
+	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCCW,
+	Context:= _ServiceContext,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ServiceId:= E_GCServiceId.LiftPinAxisMoveVelCCW,
+	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCCW);
+
+_LiftPinAxisMoveAbsService(
+	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveAbs,
+	Context:= _ServiceContext,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ServiceId:= E_GCServiceId.LiftPinAxisMoveAbs,
+	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
+
+_SingleProcessService(
+	Ctrl := _ServiceCtrlView.ByName.SingleProcess,
+	Context := _ServiceContext,
+	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
+	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
+	ServiceId := E_GCServiceId.SingleProcess,
+	Status => _ServiceStatusView.ByName.SingleProcess,
+	ProcessStatus => _SingleProcessStatus);
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateServiceDataList" Id="{0ea950db-71b5-4fd2-a9e8-c12c78c02390}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceDataList
+VAR_INPUT
+END_VAR
+VAR
+	TimingView : U_GCSingleProcessStageTimingView;
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _SingleProcessStatus.LastCycle.Result <> E_GCSingleProcessResult.Completed THEN
+	RETURN;
+END_IF
+
+TimingView.ByName := _SingleProcessStatus.LastCycle.StageTiming;
+FOR nIndex := 1 TO 8 DO
+	IF NOT TimingView.ByIndex[nIndex].Completed THEN
+		RETURN;
+	END_IF
+END_FOR
+
+// Replace the published snapshot only after a complete successful cycle.
+MEMSET(ADR(ModuleDataList), 0, SIZEOF(ModuleDataList));
+M_WriteStageServiceData(1, 'Prepare', TimingView.ByName.Prepare);
+M_WriteStageServiceData(2, 'LiftReady', TimingView.ByName.LiftReady);
+M_WriteStageServiceData(3, 'SpinAlign', TimingView.ByName.SpinAlign);
+M_WriteStageServiceData(4, 'ConcurrentProcessEntry', TimingView.ByName.ConcurrentProcessEntry);
+M_WriteStageServiceData(5, 'SpinRampUp', TimingView.ByName.SpinRampUp);
+M_WriteStageServiceData(6, 'ProcessHold', TimingView.ByName.ProcessHold);
+M_WriteStageServiceData(7, 'ConcurrentProcessExit', TimingView.ByName.ConcurrentProcessExit);
+M_WriteStageServiceData(8, 'SpinStandby', TimingView.ByName.SpinStandby);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateServiceParam" Id="{1a4b35b3-f132-467f-941f-899cd13c7e6b}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceParam
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SpinAxisMoveAbsService.Param := ServiceParam.SpinAxisMoveAbs;
+_SpinAxisJogCWService.Param := ServiceParam.SpinAxisJogCW;
+_SpinAxisMoveVelCWService.Param := ServiceParam.SpinAxisMoveVelCW;
+_LiftPinAxisMoveVelCWService.Param := ServiceParam.LiftPinAxisMoveVelCW;
+_LiftPinAxisMoveVelCCWService.Param := ServiceParam.LiftPinAxisMoveVelCCW;
+_LiftPinAxisMoveAbsService.Param := ServiceParam.LiftPinAxisMoveAbs;
+_SingleProcessService.Param := ServiceParam.SingleProcess;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateVariableList" Id="{53c2178d-7338-435f-85e1-8361520ccf25}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateVariableList
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Keep three deterministic values moving so the upper controller can verify live updates.
+IF _VariableSimulationTick >= 5999 THEN
+	_VariableSimulationTick := 0;
+ELSE
+	_VariableSimulationTick := _VariableSimulationTick + 1;
+END_IF
+
+_SimChamberTemperature := 25.0 + (DINT_TO_REAL(_VariableSimulationTick MOD 1000) * 0.005);
+_SimChamberPressure := 100.0 + (DINT_TO_REAL(_VariableSimulationTick MOD 2000) * 0.025);
+
+ModuleVariableList[1].Id := 1;
+ModuleVariableList[1].Name := 'ChamberTemperature';
+ModuleVariableList[1].DataType := E_DescriptorType.Float_32bit;
+ModuleVariableList[1].Unit := 'degC';
+ModuleVariableList[1].Value := REAL_TO_STRING(_SimChamberTemperature);
+
+ModuleVariableList[2].Id := 2;
+ModuleVariableList[2].Name := 'ChamberPressure';
+ModuleVariableList[2].DataType := E_DescriptorType.Float_32bit;
+ModuleVariableList[2].Unit := 'Pa';
+ModuleVariableList[2].Value := REAL_TO_STRING(_SimChamberPressure);
+
+ModuleVariableList[3].Id := 3;
+ModuleVariableList[3].Name := 'SimulationTick';
+ModuleVariableList[3].DataType := E_DescriptorType.Integer_32bit;
+ModuleVariableList[3].Unit := 'count';
+ModuleVariableList[3].Value := DINT_TO_STRING(_VariableSimulationTick);
+
+ModuleVariableList[4].Id := 4;
+ModuleVariableList[4].Name := 'SpinAxisSpeed';
+ModuleVariableList[4].DataType := E_DescriptorType.Float_32bit;
+ModuleVariableList[4].Unit := 'unit/s';
+ModuleVariableList[4].Value := REAL_TO_STRING(LREAL_TO_REAL(SpinAxis_BaseUnit.AxisActualVelocity));
+
+ModuleVariableList[5].Id := 5;
+ModuleVariableList[5].Name := 'LiftPinPosition';
+ModuleVariableList[5].DataType := E_DescriptorType.Float_32bit;
+ModuleVariableList[5].Unit := 'unit';
+ModuleVariableList[5].Value := REAL_TO_STRING(LREAL_TO_REAL(LiftPinAxis_BaseUnit.AxisActualPosition));
+
+// Id zero terminates the valid prefix for consumers that do not scan all 100 entries.
+ModuleVariableList[6].Id := 0;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_WriteStageServiceData" Id="{6f0188dd-ab9d-4b96-9248-74a942e61fd2}">
+      <Declaration><![CDATA[METHOD PRIVATE M_WriteStageServiceData
+VAR_INPUT
+	StageIndex : UINT;
+	StageName : STRING(22);
+	StageTiming : ST_GCSingleProcessStageTiming;
+END_VAR
+VAR
+	nStartIndex : UINT;
+	nEndIndex : UINT;
+	nActualIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[nStartIndex := ((StageIndex - 1) * 3) + 1;
+nEndIndex := nStartIndex + 1;
+nActualIndex := nStartIndex + 2;
+
+ModuleDataList[nStartIndex].Id := 700 + nStartIndex;
+ModuleDataList[nStartIndex].Name := CONCAT(StageName, 'StartUtc');
+ModuleDataList[nStartIndex].DataType := E_DescriptorType.DateTime;
+ModuleDataList[nStartIndex].Unit := 'UTC';
+ModuleDataList[nStartIndex].Value := StageTiming.StartUtc;
+
+ModuleDataList[nEndIndex].Id := 700 + nEndIndex;
+ModuleDataList[nEndIndex].Name := CONCAT(StageName, 'EndUtc');
+ModuleDataList[nEndIndex].DataType := E_DescriptorType.DateTime;
+ModuleDataList[nEndIndex].Unit := 'UTC';
+ModuleDataList[nEndIndex].Value := StageTiming.EndUtc;
+
+ModuleDataList[nActualIndex].Id := 700 + nActualIndex;
+ModuleDataList[nActualIndex].Name := CONCAT(StageName, 'ActualMs');
+ModuleDataList[nActualIndex].DataType := E_DescriptorType.Integer_32bit;
+ModuleDataList[nActualIndex].Unit := 'ms';
+ModuleDataList[nActualIndex].Value := DINT_TO_STRING(TIME_TO_DINT(StageTiming.ActualTime));]]></ST>
       </Implementation>
     </Method>
   </POU>
