@@ -29,6 +29,8 @@ The root fields are `schemaVersion`, `generator`, `generatedAtUtc`, `durationSec
 
 ## Offline Viewer
 
-Open `Viewer/index.html` directly in Edge or Chrome, then drag `test-report.json` onto the page or use **開啟報告**. The Viewer has no CDN or server dependency. It validates schema major version 1, renders report strings with DOM text nodes, supports search and status filters, and prints the current filtered view for browser PDF export.
+Open `Viewer/json-report-viewer.html` directly in Edge or Chrome, then drag `test-report.json` onto the page or use **開啟報告**. The Viewer has no CDN or server dependency. It validates schema major version 1, renders report strings with DOM text nodes, supports search and status filters, and prints the current filtered view for browser PDF export.
+
+Open `Viewer/xunit-viewer.html` to visualize the `tcunit_xunit_testresults.xml` file produced by TcUnit's built-in xUnit publisher. This Viewer derives all summary counts from `<testcase>` elements instead of relying on TcUnit's root `tests` attribute.
 
 The files under `Tests/Fixtures` cover pass, mixed status, empty, unsupported-version, malformed, long-name, UTF-8, and hostile-HTML input scenarios.
