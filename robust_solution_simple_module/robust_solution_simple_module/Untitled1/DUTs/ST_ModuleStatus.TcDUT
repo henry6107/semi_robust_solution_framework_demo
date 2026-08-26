@@ -5,11 +5,10 @@
 STRUCT
 	ModuleId : UDINT;
 	Enabled : BOOL;
-	ConfigurationReady : BOOL;
-	ConfigurationError : BOOL;
-	ConfigurationErrorId : UDINT;
+	Configuration : ST_ModuleConfigurationStatus;
 	ResponseId : UDINT;
 	PackMLOut : ST_PML_Base_Out;
+	Alarm : ST_ModuleAlarmStatus;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

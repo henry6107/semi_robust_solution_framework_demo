@@ -69,6 +69,9 @@ Status.ErrorList[nFirstEmpty].Message := Message;
 Status.ErrorList[nFirstEmpty].Path := _Path;
 Status.ErrorList[nFirstEmpty].Severity := E_Severity.Alarm;
 Status.ErrorList[nFirstEmpty].DateTime := Context.UtcDateTime;
+Status.ErrorList[nFirstEmpty].Active := TRUE;
+Status.ErrorList[nFirstEmpty].Acknowledged := FALSE;
+Status.ErrorList[nFirstEmpty].OccurrenceCount := 1;
 M_AddError := TRUE;]]></ST>
       </Implementation>
     </Method>

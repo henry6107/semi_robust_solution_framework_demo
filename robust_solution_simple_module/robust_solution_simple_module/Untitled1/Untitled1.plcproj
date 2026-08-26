@@ -115,6 +115,12 @@
     <Compile Include="DUTs\E_Severity.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\E_AlarmAckCommand.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_AlarmAckError.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\HwModule\ST_EL2809Ex.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -130,10 +136,22 @@
     <Compile Include="DUTs\ST_ExtAlarm.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\ST_AlarmAckRequest.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ConfiguredAlarmState.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\ST_ExtDescriptor.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ModuleCtrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ModuleConfigurationStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ModuleAlarmStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ModuleStatus.TcDUT">
@@ -308,6 +326,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveVelCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\FB_ConfiguredAlarmManager.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\FB_ModuleBase.TcPOU">

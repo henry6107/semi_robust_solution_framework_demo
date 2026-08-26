@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_ModuleConfigurationStatus" Id="{d2929b2a-eba4-4856-92c9-648229124038}">
+    <Declaration><![CDATA[TYPE ST_ModuleConfigurationStatus :
+STRUCT
+	Ready : BOOL;
+	Error : BOOL;
+	ErrorId : UDINT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

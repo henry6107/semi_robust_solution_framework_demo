@@ -12,7 +12,7 @@ STRUCT
 	VariableCount : UINT;
 	VariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ConfigVariableInfo;
 	AlarmCount : UINT;
-	AlarmList : ARRAY[1..Param_Config.MaxModuleAlarm] OF ST_ConfigAlarmInfo;
+	AlarmList : ARRAY[1..Param_Config.MaxConfiguredAlarmsPerModule] OF ST_ConfigAlarmInfo;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

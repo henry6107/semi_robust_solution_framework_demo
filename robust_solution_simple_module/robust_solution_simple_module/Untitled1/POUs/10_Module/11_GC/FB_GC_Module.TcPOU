@@ -319,7 +319,7 @@ nModuleAlarmIndex := 1;
 FOR nServiceIndex := 1 TO GVL_GC_Config.cServiceCount DO
 	FOR nErrorIndex := 1 TO Param_Config.MaxServiceError DO
 		IF _ServiceStatusView.ByIndex[nServiceIndex].ErrorList[nErrorIndex].MainErrorId <> 0 THEN
-			IF nModuleAlarmIndex > Param_Config.MaxModuleAlarm THEN
+			IF nModuleAlarmIndex > Param_Config.MaxPublishedModuleAlarms THEN
 				RETURN;
 			END_IF
 

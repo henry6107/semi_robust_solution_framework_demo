@@ -12,7 +12,7 @@ END_VAR
 VAR_OUTPUT
 	ModuleStatus : ST_ModuleStatus;
 	ModuleVariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ExtDescriptor;
-	ModuleAlarmList : ARRAY[1..Param_Config.MaxModuleAlarm] OF ST_ExtAlarm; 
+	ModuleAlarmList : ARRAY[1..Param_Config.MaxPublishedModuleAlarms] OF ST_ExtAlarm;
 	ModuleDataList : ARRAY[1..Param_Config.MaxModuleData] OF ST_ExtDescriptor;
 END_VAR
 
@@ -27,6 +27,7 @@ VAR
 	_LastHeartbeatIndex : UDINT;
 	_IsControlSourceAlive : BOOL;
 	_ConfiguredSnapshot : FB_AdsSumSnapshotReader;
+	_ConfiguredAlarmManager : FB_ConfiguredAlarmManager;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -89,46 +90,77 @@ END_VAR
     </Method>
     <Method Name="M_AppendConfiguredAlarms" Id="{c8fa70cf-350e-4481-b23f-7b026067b9af}">
       <Declaration><![CDATA[METHOD PRIVATE M_AppendConfiguredAlarms
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF __ISVALIDREF(RuntimeConfig) THEN
+	IF RuntimeConfig.Valid THEN
+		_ConfiguredAlarmManager.M_AppendToList(
+			ModuleId := _ModuleId,
+			RuntimeConfig := RuntimeConfig,
+			AlarmList := ModuleAlarmList);
+	END_IF
+END_IF
+
+ModuleStatus.Alarm.AckResponseId := _ConfiguredAlarmManager.AckResponseId;
+ModuleStatus.Alarm.AckAccepted := _ConfiguredAlarmManager.AckAccepted;
+ModuleStatus.Alarm.AckError := _ConfiguredAlarmManager.AckError;
+ModuleStatus.Alarm.ConfiguredLatchedCount := _ConfiguredAlarmManager.LatchedCount;
+ModuleStatus.Alarm.Overflow := _ConfiguredAlarmManager.Overflow;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateConfiguredAlarmState" Id="{6b9b6538-c160-4a7b-93a1-a430b340815a}">
+      <Declaration><![CDATA[METHOD PRIVATE M_UpdateConfiguredAlarmState
 VAR
 	nAlarm : UINT;
-	nTarget : UINT;
 	nSource : UINT;
+	nRevision : UDINT;
 	fValue : LREAL;
 	bValid : BOOL;
+	bConditionMet : BOOL;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT __ISVALIDREF(RuntimeConfig) OR NOT RuntimeConfig.Valid OR NOT _ConfiguredSnapshot.Ready THEN
+        <ST><![CDATA[nRevision := 0;
+IF __ISVALIDREF(RuntimeConfig) THEN
+	IF RuntimeConfig.Valid THEN
+		nRevision := RuntimeConfig.Revision;
+	END_IF
+END_IF
+_ConfiguredAlarmManager.M_BeginCycle(Revision := nRevision);
+
+IF NOT __ISVALIDREF(RuntimeConfig) THEN
+	RETURN;
+END_IF
+IF NOT RuntimeConfig.Valid THEN
 	RETURN;
 END_IF
 
-nTarget := 1;
-WHILE (nTarget <= Param_Config.MaxModuleAlarm)
-	AND (ModuleAlarmList[nTarget].MainErrorId <> 0) DO
-	nTarget := nTarget + 1;
-END_WHILE
+// Process acknowledgements before evaluating this cycle so AckAll cannot consume
+// a new event that the upper controller has not observed yet.
+_ConfiguredAlarmManager.M_ProcessAcknowledgement(
+	Request := ModuleCtrl.AlarmAckRequest,
+	RuntimeConfig := RuntimeConfig);
+
+IF NOT _ConfiguredSnapshot.Ready THEN
+	RETURN;
+END_IF
 
 FOR nAlarm := 1 TO RuntimeConfig.AlarmCount DO
-	IF nTarget > Param_Config.MaxModuleAlarm THEN
-		RETURN;
-	END_IF
 	nSource := RuntimeConfig.VariableCount + nAlarm;
 	fValue := _ConfiguredSnapshot.M_GetLReal(SourceIndex := nSource, Valid => bValid);
-	IF bValid AND F_AlarmConditionMet(
-		Value := fValue,
-		Operator := RuntimeConfig.AlarmList[nAlarm].Operator,
-		Threshold := RuntimeConfig.AlarmList[nAlarm].Threshold,
-		Tolerance := RuntimeConfig.AlarmList[nAlarm].Tolerance) THEN
-		ModuleAlarmList[nTarget].ModuleId := _ModuleId;
-		ModuleAlarmList[nTarget].ServiceId := 0;
-		ModuleAlarmList[nTarget].MainErrorId := RuntimeConfig.AlarmList[nAlarm].MainErrorId;
-		ModuleAlarmList[nTarget].SourceErrorId := RuntimeConfig.AlarmList[nAlarm].SourceErrorId;
-		ModuleAlarmList[nTarget].Message := RuntimeConfig.AlarmList[nAlarm].Message;
-		ModuleAlarmList[nTarget].Path := RuntimeConfig.AlarmList[nAlarm].Source;
-		ModuleAlarmList[nTarget].Severity := RuntimeConfig.AlarmList[nAlarm].Severity;
-		ModuleAlarmList[nTarget].DateTime := _ServiceContext.UtcDateTime;
-		nTarget := nTarget + 1;
+	bConditionMet := FALSE;
+	IF bValid THEN
+		bConditionMet := F_AlarmConditionMet(
+			Value := fValue,
+			Operator := RuntimeConfig.AlarmList[nAlarm].Operator,
+			Threshold := RuntimeConfig.AlarmList[nAlarm].Threshold,
+			Tolerance := RuntimeConfig.AlarmList[nAlarm].Tolerance);
 	END_IF
+	_ConfiguredAlarmManager.M_UpdateAlarm(
+		AlarmIndex := nAlarm,
+		SampleValid := bValid,
+		ConditionMet := bConditionMet,
+		UtcDateTime := _ServiceContext.UtcDateTime);
 END_FOR]]></ST>
       </Implementation>
     </Method>
@@ -196,9 +228,9 @@ IF __ISVALIDREF(RuntimeConfig) THEN
 	_ConfiguredSnapshot(RuntimeConfig := RuntimeConfig);
 	ModuleStatus.ModuleId := _ModuleId;
 	ModuleStatus.Enabled := RuntimeConfig.Enabled;
-	ModuleStatus.ConfigurationReady := _ConfiguredSnapshot.Ready;
-	ModuleStatus.ConfigurationError := _ConfiguredSnapshot.Error;
-	ModuleStatus.ConfigurationErrorId := _ConfiguredSnapshot.ErrorId;
+	ModuleStatus.Configuration.Ready := _ConfiguredSnapshot.Ready;
+	ModuleStatus.Configuration.Error := _ConfiguredSnapshot.Error;
+	ModuleStatus.Configuration.ErrorId := _ConfiguredSnapshot.ErrorId;
 END_IF
 
 _ServiceContext.ModuleId := _ModuleId;
@@ -218,6 +250,7 @@ IF _CmdRequestOneShot.Q OR _ModeRequestOneShot.Q THEN
 END_IF
 ModuleStatus.PackMLOut := PackMLOut;
 
+M_UpdateConfiguredAlarmState();
 H_UpdateAlarmList();
 M_AppendConfiguredAlarms();
 H_UpdateServiceDataList();

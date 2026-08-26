@@ -520,7 +520,7 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 	ArrayNode := _Json.FindMember(ModuleNode, 'alarmList');
 	IF ArrayNode <> 0 THEN
 		nCount := _Json.GetArraySize(ArrayNode);
-		IF nCount > Param_Config.MaxModuleAlarm THEN
+		IF nCount > Param_Config.MaxConfiguredAlarmsPerModule THEN
 			ErrorMessage := 'Too many alarmList entries.';
 			RETURN;
 		END_IF
@@ -598,6 +598,7 @@ END_IF]]></ST>
 VAR
 	nModule : UINT;
 	nItem : UINT;
+	nOther : UINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -647,6 +648,13 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 			ErrorMessage := 'Invalid alarmList entry.';
 			RETURN;
 		END_IF
+		FOR nOther := nItem + 1 TO _Config.Modules[nModule].AlarmCount DO
+			IF _Config.Modules[nModule].AlarmList[nItem].MainErrorId
+				= _Config.Modules[nModule].AlarmList[nOther].MainErrorId THEN
+				ErrorMessage := 'Duplicate configured alarm mainErrorId in module.';
+				RETURN;
+			END_IF
+		END_FOR
 	END_FOR
 END_FOR
 M_ValidateParsedConfiguration := TRUE;]]></ST>
