@@ -1,0 +1,311 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_AdsSumSnapshotReader" Id="{fa4763d6-6117-42aa-a0b3-a48b51b7f4b7}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_AdsSumSnapshotReader
+VAR_INPUT
+	RuntimeConfig : REFERENCE TO ST_ModuleRuntimeConfig;
+END_VAR
+VAR_OUTPUT
+	Ready : BOOL;
+	Error : BOOL;
+	ErrorId : UDINT;
+END_VAR
+VAR
+	_AdsReadWrite : ADSRDWRT;
+	_State : USINT;
+	_Revision : UDINT;
+	_SourceCount : UINT;
+	_HandleIndex : UINT;
+	_SourceNames : ARRAY[1..Param_Config.MaxConfigSources] OF STRING(255);
+	_SourceTypes : ARRAY[1..Param_Config.MaxConfigSources] OF E_ConfigDataType;
+	_SourceSizes : ARRAY[1..Param_Config.MaxConfigSources] OF UDINT;
+	_Handles : ARRAY[1..Param_Config.MaxConfigSources] OF UDINT;
+	_Requests : ARRAY[1..Param_Config.MaxConfigSources] OF ST_AdsSumReadRequest;
+	_Response : ARRAY[0..Param_Config.MaxAdsSumResponseSize - 1] OF BYTE;
+	_ResultErrors : ARRAY[1..Param_Config.MaxConfigSources] OF UDINT;
+	_Values : ARRAY[1..Param_Config.MaxConfigSources] OF ST_AdsRawValue;
+	_TotalValueBytes : UDINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT __ISVALIDREF(RuntimeConfig) THEN
+	Ready := FALSE;
+	RETURN;
+END_IF
+IF NOT RuntimeConfig.Enabled OR NOT RuntimeConfig.Valid THEN
+	Ready := FALSE;
+	RETURN;
+END_IF
+
+IF _Revision <> RuntimeConfig.Revision THEN
+	M_BuildSourceList();
+END_IF
+
+CASE _State OF
+	0:
+		// No configured Variable/Alarm sources is a valid, immediately ready snapshot.
+		Ready := TRUE;
+
+	10:
+		// Resolve one symbolic handle at a time during startup. Cyclic reads use one Sum Command.
+		_AdsReadWrite(
+			NETID := '',
+			PORT := RuntimeConfig.AdsPort,
+			IDXGRP := 16#F003,
+			IDXOFFS := 0,
+			WRITELEN := INT_TO_UDINT(LEN(_SourceNames[_HandleIndex]) + 1),
+			READLEN := SIZEOF(UDINT),
+			SRCADDR := ADR(_SourceNames[_HandleIndex]),
+			DESTADDR := ADR(_Handles[_HandleIndex]),
+			WRTRD := TRUE,
+			TMOUT := Param_Config.ConfigAdsTimeout);
+		_State := 11;
+
+	11:
+		_AdsReadWrite(
+			NETID := '',
+			PORT := RuntimeConfig.AdsPort,
+			IDXGRP := 16#F003,
+			IDXOFFS := 0,
+			WRITELEN := INT_TO_UDINT(LEN(_SourceNames[_HandleIndex]) + 1),
+			READLEN := SIZEOF(UDINT),
+			SRCADDR := ADR(_SourceNames[_HandleIndex]),
+			DESTADDR := ADR(_Handles[_HandleIndex]),
+			WRTRD := FALSE,
+			TMOUT := Param_Config.ConfigAdsTimeout);
+		IF NOT _AdsReadWrite.BUSY THEN
+			IF _AdsReadWrite.ERR THEN
+				Error := TRUE;
+				ErrorId := _AdsReadWrite.ERRID;
+				_State := 99;
+			ELSE
+				_Requests[_HandleIndex].IndexGroup := 16#F005;
+				_Requests[_HandleIndex].IndexOffset := _Handles[_HandleIndex];
+				_Requests[_HandleIndex].Length := _SourceSizes[_HandleIndex];
+				IF _HandleIndex < _SourceCount THEN
+					_HandleIndex := _HandleIndex + 1;
+					_State := 10;
+				ELSE
+					_State := 20;
+				END_IF
+			END_IF
+		END_IF
+
+	20:
+		_AdsReadWrite(
+			NETID := '',
+			PORT := RuntimeConfig.AdsPort,
+			IDXGRP := 16#F080,
+			IDXOFFS := _SourceCount,
+			WRITELEN := UINT_TO_UDINT(_SourceCount) * SIZEOF(ST_AdsSumReadRequest),
+			READLEN := (UINT_TO_UDINT(_SourceCount) * SIZEOF(UDINT)) + _TotalValueBytes,
+			SRCADDR := ADR(_Requests),
+			DESTADDR := ADR(_Response),
+			WRTRD := TRUE,
+			TMOUT := Param_Config.ConfigAdsTimeout);
+		_State := 21;
+
+	21:
+		_AdsReadWrite(
+			NETID := '',
+			PORT := RuntimeConfig.AdsPort,
+			IDXGRP := 16#F080,
+			IDXOFFS := _SourceCount,
+			WRITELEN := UINT_TO_UDINT(_SourceCount) * SIZEOF(ST_AdsSumReadRequest),
+			READLEN := (UINT_TO_UDINT(_SourceCount) * SIZEOF(UDINT)) + _TotalValueBytes,
+			SRCADDR := ADR(_Requests),
+			DESTADDR := ADR(_Response),
+			WRTRD := FALSE,
+			TMOUT := Param_Config.ConfigAdsTimeout);
+		IF NOT _AdsReadWrite.BUSY THEN
+			IF _AdsReadWrite.ERR THEN
+				Error := TRUE;
+				ErrorId := _AdsReadWrite.ERRID;
+				Ready := FALSE;
+				_State := 99;
+			ELSE
+				M_UnpackResponse();
+				Ready := TRUE;
+				_State := 20;
+			END_IF
+		END_IF
+
+	99:
+		Ready := FALSE;
+END_CASE]]></ST>
+    </Implementation>
+    <Method Name="M_BuildSourceList" Id="{0db93f5d-cfc5-462b-ae18-9b0c9dd98a46}">
+      <Declaration><![CDATA[METHOD PRIVATE M_BuildSourceList
+VAR
+	nIndex : UINT;
+	nSource : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Ready := FALSE;
+Error := FALSE;
+ErrorId := 0;
+MEMSET(ADR(_SourceNames), 0, SIZEOF(_SourceNames));
+MEMSET(ADR(_SourceTypes), 0, SIZEOF(_SourceTypes));
+MEMSET(ADR(_SourceSizes), 0, SIZEOF(_SourceSizes));
+MEMSET(ADR(_Handles), 0, SIZEOF(_Handles));
+MEMSET(ADR(_Requests), 0, SIZEOF(_Requests));
+MEMSET(ADR(_Response), 0, SIZEOF(_Response));
+MEMSET(ADR(_ResultErrors), 0, SIZEOF(_ResultErrors));
+MEMSET(ADR(_Values), 0, SIZEOF(_Values));
+
+_Revision := RuntimeConfig.Revision;
+_SourceCount := RuntimeConfig.VariableCount + RuntimeConfig.AlarmCount;
+_TotalValueBytes := 0;
+IF _SourceCount > Param_Config.MaxConfigSources THEN
+	Error := TRUE;
+	ErrorId := 16#7001;
+	_State := 99;
+	RETURN;
+END_IF
+
+FOR nIndex := 1 TO RuntimeConfig.VariableCount DO
+	nSource := nIndex;
+	_SourceNames[nSource] := RuntimeConfig.VariableList[nIndex].Source;
+	_SourceTypes[nSource] := RuntimeConfig.VariableList[nIndex].DataType;
+	_SourceSizes[nSource] := F_ConfigDataTypeSize(DataType := _SourceTypes[nSource]);
+	_TotalValueBytes := _TotalValueBytes + _SourceSizes[nSource];
+END_FOR
+FOR nIndex := 1 TO RuntimeConfig.AlarmCount DO
+	nSource := RuntimeConfig.VariableCount + nIndex;
+	_SourceNames[nSource] := RuntimeConfig.AlarmList[nIndex].Source;
+	_SourceTypes[nSource] := RuntimeConfig.AlarmList[nIndex].DataType;
+	_SourceSizes[nSource] := F_ConfigDataTypeSize(DataType := _SourceTypes[nSource]);
+	_TotalValueBytes := _TotalValueBytes + _SourceSizes[nSource];
+END_FOR
+
+IF _SourceCount = 0 THEN
+	_State := 0;
+ELSE
+	_HandleIndex := 1;
+	_State := 10;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_GetLReal" Id="{8d2bb4e1-f7fa-4891-83bd-79eb0fcc000c}">
+      <Declaration><![CDATA[METHOD PUBLIC M_GetLReal : LREAL
+VAR_INPUT
+	SourceIndex : UINT;
+END_VAR
+VAR_OUTPUT
+	Valid : BOOL;
+END_VAR
+VAR
+	pBool : POINTER TO BOOL;
+	pDInt : POINTER TO DINT;
+	pUDInt : POINTER TO UDINT;
+	pReal : POINTER TO REAL;
+	pLReal : POINTER TO LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Valid := FALSE;
+M_GetLReal := 0.0;
+IF NOT Ready OR (SourceIndex < 1) OR (SourceIndex > _SourceCount)
+	OR (_ResultErrors[SourceIndex] <> 0) THEN
+	RETURN;
+END_IF
+
+CASE _SourceTypes[SourceIndex] OF
+	E_ConfigDataType.Boolean:
+		pBool := ADR(_Values[SourceIndex].Data);
+		IF pBool^ THEN M_GetLReal := 1.0; END_IF
+	E_ConfigDataType.Integer32:
+		pDInt := ADR(_Values[SourceIndex].Data);
+		M_GetLReal := DINT_TO_LREAL(pDInt^);
+	E_ConfigDataType.UnsignedInteger32:
+		pUDInt := ADR(_Values[SourceIndex].Data);
+		M_GetLReal := UDINT_TO_LREAL(pUDInt^);
+	E_ConfigDataType.Float32:
+		pReal := ADR(_Values[SourceIndex].Data);
+		M_GetLReal := REAL_TO_LREAL(pReal^);
+	E_ConfigDataType.Float64:
+		pLReal := ADR(_Values[SourceIndex].Data);
+		M_GetLReal := pLReal^;
+ELSE
+	RETURN;
+END_CASE
+Valid := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_GetValueString" Id="{b6a64007-b2b2-4f8f-8689-19a48de78355}">
+      <Declaration><![CDATA[METHOD PUBLIC M_GetValueString : STRING(80)
+VAR_INPUT
+	SourceIndex : UINT;
+END_VAR
+VAR_OUTPUT
+	Valid : BOOL;
+END_VAR
+VAR
+	pBool : POINTER TO BOOL;
+	pDInt : POINTER TO DINT;
+	pUDInt : POINTER TO UDINT;
+	pReal : POINTER TO REAL;
+	pLReal : POINTER TO LREAL;
+	sValue : STRING(80);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Valid := FALSE;
+M_GetValueString := '';
+IF NOT Ready OR (SourceIndex < 1) OR (SourceIndex > _SourceCount)
+	OR (_ResultErrors[SourceIndex] <> 0) THEN
+	RETURN;
+END_IF
+
+CASE _SourceTypes[SourceIndex] OF
+	E_ConfigDataType.Boolean:
+		pBool := ADR(_Values[SourceIndex].Data);
+		sValue := BOOL_TO_STRING(pBool^);
+	E_ConfigDataType.Integer32:
+		pDInt := ADR(_Values[SourceIndex].Data);
+		sValue := DINT_TO_STRING(pDInt^);
+	E_ConfigDataType.UnsignedInteger32:
+		pUDInt := ADR(_Values[SourceIndex].Data);
+		sValue := UDINT_TO_STRING(pUDInt^);
+	E_ConfigDataType.Float32:
+		pReal := ADR(_Values[SourceIndex].Data);
+		sValue := REAL_TO_STRING(pReal^);
+	E_ConfigDataType.Float64:
+		pLReal := ADR(_Values[SourceIndex].Data);
+		sValue := LREAL_TO_STRING(pLReal^);
+	E_ConfigDataType.String80:
+		MEMCPY(ADR(sValue), ADR(_Values[SourceIndex].Data), _SourceSizes[SourceIndex]);
+ELSE
+	RETURN;
+END_CASE
+M_GetValueString := sValue;
+Valid := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UnpackResponse" Id="{4a8b0081-f83c-4ef1-8331-03bc90ae4f3b}">
+      <Declaration><![CDATA[METHOD PRIVATE M_UnpackResponse
+VAR
+	nIndex : UINT;
+	nOffset : UDINT;
+	pResponse : POINTER TO BYTE;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[pResponse := ADR(_Response);
+nOffset := 0;
+FOR nIndex := 1 TO _SourceCount DO
+	MEMCPY(ADR(_ResultErrors[nIndex]), pResponse + nOffset, SIZEOF(UDINT));
+	nOffset := nOffset + SIZEOF(UDINT);
+END_FOR
+
+nOffset := UINT_TO_UDINT(_SourceCount) * SIZEOF(UDINT);
+FOR nIndex := 1 TO _SourceCount DO
+	MEMSET(ADR(_Values[nIndex]), 0, SIZEOF(ST_AdsRawValue));
+	MEMCPY(ADR(_Values[nIndex].Data), pResponse + nOffset, _SourceSizes[nIndex]);
+	nOffset := nOffset + _SourceSizes[nIndex];
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

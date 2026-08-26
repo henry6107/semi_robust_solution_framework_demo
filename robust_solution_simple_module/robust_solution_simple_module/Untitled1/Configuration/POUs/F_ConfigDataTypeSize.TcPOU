@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_ConfigDataTypeSize" Id="{77fcb289-6570-44ba-9a67-58620a6f624d}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_ConfigDataTypeSize : UDINT
+VAR_INPUT
+	DataType : E_ConfigDataType;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE DataType OF
+	E_ConfigDataType.Boolean:
+		F_ConfigDataTypeSize := SIZEOF(BOOL);
+	E_ConfigDataType.Integer32:
+		F_ConfigDataTypeSize := SIZEOF(DINT);
+	E_ConfigDataType.UnsignedInteger32:
+		F_ConfigDataTypeSize := SIZEOF(UDINT);
+	E_ConfigDataType.Float32:
+		F_ConfigDataTypeSize := SIZEOF(REAL);
+	E_ConfigDataType.Float64:
+		F_ConfigDataTypeSize := SIZEOF(LREAL);
+	E_ConfigDataType.String80:
+		F_ConfigDataTypeSize := 81;
+ELSE
+	F_ConfigDataTypeSize := 0;
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

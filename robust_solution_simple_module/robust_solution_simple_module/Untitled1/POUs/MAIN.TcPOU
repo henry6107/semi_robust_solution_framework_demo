@@ -3,21 +3,66 @@
   <POU Name="MAIN" Id="{732eef67-564b-4eae-a87a-e2bb58901008}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
-	GC1_Module : FB_GC_Module(ModuleId := E_ModuleId.GC1);
-	GC1_SpinAxis_BaseUnit : FB_Axis_BaseUnit;
-	GC1_LiftPinAxis_BaseUnit : FB_Axis_BaseUnit;
-	_GC1 : ST_GC_CtrlStatus;
-	GC1_HwIn :  U_GC_HW_In;
-	GC_HwOut : U_GC_HW_Out;
+	_GC1 : REFERENCE TO ST_GC_CtrlStatus;
 	_UtcClock : FB_UtcClock;
 	_SystemContext : ST_SystemContext;
+	_LinkVariableManager : FB_LinkVariableManager;
+	_AxisReferenceManager : FB_AxisReferenceManager;
+	_ModuleConfigurationManager : FB_ModuleConfigurationManager;
+	_bNodesRegistered : BOOL;
+	_bRegistrationOk : BOOL;
+	_nModule : UINT;
 	
 	_bTest : BOOL;
 	_bTestHearbeat : BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[// Map the right channel to _GC1 for module control
+      <ST><![CDATA[_GC1 REF= GVL_Module.GC_Control[1];
+
+// Register complete hardware terminals and GC Module IO with type-safe access rules.
+IF NOT _bNodesRegistered THEN
+	_bRegistrationOk := _LinkVariableManager.M_RegisterEL1889(
+		Terminal := GVL_IO.Term4_EL1889);
+	IF _bRegistrationOk THEN
+		_bRegistrationOk := _LinkVariableManager.M_RegisterEL3602(
+			Terminal := GVL_IO.Term2_EL3602);
+	END_IF
+	IF _bRegistrationOk THEN
+		_bRegistrationOk := _LinkVariableManager.M_RegisterEL2809(
+			Terminal := GVL_IO.Term3_EL2809);
+	END_IF
+
+	IF _bRegistrationOk THEN
+		FOR _nModule := 1 TO Param_Config.MaxConfiguredModules DO
+			IF NOT _LinkVariableManager.M_RegisterGCModule(
+				Module := GVL_Module.GC[_nModule]) THEN
+				_bRegistrationOk := FALSE;
+				EXIT;
+			END_IF
+		END_FOR
+	END_IF
+
+	IF _bRegistrationOk THEN
+		_bRegistrationOk := _AxisReferenceManager.M_RegisterAxis(
+			Name := 'GVL_IO.NC_Axis1',
+			Axis := GVL_IO.NC_Axis1);
+	END_IF
+	IF _bRegistrationOk THEN
+		_bRegistrationOk := _AxisReferenceManager.M_RegisterAxis(
+			Name := 'GVL_IO.NC_Axis2',
+			Axis := GVL_IO.NC_Axis2);
+	END_IF
+	_bNodesRegistered := _bRegistrationOk;
+END_IF
+
+_ModuleConfigurationManager(
+	Execute := _bNodesRegistered,
+	FilePath := Param_Config.ModuleConfigFilePath,
+	LinkVariableManager := _LinkVariableManager,
+	AxisReferenceManager := _AxisReferenceManager);
+
+// Map the right channel to _GC1 for module control
 // IF GC1_Module.ModuleStatus.eModeCurrent = E_PackMLMode.Manual THEN
 // 	_GC1 := GVL_GUI.GC1;
 //
@@ -31,21 +76,28 @@ IF _bTestHearbeat THEN
 	_GC1.HeartbeatIndex := _GC1.HeartbeatIndex + 1;
 END_IF
 
-GC1_Module(
-	HwInput:= GC1_HwIn.Signal, 
-	HwOutput:= GC_HwOut.Signal,
-	HeartbeatIndex := _GC1.HeartbeatIndex,
-	ModuleCtrl:= _GC1.ModuleCtrl, 
-	ServiceCtrl:= _GC1.ServiceCtrl,
-	ServiceParam:= _GC1.ServiceParam, 
-	SystemContext:= _SystemContext,
-	SpinAxis_BaseUnit:= GC1_SpinAxis_BaseUnit,
-	LiftPinAxis_BaseUnit:= GC1_LiftPinAxis_BaseUnit,
-	ModuleStatus=> _GC1.ModuleStatus,
-	ServiceStatus=> _GC1.ServiceStatus, 
-	ModuleAlarmList=> _GC1.ModuleAlarmList , 
-	ModuleDataList=> _GC1.ModuleDataList, 
-	ModuleVariableList=> _GC1.ModuleVariableList);
+IF _ModuleConfigurationManager.Ready THEN
+	_LinkVariableManager.M_CyclicInput();
+	FOR _nModule := 1 TO Param_Config.MaxConfiguredModules DO
+		IF GVL_Module.GC_Runtime[_nModule].Enabled AND GVL_Module.GC_Runtime[_nModule].Valid THEN
+			GVL_Module.GC[_nModule](
+				HeartbeatIndex := GVL_Module.GC_Control[_nModule].HeartbeatIndex,
+				ModuleCtrl := GVL_Module.GC_Control[_nModule].ModuleCtrl,
+				ServiceCtrl := GVL_Module.GC_Control[_nModule].ServiceCtrl,
+				ServiceParam := GVL_Module.GC_Control[_nModule].ServiceParam,
+				SystemContext := _SystemContext,
+				RuntimeConfig := GVL_Module.GC_Runtime[_nModule],
+				SpinAxis_BaseUnit := GVL_Module.GC_SpinAxis[_nModule],
+				LiftPinAxis_BaseUnit := GVL_Module.GC_LiftPinAxis[_nModule],
+				ModuleStatus => GVL_Module.GC_Control[_nModule].ModuleStatus,
+				ServiceStatus => GVL_Module.GC_Control[_nModule].ServiceStatus,
+				ModuleAlarmList => GVL_Module.GC_Control[_nModule].ModuleAlarmList,
+				ModuleDataList => GVL_Module.GC_Control[_nModule].ModuleDataList,
+				ModuleVariableList => GVL_Module.GC_Control[_nModule].ModuleVariableList);
+		END_IF
+	END_FOR
+	_LinkVariableManager.M_CyclicOutput();
+END_IF
 	
 IF _bTest THEN
 	_bTest := FALSE;

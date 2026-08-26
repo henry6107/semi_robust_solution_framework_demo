@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_AxisReferenceManager" Id="{9876fc16-fe16-4cc5-b330-d893d8344748}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_AxisReferenceManager
+VAR_OUTPUT
+	Error : BOOL;
+	ErrorMessage : STRING(255);
+END_VAR
+VAR
+	_Names : ARRAY[1..Param_Config.MaxConfigAxisNodes] OF STRING(255);
+	_Axes : ARRAY[1..Param_Config.MaxConfigAxisNodes] OF I_Axis_BaseUnit;
+	_Count : UINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="M_RegisterAxis" Id="{30f6847e-f317-4205-a8d3-568bd3a0a3e6}">
+      <Declaration><![CDATA[METHOD PUBLIC M_RegisterAxis : BOOL
+VAR_INPUT
+	Name : STRING(255);
+	Axis : I_Axis_BaseUnit;
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterAxis := FALSE;
+Error := FALSE;
+ErrorMessage := '';
+IF Axis = 0 THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot register an unbound axis interface.';
+	RETURN;
+END_IF
+
+FOR nIndex := 1 TO _Count DO
+	IF _Names[nIndex] = Name THEN
+		_Axes[nIndex] := Axis;
+		M_RegisterAxis := TRUE;
+		RETURN;
+	END_IF
+END_FOR
+
+nIndex := _Count + 1;
+IF nIndex > Param_Config.MaxConfigAxisNodes THEN
+	Error := TRUE;
+	ErrorMessage := 'Axis registry is full.';
+	RETURN;
+END_IF
+
+_Names[nIndex] := Name;
+_Axes[nIndex] := Axis;
+_Count := nIndex;
+M_RegisterAxis := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Resolve" Id="{846010cd-2d2e-466c-a333-6b11259411bc}">
+      <Declaration><![CDATA[METHOD PUBLIC M_Resolve : I_Axis_BaseUnit
+VAR_INPUT
+	Name : STRING(255);
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_Resolve := 0;
+Error := FALSE;
+ErrorMessage := '';
+FOR nIndex := 1 TO _Count DO
+	IF _Names[nIndex] = Name THEN
+		M_Resolve := _Axes[nIndex];
+		RETURN;
+	END_IF
+END_FOR
+Error := TRUE;
+ErrorMessage := 'Axis reference source was not registered.';]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

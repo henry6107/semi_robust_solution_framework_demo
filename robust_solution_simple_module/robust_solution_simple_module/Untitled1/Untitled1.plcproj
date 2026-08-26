@@ -25,6 +25,72 @@
     <Author>BATW</Author>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Configuration\DUTs\E_AlarmOperator.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\E_ConfigDataType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\E_LinkPhase.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\E_VariableAccess.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_AdsRawValue.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_AdsSumReadRequest.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_AxisReferenceFileConfig.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_ConfigAlarmInfo.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_ConfigVariableInfo.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_LinkVariableNode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_MappingFileConfig.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_ModuleFileConfig.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_ModuleRuntimeConfig.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_SystemFileConfig.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_VariableLink.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\F_AlarmConditionMet.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\F_ConfigDataTypeSize.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\F_ConfigDataTypeToDescriptor.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\FB_AdsSumSnapshotReader.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\FB_AxisReferenceManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\FB_LinkVariableManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\FB_ModuleConfigurationManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\E_DescriptorType.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -32,6 +98,18 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\E_Severity.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HwModule\ST_EL2809Ex.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HwModule\ST_EL1889Ex.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HwModule\ST_EL3602Ex.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\HwModule\ST_ReserveForGetSymbolNameByAddrress.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ExtAlarm.TcDUT">
@@ -69,6 +147,14 @@
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
     </Compile>
+    <Compile Include="GVLs\GVL_IO.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="GVLs\GVL_Module.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
     <Compile Include="GVLs\Param_Config.TcGVL">
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
@@ -98,18 +184,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Signal_Out.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Terminal_In.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Terminal_Out.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\U_GC_HW_In.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\U_GC_HW_Out.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCErrorCode.TcDUT">
@@ -325,7 +399,11 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Configuration" />
+    <Folder Include="Configuration\DUTs" />
+    <Folder Include="Configuration\POUs" />
     <Folder Include="DUTs" />
+    <Folder Include="DUTs\HwModule" />
     <Folder Include="GVLs" />
     <Folder Include="POUs" />
     <Folder Include="POUs\00_BaseUnit" />
@@ -376,6 +454,10 @@
       <DefaultResolution>Tc3_Module, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc3_Module</Namespace>
       <SystemLibrary>true</SystemLibrary>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_JsonXml">
+      <DefaultResolution>Tc3_JsonXml, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_JsonXml</Namespace>
     </PlaceholderReference>
     <PlaceholderReference Include="TcUnit">
       <DefaultResolution>TcUnit, * (www.tcunit.org)</DefaultResolution>

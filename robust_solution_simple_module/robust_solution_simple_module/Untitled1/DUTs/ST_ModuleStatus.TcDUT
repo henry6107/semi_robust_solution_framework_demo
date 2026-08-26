@@ -3,6 +3,11 @@
   <DUT Name="ST_ModuleStatus" Id="{6c7acf88-b8e8-4b23-b4ca-30b3cf9d6905}">
     <Declaration><![CDATA[TYPE ST_ModuleStatus :
 STRUCT
+	ModuleId : UDINT;
+	Enabled : BOOL;
+	ConfigurationReady : BOOL;
+	ConfigurationError : BOOL;
+	ConfigurationErrorId : UDINT;
 	ResponseId : UDINT;
 	PackMLOut : ST_PML_Base_Out;
 END_STRUCT

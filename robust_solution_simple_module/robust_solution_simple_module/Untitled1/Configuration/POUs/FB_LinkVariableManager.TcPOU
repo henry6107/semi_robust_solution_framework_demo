@@ -1,0 +1,597 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_LinkVariableManager" Id="{32f3e872-0a15-456f-a56c-c9d00d5b9111}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_LinkVariableManager
+VAR_OUTPUT
+	Error : BOOL;
+	ErrorMessage : STRING(255);
+END_VAR
+VAR
+	_Nodes : ARRAY[1..Param_Config.MaxConfigVariableNodes] OF ST_LinkVariableNode;
+	_NodeCount : UINT;
+	_Links : ARRAY[1..Param_Config.MaxModuleMappings * Param_Config.MaxConfiguredModules * 2] OF ST_VariableLink;
+	_LinkCount : UINT;
+	_JsonDataType : FB_JsonReadWriteDataType;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="Private" Id="{e208b29b-f674-48c8-ba09-da80fd6c3e46}" />
+    <Method Name="M_AddLink" Id="{11c3d68c-d253-4d56-ad40-679c1999e4e0}">
+      <Declaration><![CDATA[METHOD PUBLIC M_AddLink : BOOL
+VAR_INPUT
+	SourceName : STRING(255);
+	TargetName : STRING(255);
+	SourceDataType : E_ConfigDataType;
+	TargetDataType : E_ConfigDataType;
+	Phase : E_LinkPhase;
+	HasTransform : BOOL;
+	Scale : LREAL;
+	Offset : LREAL;
+END_VAR
+VAR
+	nSource : UINT;
+	nTarget : UINT;
+	nNext : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_AddLink := FALSE;
+Error := FALSE;
+ErrorMessage := '';
+
+nSource := M_FindNode(Name := SourceName);
+nTarget := M_FindNode(Name := TargetName);
+IF (nSource = 0) OR (nTarget = 0) THEN
+	Error := TRUE;
+	ErrorMessage := 'Link source or target was not registered.';
+	RETURN;
+END_IF
+
+IF _Nodes[nSource].Access = E_VariableAccess.WriteOnly THEN
+	Error := TRUE;
+	ErrorMessage := 'Link source is write-only.';
+	RETURN;
+END_IF
+IF _Nodes[nTarget].Access = E_VariableAccess.ReadOnly THEN
+	Error := TRUE;
+	ErrorMessage := 'Link target is read-only.';
+	RETURN;
+END_IF
+
+IF (SourceDataType <> E_ConfigDataType.Unknown) AND (_Nodes[nSource].DataType <> SourceDataType) THEN
+	Error := TRUE;
+	ErrorMessage := 'Link source type does not match the registered node.';
+	RETURN;
+END_IF
+IF (TargetDataType <> E_ConfigDataType.Unknown) AND (_Nodes[nTarget].DataType <> TargetDataType) THEN
+	Error := TRUE;
+	ErrorMessage := 'Link target type does not match the registered node.';
+	RETURN;
+END_IF
+
+IF HasTransform THEN
+	IF NOT M_IsNumeric(DataType := _Nodes[nSource].DataType)
+		OR NOT M_IsNumeric(DataType := _Nodes[nTarget].DataType) THEN
+		Error := TRUE;
+		ErrorMessage := 'scale/offset requires numeric source and target nodes.';
+		RETURN;
+	END_IF
+ELSE
+	IF (_Nodes[nSource].DataType <> _Nodes[nTarget].DataType)
+		OR (_Nodes[nSource].Size <> _Nodes[nTarget].Size) THEN
+		Error := TRUE;
+		ErrorMessage := 'MEMCPY links require identical type and size.';
+		RETURN;
+	END_IF
+END_IF
+
+nNext := _LinkCount + 1;
+IF nNext > (Param_Config.MaxModuleMappings * Param_Config.MaxConfiguredModules * 2) THEN
+	Error := TRUE;
+	ErrorMessage := 'Link table is full.';
+	RETURN;
+END_IF
+
+_Links[nNext].SourceAddress := _Nodes[nSource].Address;
+_Links[nNext].TargetAddress := _Nodes[nTarget].Address;
+_Links[nNext].SourceSize := _Nodes[nSource].Size;
+_Links[nNext].TargetSize := _Nodes[nTarget].Size;
+_Links[nNext].SourceDataType := _Nodes[nSource].DataType;
+_Links[nNext].TargetDataType := _Nodes[nTarget].DataType;
+_Links[nNext].Phase := Phase;
+_Links[nNext].HasTransform := HasTransform;
+_Links[nNext].Scale := Scale;
+_Links[nNext].Offset := Offset;
+_LinkCount := nNext;
+M_AddLink := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_BuildNodeName" Id="{43999312-2fea-44b3-94f7-73927a60dac8}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_BuildNodeName : BOOL
+VAR_INPUT
+	RootName : STRING(255);
+	RelativeName : STRING(255);
+END_VAR
+VAR_OUTPUT
+	FullName : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_BuildNodeName := FALSE;
+FullName := '';
+
+IF RootName = '' THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot register nodes without a root symbol name.';
+	RETURN;
+END_IF
+IF (LEN(RootName) + LEN(RelativeName) + 1) > 255 THEN
+	Error := TRUE;
+	ErrorMessage := 'Registered node symbol name exceeds 255 characters.';
+	RETURN;
+END_IF
+
+FullName := CONCAT(CONCAT(RootName,'.'), RelativeName);
+M_BuildNodeName := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearLinks" Id="{34644482-cab1-42d5-838d-e3453a94ec2b}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ClearLinks
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(_Links), 0, SIZEOF(_Links));
+_LinkCount := 0;
+Error := FALSE;
+ErrorMessage := '';]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_CopyPhase" Id="{0fde2d96-5a81-4142-9eb5-b70bb497ef0d}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_CopyPhase
+VAR_INPUT
+	Phase : E_LinkPhase;
+END_VAR
+VAR
+	nIndex : UINT;
+	fSource : LREAL;
+	bValid : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR nIndex := 1 TO _LinkCount DO
+	IF _Links[nIndex].Phase <> Phase THEN
+		CONTINUE;
+	END_IF
+
+	IF _Links[nIndex].HasTransform THEN
+		fSource := M_ReadNumeric(
+			Address := _Links[nIndex].SourceAddress,
+			DataType := _Links[nIndex].SourceDataType,
+			Valid => bValid);
+		IF bValid THEN
+			M_WriteNumeric(
+				Address := _Links[nIndex].TargetAddress,
+				DataType := _Links[nIndex].TargetDataType,
+				Value := (fSource * _Links[nIndex].Scale) + _Links[nIndex].Offset);
+		END_IF
+	ELSE
+		MEMCPY(
+			destAddr := _Links[nIndex].TargetAddress,
+			srcAddr := _Links[nIndex].SourceAddress,
+			n := _Links[nIndex].SourceSize);
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_CyclicInput" Id="{5a926a54-7d0d-4302-a35b-269e5f4672c8}">
+      <Declaration><![CDATA[METHOD PUBLIC M_CyclicInput
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_CopyPhase(Phase := E_LinkPhase.InputToModule);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_CyclicOutput" Id="{29b36394-ee82-4519-81ce-87ef9efd901f}">
+      <Declaration><![CDATA[METHOD PUBLIC M_CyclicOutput
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_CopyPhase(Phase := E_LinkPhase.ModuleToOutput);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_FindNode" Id="{830b2dfb-01e4-4487-9fc3-df59b35f3009}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_FindNode : UINT
+VAR_INPUT
+	Name : STRING(255);
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_FindNode := 0;
+FOR nIndex := 1 TO _NodeCount DO
+	IF _Nodes[nIndex].Name = Name THEN
+		M_FindNode := nIndex;
+		RETURN;
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsNumeric" Id="{854464c4-afe1-4502-bca5-7ff473daf16a}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_IsNumeric : BOOL
+VAR_INPUT
+	DataType : E_ConfigDataType;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_IsNumeric := (DataType = E_ConfigDataType.Integer32)
+	OR (DataType = E_ConfigDataType.UnsignedInteger32)
+	OR (DataType = E_ConfigDataType.Float32)
+	OR (DataType = E_ConfigDataType.Float64);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ReadNumeric" Id="{4e8b3b87-972f-4f8b-af53-cd974ffb4264}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_ReadNumeric : LREAL
+VAR_INPUT
+	Address : PVOID;
+	DataType : E_ConfigDataType;
+END_VAR
+VAR_OUTPUT
+	Valid : BOOL;
+END_VAR
+VAR
+	pDInt : POINTER TO DINT;
+	pUDInt : POINTER TO UDINT;
+	pReal : POINTER TO REAL;
+	pLReal : POINTER TO LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Valid := TRUE;
+CASE DataType OF
+	E_ConfigDataType.Integer32:
+		pDInt := Address;
+		M_ReadNumeric := DINT_TO_LREAL(pDInt^);
+	E_ConfigDataType.UnsignedInteger32:
+		pUDInt := Address;
+		M_ReadNumeric := UDINT_TO_LREAL(pUDInt^);
+	E_ConfigDataType.Float32:
+		pReal := Address;
+		M_ReadNumeric := REAL_TO_LREAL(pReal^);
+	E_ConfigDataType.Float64:
+		pLReal := Address;
+		M_ReadNumeric := pLReal^;
+ELSE
+	Valid := FALSE;
+	M_ReadNumeric := 0.0;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RegisterEL1889" Id="{890efd5c-833e-4076-899e-a5543ce108dd}">
+      <Declaration><![CDATA[METHOD PUBLIC M_RegisterEL1889 : BOOL
+VAR_IN_OUT CONSTANT
+	Terminal : ST_EL1889Ex;
+END_VAR
+VAR
+	sRootName : STRING(255);
+	sRelativeName : STRING(255);
+	sNodeName : STRING(255);
+	nChannel : UINT;
+	hrErrorCode : HRESULT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterEL1889 := FALSE;
+Error := FALSE;
+ErrorMessage := '';
+
+sRootName := _JsonDataType.GetSymbolNameByAddress(
+	nData := SIZEOF(Terminal.Chl),
+	pData := ADR(Terminal.Chl),
+	hrErrorCode => hrErrorCode);
+IF (hrErrorCode <> 0) OR (sRootName = '') THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot resolve the EL1889 ADS symbol name.';
+	RETURN;
+END_IF
+
+FOR nChannel := 1 TO 16 DO
+	sRelativeName := CONCAT(CONCAT('[', UINT_TO_STRING(nChannel)), ']');
+	sNodeName := CONCAT(sRootName, sRelativeName);
+	IF NOT M_RegisterNode(
+		Name := sNodeName,
+		Variable := Terminal.Chl[nChannel],
+		Access := E_VariableAccess.ReadOnly) THEN
+		RETURN;
+	END_IF
+END_FOR
+
+M_RegisterEL1889 := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RegisterEL2809" Id="{7376f834-583c-4f3c-9f1d-cde75d97c5f8}">
+      <Declaration><![CDATA[METHOD PUBLIC M_RegisterEL2809 : BOOL
+VAR_IN_OUT CONSTANT
+	Terminal : ST_EL2809Ex;
+END_VAR
+VAR
+	sRootName : STRING(255);
+	sRelativeName : STRING(255);
+	sNodeName : STRING(255);
+	nChannel : UINT;
+	hrErrorCode : HRESULT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterEL2809 := FALSE;
+Error := FALSE;
+ErrorMessage := '';
+
+sRootName := _JsonDataType.GetSymbolNameByAddress(
+	nData := SIZEOF(Terminal.Chl),
+	pData := ADR(Terminal.Chl),
+	hrErrorCode => hrErrorCode);
+IF (hrErrorCode <> 0) OR (sRootName = '') THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot resolve the EL2809 ADS symbol name.';
+	RETURN;
+END_IF
+
+FOR nChannel := 1 TO 16 DO
+	sRelativeName := CONCAT(CONCAT('[', UINT_TO_STRING(nChannel)), ']');
+	sNodeName := CONCAT(sRootName, sRelativeName);
+	IF NOT M_RegisterNode(
+		Name := sNodeName,
+		Variable := Terminal.Chl[nChannel],
+		Access := E_VariableAccess.WriteOnly) THEN
+		RETURN;
+	END_IF
+END_FOR
+
+M_RegisterEL2809 := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RegisterEL3602" Id="{db0707dd-5cd4-4b57-8eb1-f568cf32caa8}">
+      <Declaration><![CDATA[METHOD PUBLIC M_RegisterEL3602 : BOOL
+VAR_IN_OUT CONSTANT
+	Terminal : ST_EL3602Ex;
+END_VAR
+VAR
+	sRootName : STRING(255);
+	sRelativeName : STRING(255);
+	sNodeName : STRING(255);
+	nChannel : UINT;
+	hrErrorCode : HRESULT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterEL3602 := FALSE;
+Error := FALSE;
+ErrorMessage := '';
+
+sRootName := _JsonDataType.GetSymbolNameByAddress(
+	nData := SIZEOF(Terminal.Chl),
+	pData := ADR(Terminal.Chl),
+	hrErrorCode => hrErrorCode);
+IF (hrErrorCode <> 0) OR (sRootName = '') THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot resolve the EL3602 ADS symbol name.';
+	RETURN;
+END_IF
+
+FOR nChannel := 1 TO 2 DO
+	sRelativeName := CONCAT(CONCAT('[', UINT_TO_STRING(nChannel)), ']');
+	sNodeName := CONCAT(sRootName, sRelativeName);
+	IF NOT M_RegisterNode(
+		Name := sNodeName,
+		Variable := Terminal.Chl[nChannel],
+		Access := E_VariableAccess.ReadOnly) THEN
+		RETURN;
+	END_IF
+END_FOR
+
+M_RegisterEL3602 := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RegisterGCModule" Id="{76056015-c292-496c-a9e4-be7a3fa2ba92}">
+      <Declaration><![CDATA[METHOD PUBLIC M_RegisterGCModule : BOOL
+VAR_IN_OUT CONSTANT
+	Module : FB_GC_Module;
+END_VAR
+VAR
+	sRootName : STRING(255);
+	sRelativeName : STRING(255);
+	sNodeName : STRING(255);
+	nChannel : UINT;
+	hrErrorCode : HRESULT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterGCModule := FALSE;
+Error := FALSE;
+ErrorMessage := '';
+
+sRootName := _JsonDataType.GetSymbolNameByAddress(
+	nData := SIZEOF(Module),
+	pData := ADR(Module),
+	hrErrorCode => hrErrorCode);
+IF (hrErrorCode <> 0) OR (sRootName = '') THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot resolve the GC Module ADS symbol name.';
+	RETURN;
+END_IF
+
+IF NOT M_BuildNodeName(
+	RootName := sRootName,
+	RelativeName := 'HwInput.bDoorClosed',
+	FullName => sNodeName) THEN RETURN; END_IF
+IF NOT M_RegisterNode(
+	Name := sNodeName,
+	Variable := Module.HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite) THEN RETURN; END_IF
+
+IF NOT M_BuildNodeName(
+	RootName := sRootName,
+	RelativeName := 'HwInput.rTemperature',
+	FullName => sNodeName) THEN RETURN; END_IF
+IF NOT M_RegisterNode(
+	Name := sNodeName,
+	Variable := Module.HwInput.rTemperature,
+	Access := E_VariableAccess.ReadWrite) THEN RETURN; END_IF
+
+FOR nChannel := 1 TO 16 DO
+	sRelativeName := CONCAT(CONCAT('HwInput.bDIs[', UINT_TO_STRING(nChannel)), ']');
+	IF NOT M_BuildNodeName(
+		RootName := sRootName,
+		RelativeName := sRelativeName,
+		FullName => sNodeName) THEN RETURN; END_IF
+	IF NOT M_RegisterNode(
+		Name := sNodeName,
+		Variable := Module.HwInput.bDIs[nChannel],
+		Access := E_VariableAccess.ReadWrite) THEN RETURN; END_IF
+
+	sRelativeName := CONCAT(CONCAT('HwInput.rAIs[', UINT_TO_STRING(nChannel)), ']');
+	IF NOT M_BuildNodeName(
+		RootName := sRootName,
+		RelativeName := sRelativeName,
+		FullName => sNodeName) THEN RETURN; END_IF
+	IF NOT M_RegisterNode(
+		Name := sNodeName,
+		Variable := Module.HwInput.rAIs[nChannel],
+		Access := E_VariableAccess.ReadWrite) THEN RETURN; END_IF
+END_FOR
+
+IF NOT M_BuildNodeName(
+	RootName := sRootName,
+	RelativeName := 'HwOutput.bVaccumOn',
+	FullName => sNodeName) THEN RETURN; END_IF
+IF NOT M_RegisterNode(
+	Name := sNodeName,
+	Variable := Module.HwOutput.bVaccumOn,
+	Access := E_VariableAccess.ReadOnly) THEN RETURN; END_IF
+
+FOR nChannel := 1 TO 16 DO
+	sRelativeName := CONCAT(CONCAT('HwOutput.bDOs[', UINT_TO_STRING(nChannel)), ']');
+	IF NOT M_BuildNodeName(
+		RootName := sRootName,
+		RelativeName := sRelativeName,
+		FullName => sNodeName) THEN RETURN; END_IF
+	IF NOT M_RegisterNode(
+		Name := sNodeName,
+		Variable := Module.HwOutput.bDOs[nChannel],
+		Access := E_VariableAccess.ReadOnly) THEN RETURN; END_IF
+
+	sRelativeName := CONCAT(CONCAT('HwOutput.rAOs[', UINT_TO_STRING(nChannel)), ']');
+	IF NOT M_BuildNodeName(
+		RootName := sRootName,
+		RelativeName := sRelativeName,
+		FullName => sNodeName) THEN RETURN; END_IF
+	IF NOT M_RegisterNode(
+		Name := sNodeName,
+		Variable := Module.HwOutput.rAOs[nChannel],
+		Access := E_VariableAccess.ReadOnly) THEN RETURN; END_IF
+END_FOR
+
+M_RegisterGCModule := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RegisterNode" Id="{563ad443-6d1d-4e7a-a2a4-7d74ea3654e8}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_RegisterNode : BOOL
+VAR_INPUT
+	Name : STRING(255);
+	Variable : ANY;
+	Access : E_VariableAccess;
+END_VAR
+VAR
+	nIndex : UINT;
+	eDataType : E_ConfigDataType;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterNode := FALSE;
+Error := FALSE;
+ErrorMessage := '';
+
+CASE Variable.TypeClass OF
+	__SYSTEM.TYPE_CLASS.TYPE_BOOL:
+		eDataType := E_ConfigDataType.Boolean;
+	__SYSTEM.TYPE_CLASS.TYPE_DINT:
+		eDataType := E_ConfigDataType.Integer32;
+	__SYSTEM.TYPE_CLASS.TYPE_UDINT:
+		eDataType := E_ConfigDataType.UnsignedInteger32;
+	__SYSTEM.TYPE_CLASS.TYPE_REAL:
+		eDataType := E_ConfigDataType.Float32;
+	__SYSTEM.TYPE_CLASS.TYPE_LREAL:
+		eDataType := E_ConfigDataType.Float64;
+	__SYSTEM.TYPE_CLASS.TYPE_STRING:
+		eDataType := E_ConfigDataType.String80;
+ELSE
+	Error := TRUE;
+	ErrorMessage := 'Only BOOL, DINT, UDINT, REAL, LREAL and STRING nodes are supported.';
+	RETURN;
+END_CASE
+
+IF (eDataType <> E_ConfigDataType.String80)
+	AND (DINT_TO_UDINT(Variable.diSize) <> F_ConfigDataTypeSize(DataType := eDataType)) THEN
+	Error := TRUE;
+	ErrorMessage := 'Registered node size does not match its primitive type.';
+	RETURN;
+END_IF
+IF (eDataType = E_ConfigDataType.String80) AND (Variable.diSize > Param_Config.MaxConfigValueSize) THEN
+	Error := TRUE;
+	ErrorMessage := 'Registered STRING exceeds STRING(80).';
+	RETURN;
+END_IF
+
+nIndex := M_FindNode(Name := Name);
+IF nIndex = 0 THEN
+	nIndex := _NodeCount + 1;
+	IF nIndex > Param_Config.MaxConfigVariableNodes THEN
+		Error := TRUE;
+		ErrorMessage := 'Variable node registry is full.';
+		RETURN;
+	END_IF
+	_NodeCount := nIndex;
+END_IF
+
+_Nodes[nIndex].Name := Name;
+_Nodes[nIndex].Address := Variable.pValue;
+_Nodes[nIndex].Size := DINT_TO_UDINT(Variable.diSize);
+_Nodes[nIndex].DataType := eDataType;
+_Nodes[nIndex].Access := Access;
+M_RegisterNode := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_WriteNumeric" Id="{638cfbb7-f3ea-46fb-abab-042288179c45}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_WriteNumeric
+VAR_INPUT
+	Address : PVOID;
+	DataType : E_ConfigDataType;
+	Value : LREAL;
+END_VAR
+VAR
+	pDInt : POINTER TO DINT;
+	pUDInt : POINTER TO UDINT;
+	pReal : POINTER TO REAL;
+	pLReal : POINTER TO LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE DataType OF
+	E_ConfigDataType.Integer32:
+		pDInt := Address;
+		pDInt^ := LREAL_TO_DINT(Value);
+	E_ConfigDataType.UnsignedInteger32:
+		pUDInt := Address;
+		pUDInt^ := LREAL_TO_UDINT(Value);
+	E_ConfigDataType.Float32:
+		pReal := Address;
+		pReal^ := LREAL_TO_REAL(Value);
+	E_ConfigDataType.Float64:
+		pLReal := Address;
+		pLReal^ := Value;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

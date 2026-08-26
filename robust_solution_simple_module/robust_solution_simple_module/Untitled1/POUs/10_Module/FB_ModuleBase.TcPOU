@@ -6,6 +6,7 @@ VAR_INPUT
 	ModuleCtrl : REFERENCE TO ST_ModuleCtrl;
 	SystemContext : REFERENCE TO ST_SystemContext;
 	HeartbeatIndex : UDINT;
+	RuntimeConfig : REFERENCE TO ST_ModuleRuntimeConfig;
 END_VAR
 
 VAR_OUTPUT
@@ -25,28 +26,13 @@ VAR
 	_HeartbeatTimer : TON;
 	_LastHeartbeatIndex : UDINT;
 	_IsControlSourceAlive : BOOL;
+	_ConfiguredSnapshot : FB_AdsSumSnapshotReader;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
     <Folder Name="HookMethod" Id="{0b542957-3892-4df2-b0e7-9c93700d86b5}" />
-    <Method Name="FB_Init" Id="{54bcf0cd-3243-4b00-b0fe-48dc66400739}">
-      <Declaration><![CDATA[//FB_Init is always available implicitly and it is used primarily for initialization.
-//The return value is not evaluated. For a specific influence, you can also declare the
-//methods explicitly and provide additional code there with the standard initialization
-//code. You can evaluate the return value.
-METHOD FB_Init: BOOL
-VAR_INPUT
-    bInitRetains: BOOL; // TRUE: the retain variables are initialized (reset warm / reset cold)
-    bInCopyCode: BOOL;  // TRUE: the instance will be copied to the copy code afterward (online change)
-
-	ModuleId : UDINT;
-END_VAR]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[_ModuleId := ModuleId;]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="H_SelectServiceControlSource" Id="{64c4ffc3-20ab-48f6-9187-96b7127a8944}" FolderPath="HookMethod\">
       <Declaration><![CDATA[METHOD PROTECTED H_SelectServiceControlSource
 VAR_INPUT
@@ -110,6 +96,51 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_AppendConfiguredAlarms" Id="{c8fa70cf-350e-4481-b23f-7b026067b9af}">
+      <Declaration><![CDATA[METHOD PRIVATE M_AppendConfiguredAlarms
+VAR
+	nAlarm : UINT;
+	nTarget : UINT;
+	nSource : UINT;
+	fValue : LREAL;
+	bValid : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT __ISVALIDREF(RuntimeConfig) OR NOT RuntimeConfig.Valid OR NOT _ConfiguredSnapshot.Ready THEN
+	RETURN;
+END_IF
+
+nTarget := 1;
+WHILE (nTarget <= Param_Config.MaxModuleAlarm)
+	AND (ModuleAlarmList[nTarget].MainErrorId <> 0) DO
+	nTarget := nTarget + 1;
+END_WHILE
+
+FOR nAlarm := 1 TO RuntimeConfig.AlarmCount DO
+	IF nTarget > Param_Config.MaxModuleAlarm THEN
+		RETURN;
+	END_IF
+	nSource := RuntimeConfig.VariableCount + nAlarm;
+	fValue := _ConfiguredSnapshot.M_GetLReal(SourceIndex := nSource, Valid => bValid);
+	IF bValid AND F_AlarmConditionMet(
+		Value := fValue,
+		Operator := RuntimeConfig.AlarmList[nAlarm].Operator,
+		Threshold := RuntimeConfig.AlarmList[nAlarm].Threshold,
+		Tolerance := RuntimeConfig.AlarmList[nAlarm].Tolerance) THEN
+		ModuleAlarmList[nTarget].ModuleId := _ModuleId;
+		ModuleAlarmList[nTarget].ServiceId := 0;
+		ModuleAlarmList[nTarget].MainErrorId := RuntimeConfig.AlarmList[nAlarm].MainErrorId;
+		ModuleAlarmList[nTarget].SourceErrorId := RuntimeConfig.AlarmList[nAlarm].SourceErrorId;
+		ModuleAlarmList[nTarget].Message := RuntimeConfig.AlarmList[nAlarm].Message;
+		ModuleAlarmList[nTarget].Path := RuntimeConfig.AlarmList[nAlarm].Source;
+		ModuleAlarmList[nTarget].Severity := RuntimeConfig.AlarmList[nAlarm].Severity;
+		ModuleAlarmList[nTarget].DateTime := _ServiceContext.UtcDateTime;
+		nTarget := nTarget + 1;
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_CheckHeartbeat" Id="{95356be4-c779-4a0a-84d9-ca5fd7d93bc1}">
       <Declaration><![CDATA[METHOD PRIVATE M_CheckHeartbeat
 VAR_INPUT
@@ -134,6 +165,30 @@ _LastHeartbeatIndex := HeartbeatIndex;
 _IsControlSourceAlive := NOT _HeartbeatTimer.Q;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_UpdateConfiguredVariableList" Id="{6e5b225f-a33a-409e-827d-1330e9e22088}">
+      <Declaration><![CDATA[METHOD PRIVATE M_UpdateConfiguredVariableList
+VAR
+	nVariable : UINT;
+	bValid : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT __ISVALIDREF(RuntimeConfig) OR NOT RuntimeConfig.Valid THEN
+	RETURN;
+END_IF
+
+MEMSET(ADR(ModuleVariableList), 0, SIZEOF(ModuleVariableList));
+FOR nVariable := 1 TO RuntimeConfig.VariableCount DO
+	ModuleVariableList[nVariable].Id := RuntimeConfig.VariableList[nVariable].Id;
+	ModuleVariableList[nVariable].Name := RuntimeConfig.VariableList[nVariable].Name;
+	ModuleVariableList[nVariable].DataType := F_ConfigDataTypeToDescriptor(DataType := RuntimeConfig.VariableList[nVariable].DataType);
+	ModuleVariableList[nVariable].Unit := RuntimeConfig.VariableList[nVariable].Unit;
+	ModuleVariableList[nVariable].Value := _ConfiguredSnapshot.M_GetValueString(
+		SourceIndex := nVariable,
+		Valid => bValid);
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_UpdateModule" Id="{a3ee927e-c27b-49bf-8f5e-1ddb1a222fc5}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateModule
 VAR_INPUT
@@ -144,6 +199,16 @@ END_VAR
 
 PackMLIn := ModuleCtrl.PackMLIn;
 SUPER^();
+
+IF __ISVALIDREF(RuntimeConfig) THEN
+	_ModuleId := RuntimeConfig.ModuleId;
+	_ConfiguredSnapshot(RuntimeConfig := RuntimeConfig);
+	ModuleStatus.ModuleId := _ModuleId;
+	ModuleStatus.Enabled := RuntimeConfig.Enabled;
+	ModuleStatus.ConfigurationReady := _ConfiguredSnapshot.Ready;
+	ModuleStatus.ConfigurationError := _ConfiguredSnapshot.Error;
+	ModuleStatus.ConfigurationErrorId := _ConfiguredSnapshot.ErrorId;
+END_IF
 
 _ServiceContext.ModuleId := _ModuleId;
 _ServiceContext.UtcDateTime := SystemContext.UtcDateTime;
@@ -163,8 +228,10 @@ END_IF
 ModuleStatus.PackMLOut := PackMLOut;
 
 H_UpdateAlarmList();
+M_AppendConfiguredAlarms();
 H_UpdateServiceDataList();
-H_UpdateVariableList();]]></ST>
+H_UpdateVariableList();
+M_UpdateConfiguredVariableList();]]></ST>
       </Implementation>
     </Method>
   </POU>
