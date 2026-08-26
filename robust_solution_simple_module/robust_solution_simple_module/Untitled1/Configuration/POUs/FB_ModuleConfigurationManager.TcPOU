@@ -583,7 +583,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF Value = 'Warning' THEN M_ParseSeverity := E_Severity.Warning;
+        <ST><![CDATA[IF Value = TO_STRING(E_Severity.Warning) THEN M_ParseSeverity := E_Severity.Warning;
 ELSE M_ParseSeverity := E_Severity.Alarm;
 END_IF]]></ST>
       </Implementation>
