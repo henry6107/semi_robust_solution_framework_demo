@@ -32,7 +32,7 @@ IF _ModuleConfigurationManager.Ready THEN
 	_LinkVariableManager.M_CyclicInput();
 	
 	// Call module instance
-	FOR _nModule := 1 TO Param_Config.MaxConfiguredModules DO
+	FOR _nModule := 1 TO Param_Config.MaxModulePerType DO
 		IF GVL_Module.GC_Runtime[_nModule].Enabled AND GVL_Module.GC_Runtime[_nModule].Valid THEN
 			GVL_Module.GC[_nModule](
 				HeartbeatIndex := GVL_Module.GC_Control[_nModule].HeartbeatIndex,

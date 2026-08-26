@@ -6,7 +6,7 @@ STRUCT
 	SchemaVersion : UDINT;
 	AdsPort : UINT;
 	ModuleCount : UINT;
-	Modules : ARRAY[1..Param_Config.MaxConfiguredModules] OF ST_ModuleFileConfig;
+	Modules : ARRAY[1..Param_Config.MaxTotalConfiguredModules] OF ST_ModuleFileConfig;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

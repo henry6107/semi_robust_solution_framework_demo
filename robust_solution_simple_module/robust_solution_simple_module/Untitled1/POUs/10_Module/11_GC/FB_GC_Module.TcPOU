@@ -448,15 +448,6 @@ _LiftPinAxisMoveAbsService.Param := ServiceParam.LiftPinAxisMoveAbs;
 _SingleProcessService.Param := ServiceParam.SingleProcess;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_UpdateVariableList" Id="{53c2178d-7338-435f-85e1-8361520ccf25}" FolderPath="ModuleUpdate\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateVariableList
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Configured variables are published by FB_ModuleBase from RuntimeConfig.]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_WriteStageServiceData" Id="{6f0188dd-ab9d-4b96-9248-74a942e61fd2}">
       <Declaration><![CDATA[METHOD PRIVATE M_WriteStageServiceData
 VAR_INPUT

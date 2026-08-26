@@ -28,11 +28,8 @@ VAR_OUTPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Method Name="M_ClearSlot" Id="{f7f2334b-9437-4993-b725-e2bbdc75ae40}">
-      <Declaration><![CDATA[METHOD M_ClearSlot : BOOL
-VAR_INPUT
-	Slot : UINT;
-END_VAR
+    <Method Name="M_ClearAllSlots" Id="{f7f2334b-9437-4993-b725-e2bbdc75ae40}">
+      <Declaration><![CDATA[METHOD M_ClearAllSlots : BOOL
 VAR_OUTPUT
 	ErrorMessage : STRING(255);
 END_VAR

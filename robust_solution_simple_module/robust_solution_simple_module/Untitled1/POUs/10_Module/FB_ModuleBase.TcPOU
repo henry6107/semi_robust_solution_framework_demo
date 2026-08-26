@@ -87,15 +87,6 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_UpdateVariableList" Id="{2dfb38df-bde7-4ba2-95ef-7b6de0147db6}" FolderPath="HookMethod\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateVariableList
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_AppendConfiguredAlarms" Id="{c8fa70cf-350e-4481-b23f-7b026067b9af}">
       <Declaration><![CDATA[METHOD PRIVATE M_AppendConfiguredAlarms
 VAR
@@ -230,7 +221,6 @@ ModuleStatus.PackMLOut := PackMLOut;
 H_UpdateAlarmList();
 M_AppendConfiguredAlarms();
 H_UpdateServiceDataList();
-H_UpdateVariableList();
 M_UpdateConfiguredVariableList();]]></ST>
       </Implementation>
     </Method>

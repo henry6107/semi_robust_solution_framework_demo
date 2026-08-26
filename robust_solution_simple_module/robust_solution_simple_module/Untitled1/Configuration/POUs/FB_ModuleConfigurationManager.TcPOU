@@ -114,8 +114,10 @@ END_VAR
 // Resolve every configured type and reject ambiguous addressing before mutating runtime state.
 FOR nModule := 1 TO _Config.ModuleCount DO
 	IF (_Config.Modules[nModule].Slot < 1)
-		OR (_Config.Modules[nModule].Slot > Param_Config.MaxConfiguredModules) THEN
-		ErrorMessage := 'A module slot is outside the supported range 1..6.';
+		OR (_Config.Modules[nModule].Slot > Param_Config.MaxModulePerType) THEN
+		ErrorMessage := CONCAT(
+			CONCAT('A module slot is outside the supported range 1..', TO_STRING(Param_Config.MaxModulePerType)),
+			'.');
 		RETURN;
 	END_IF
 	Adapter := ModuleTypeRegistry.M_Resolve(ModuleTypeName := _Config.Modules[nModule].ModuleType);
@@ -134,8 +136,9 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 		END_IF
 	END_IF
 	FOR nOther := nModule + 1 TO _Config.ModuleCount DO
-		IF _Config.Modules[nModule].Slot = _Config.Modules[nOther].Slot THEN
-			ErrorMessage := 'Duplicate module slot in configuration.';
+		IF (_Config.Modules[nModule].ModuleType = _Config.Modules[nOther].ModuleType)
+			AND (_Config.Modules[nModule].Slot = _Config.Modules[nOther].Slot) THEN
+			ErrorMessage := 'Duplicate module slot for the same module type.';
 			RETURN;
 		END_IF
 		IF _Config.Modules[nModule].Enabled AND _Config.Modules[nOther].Enabled
@@ -360,8 +363,10 @@ IF (ModulesNode = 0) OR NOT _Json.IsArray(ModulesNode) THEN
 	RETURN;
 END_IF
 nCount := _Json.GetArraySize(ModulesNode);
-IF nCount > Param_Config.MaxConfiguredModules THEN
-	ErrorMessage := 'Configuration contains more than six modules.';
+IF nCount > Param_Config.MaxTotalConfiguredModules THEN
+	ErrorMessage := CONCAT(
+		CONCAT('Configuration contains more than ', TO_STRING(Param_Config.MaxTotalConfiguredModules)),
+		' modules.');
 	RETURN;
 END_IF
 _Config.ModuleCount := UDINT_TO_UINT(nCount);

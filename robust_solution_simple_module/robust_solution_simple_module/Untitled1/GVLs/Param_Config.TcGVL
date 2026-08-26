@@ -3,23 +3,35 @@
   <GVL Name="Param_Config" Id="{aee02a59-14c8-4392-aff7-2b6206c787f0}" ParameterList="True">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 VAR_GLOBAL CONSTANT
-	MaxModuleVariable : UINT := 100;
-	MaxModuleAlarm : UINT := 100;
-	MaxServiceError : UINT := 10;
-	MaxModuleData : UINT := 50;
+	MaxModuleVariable : UINT := 100;	// Num of SVID
+	MaxModuleAlarm : UINT := 100;		// Num of ALID
+	MaxServiceError : UINT := 10;		// Num of Service Error per round
+	MaxModuleData : UINT := 50;			// Num of DVID
 	ModuleHeartbeat_Timout : TIME := T#10S;
 
 	// Runtime configuration limits. They also bound PLC memory and ADS Sum Command work.
-	MaxConfiguredModules : UINT := 6;
 	MaxModuleTypes : UINT := 8;
-	MaxModuleMappings : UINT := 64;
-	MaxModuleReferenceBindings : UINT := 4;
+
+	// Module type capacities bound type-specific runtime arrays.
+	MaxModulePerType : UINT := 6;
+
+	// Total config capacity is the compile-time sum of every supported Module type capacity.
+	MaxTotalConfiguredModules : UINT := MaxModulePerType * MaxModuleTypes;
+
+	// Variable mapping
+	MaxModuleMappings : UINT := 256;
 	MaxConfigVariableNodes : UINT := 512;
-	MaxConfigReferenceNodes : UINT := 16;
+
+	// Reference binding
+	MaxModuleReferenceBindings : UINT := 50;
+	MaxConfigReferenceNodes : UINT := 100;
+
+	// Ads sum command used
 	MaxConfigSources : UINT := MaxModuleVariable + MaxModuleAlarm;
 	MaxConfigValueSize : UINT := 81; // STRING(80), including the terminating zero.
 	MaxAdsSumResponseSize : UINT := (MaxConfigSources * 4) + (MaxConfigSources * MaxConfigValueSize);
 
+	// System config
 	ConfigSchemaVersion : UDINT := 2;
 	DefaultPlcAdsPort : UINT := 851;
 	ConfigAdsTimeout : TIME := T#2S;

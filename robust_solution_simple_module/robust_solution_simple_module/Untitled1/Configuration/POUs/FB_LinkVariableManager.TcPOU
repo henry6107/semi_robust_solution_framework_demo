@@ -9,7 +9,7 @@ END_VAR
 VAR
 	_Nodes : ARRAY[1..Param_Config.MaxConfigVariableNodes] OF ST_LinkVariableNode;
 	_NodeCount : UINT;
-	_Links : ARRAY[1..Param_Config.MaxModuleMappings * Param_Config.MaxConfiguredModules * 2] OF ST_VariableLink;
+	_Links : ARRAY[1..Param_Config.MaxModuleMappings * Param_Config.MaxTotalConfiguredModules * 2] OF ST_VariableLink;
 	_LinkCount : UINT;
 	_JsonDataType : FB_JsonReadWriteDataType;
 END_VAR
@@ -88,7 +88,7 @@ ELSE
 END_IF
 
 nNext := _LinkCount + 1;
-IF nNext > (Param_Config.MaxModuleMappings * Param_Config.MaxConfiguredModules * 2) THEN
+IF nNext > (Param_Config.MaxModuleMappings * Param_Config.MaxTotalConfiguredModules * 2) THEN
 	Error := TRUE;
 	ErrorMessage := 'Link table is full.';
 	RETURN;

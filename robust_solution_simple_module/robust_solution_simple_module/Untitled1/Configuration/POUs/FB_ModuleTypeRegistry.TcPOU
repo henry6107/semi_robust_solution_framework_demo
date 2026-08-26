@@ -17,7 +17,6 @@ END_VAR
       <Declaration><![CDATA[METHOD PUBLIC M_ClearAll : BOOL
 VAR
 	nAdapter : UINT;
-	nSlot : UINT;
 	sAdapterError : STRING(255);
 END_VAR
 ]]></Declaration>
@@ -25,17 +24,12 @@ END_VAR
 Error := FALSE;
 ErrorMessage := '';
 FOR nAdapter := 1 TO _Count DO
-	FOR nSlot := 1 TO Param_Config.MaxConfiguredModules DO
-		IF _Adapters[nAdapter].M_IsSlotSupported(Slot := nSlot) THEN
-			IF NOT _Adapters[nAdapter].M_ClearSlot(
-				Slot := nSlot,
-				ErrorMessage => sAdapterError) THEN
-				Error := TRUE;
-				ErrorMessage := sAdapterError;
-				RETURN;
-			END_IF
-		END_IF
-	END_FOR
+	IF NOT _Adapters[nAdapter].M_ClearAllSlots(
+		ErrorMessage => sAdapterError) THEN
+		Error := TRUE;
+		ErrorMessage := sAdapterError;
+		RETURN;
+	END_IF
 END_FOR
 M_ClearAll := TRUE;]]></ST></Implementation>
     </Method>
