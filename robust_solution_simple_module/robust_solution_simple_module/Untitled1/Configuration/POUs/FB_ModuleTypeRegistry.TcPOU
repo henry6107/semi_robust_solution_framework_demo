@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ModuleTypeRegistry" Id="{7077ad5f-0993-45c1-96b7-f6d00b53bc35}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleTypeRegistry
+VAR_OUTPUT
+	Error : BOOL;
+	ErrorMessage : STRING(255);
+END_VAR
+VAR
+	_ModuleTypes : ARRAY[1..Param_Config.MaxModuleTypes] OF E_ModuleType;
+	_Adapters : ARRAY[1..Param_Config.MaxModuleTypes] OF I_ModuleConfigurationAdapter;
+	_Count : UINT;
+END_VAR
+]]></Declaration>
+    <Implementation><ST><![CDATA[]]></ST></Implementation>
+    <Method Name="M_ClearAll" Id="{0ca10ce5-29c9-4c5f-b64c-b24780a0d046}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ClearAll : BOOL
+VAR
+	nAdapter : UINT;
+	nSlot : UINT;
+	sAdapterError : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_ClearAll := FALSE;
+Error := FALSE;
+ErrorMessage := '';
+FOR nAdapter := 1 TO _Count DO
+	FOR nSlot := 1 TO Param_Config.MaxConfiguredModules DO
+		IF _Adapters[nAdapter].M_IsSlotSupported(Slot := nSlot) THEN
+			IF NOT _Adapters[nAdapter].M_ClearSlot(
+				Slot := nSlot,
+				ErrorMessage => sAdapterError) THEN
+				Error := TRUE;
+				ErrorMessage := sAdapterError;
+				RETURN;
+			END_IF
+		END_IF
+	END_FOR
+END_FOR
+M_ClearAll := TRUE;]]></ST></Implementation>
+    </Method>
+    <Method Name="M_Register" Id="{f932ec70-80ec-4f33-8af2-c3d49daf48de}">
+      <Declaration><![CDATA[METHOD PUBLIC M_Register : BOOL
+VAR_INPUT
+	ModuleType : E_ModuleType;
+	Adapter : I_ModuleConfigurationAdapter;
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_Register := FALSE;
+Error := FALSE;
+ErrorMessage := '';
+IF (ModuleType = E_ModuleType.Unknown) OR (Adapter = 0) THEN
+	Error := TRUE;
+	ErrorMessage := 'A known module type and adapter are required.';
+	RETURN;
+END_IF
+
+FOR nIndex := 1 TO _Count DO
+	IF _ModuleTypes[nIndex] = ModuleType THEN
+		_Adapters[nIndex] := Adapter;
+		M_Register := TRUE;
+		RETURN;
+	END_IF
+END_FOR
+
+nIndex := _Count + 1;
+IF nIndex > Param_Config.MaxModuleTypes THEN
+	Error := TRUE;
+	ErrorMessage := 'Module type registry is full.';
+	RETURN;
+END_IF
+_ModuleTypes[nIndex] := ModuleType;
+_Adapters[nIndex] := Adapter;
+_Count := nIndex;
+M_Register := TRUE;]]></ST></Implementation>
+    </Method>
+    <Method Name="M_Resolve" Id="{0e17ac2c-8fd4-42c5-a10c-27f39c8d9408}">
+      <Declaration><![CDATA[METHOD PUBLIC M_Resolve : I_ModuleConfigurationAdapter
+VAR_INPUT
+	ModuleTypeName : STRING(16);
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_Resolve := 0;
+Error := FALSE;
+ErrorMessage := '';
+FOR nIndex := 1 TO _Count DO
+	IF ModuleTypeName = TO_STRING(_ModuleTypes[nIndex]) THEN
+		M_Resolve := _Adapters[nIndex];
+		RETURN;
+	END_IF
+END_FOR
+Error := TRUE;
+ErrorMessage := 'Module type was not registered.';]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -11,15 +11,16 @@ VAR_GLOBAL CONSTANT
 
 	// Runtime configuration limits. They also bound PLC memory and ADS Sum Command work.
 	MaxConfiguredModules : UINT := 6;
+	MaxModuleTypes : UINT := 8;
 	MaxModuleMappings : UINT := 64;
-	MaxModuleAxisReferences : UINT := 4;
+	MaxModuleReferenceBindings : UINT := 4;
 	MaxConfigVariableNodes : UINT := 512;
-	MaxConfigAxisNodes : UINT := 16;
+	MaxConfigReferenceNodes : UINT := 16;
 	MaxConfigSources : UINT := MaxModuleVariable + MaxModuleAlarm;
 	MaxConfigValueSize : UINT := 81; // STRING(80), including the terminating zero.
 	MaxAdsSumResponseSize : UINT := (MaxConfigSources * 4) + (MaxConfigSources * MaxConfigValueSize);
 
-	ConfigSchemaVersion : UDINT := 1;
+	ConfigSchemaVersion : UDINT := 2;
 	DefaultPlcAdsPort : UINT := 851;
 	ConfigAdsTimeout : TIME := T#2S;
 	ModuleConfigFilePath : STRING(255) := 'C:\ProgramData\RobustSolution\module-config.json';

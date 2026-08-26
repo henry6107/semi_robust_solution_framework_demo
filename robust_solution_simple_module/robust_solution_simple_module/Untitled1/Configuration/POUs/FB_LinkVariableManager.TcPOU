@@ -398,6 +398,9 @@ M_RegisterEL3602 := TRUE;]]></ST>
 VAR_IN_OUT CONSTANT
 	Module : FB_GC_Module;
 END_VAR
+VAR_OUTPUT
+	ModuleSymbol : STRING(255);
+END_VAR
 VAR
 	sRootName : STRING(255);
 	sRelativeName : STRING(255);
@@ -408,6 +411,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[M_RegisterGCModule := FALSE;
+ModuleSymbol := '';
 Error := FALSE;
 ErrorMessage := '';
 
@@ -492,6 +496,7 @@ FOR nChannel := 1 TO 16 DO
 		Access := E_VariableAccess.ReadOnly) THEN RETURN; END_IF
 END_FOR
 
+ModuleSymbol := sRootName;
 M_RegisterGCModule := TRUE;]]></ST>
       </Implementation>
     </Method>

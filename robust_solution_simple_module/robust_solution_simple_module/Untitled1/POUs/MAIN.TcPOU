@@ -7,9 +7,11 @@ VAR
 	_UtcClock : FB_UtcClock;
 	_SystemContext : ST_SystemContext;
 	_LinkVariableManager : FB_LinkVariableManager;
-	_AxisReferenceManager : FB_AxisReferenceManager;
+	_ReferenceManager : FB_ReferenceManager;
+	_ModuleTypeRegistry : FB_ModuleTypeRegistry;
+	_GCModuleConfigurationAdapter : FB_GCModuleConfigurationAdapter;
 	_ModuleConfigurationManager : FB_ModuleConfigurationManager;
-	_bNodesRegistered : BOOL;
+	_bInfrastructureRegistered : BOOL;
 	_bRegistrationOk : BOOL;
 	_nModule : UINT;
 	
@@ -20,8 +22,8 @@ END_VAR
     <Implementation>
       <ST><![CDATA[_GC1 REF= GVL_Module.GC_Control[1];
 
-// Register complete hardware terminals and GC Module IO with type-safe access rules.
-IF NOT _bNodesRegistered THEN
+// Register shared hardware terminals, BaseUnit references and Module adapters before loading configuration.
+IF NOT _bInfrastructureRegistered THEN
 	_bRegistrationOk := _LinkVariableManager.M_RegisterEL1889(
 		Terminal := GVL_IO.Term4_EL1889);
 	IF _bRegistrationOk THEN
@@ -34,33 +36,29 @@ IF NOT _bNodesRegistered THEN
 	END_IF
 
 	IF _bRegistrationOk THEN
-		FOR _nModule := 1 TO Param_Config.MaxConfiguredModules DO
-			IF NOT _LinkVariableManager.M_RegisterGCModule(
-				Module := GVL_Module.GC[_nModule]) THEN
-				_bRegistrationOk := FALSE;
-				EXIT;
-			END_IF
-		END_FOR
-	END_IF
-
-	IF _bRegistrationOk THEN
-		_bRegistrationOk := _AxisReferenceManager.M_RegisterAxis(
+		_bRegistrationOk := _ReferenceManager.M_RegisterReference(
 			Name := 'GVL_IO.NC_Axis1',
-			Axis := GVL_IO.NC_Axis1);
+			BaseUnit := GVL_IO.NC_Axis1);
 	END_IF
 	IF _bRegistrationOk THEN
-		_bRegistrationOk := _AxisReferenceManager.M_RegisterAxis(
+		_bRegistrationOk := _ReferenceManager.M_RegisterReference(
 			Name := 'GVL_IO.NC_Axis2',
-			Axis := GVL_IO.NC_Axis2);
+			BaseUnit := GVL_IO.NC_Axis2);
 	END_IF
-	_bNodesRegistered := _bRegistrationOk;
+	IF _bRegistrationOk THEN
+		_bRegistrationOk := _ModuleTypeRegistry.M_Register(
+			ModuleType := E_ModuleType.GC,
+			Adapter := _GCModuleConfigurationAdapter);
+	END_IF
+	_bInfrastructureRegistered := _bRegistrationOk;
 END_IF
 
 _ModuleConfigurationManager(
-	Execute := _bNodesRegistered,
+	Execute := _bInfrastructureRegistered,
 	FilePath := Param_Config.ModuleConfigFilePath,
 	LinkVariableManager := _LinkVariableManager,
-	AxisReferenceManager := _AxisReferenceManager);
+	ReferenceManager := _ReferenceManager,
+	ModuleTypeRegistry := _ModuleTypeRegistry);
 
 // Map the right channel to _GC1 for module control
 // IF GC1_Module.ModuleStatus.eModeCurrent = E_PackMLMode.Manual THEN

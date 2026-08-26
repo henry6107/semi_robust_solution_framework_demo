@@ -7,7 +7,6 @@ STRUCT
 	Valid : BOOL;
 	ModuleId : UDINT;
 	ModuleType : STRING(16);
-	Symbol : STRING(255);
 	AdsPort : UINT;
 	Revision : UDINT;
 	VariableCount : UINT;

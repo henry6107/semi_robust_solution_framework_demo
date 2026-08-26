@@ -34,6 +34,9 @@
     <Compile Include="Configuration\DUTs\E_LinkPhase.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Configuration\DUTs\E_ModuleType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Configuration\DUTs\E_VariableAccess.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -43,7 +46,7 @@
     <Compile Include="Configuration\DUTs\ST_AdsSumReadRequest.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Configuration\DUTs\ST_AxisReferenceFileConfig.TcDUT">
+    <Compile Include="Configuration\DUTs\ST_ReferenceBindingFileConfig.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\DUTs\ST_ConfigAlarmInfo.TcDUT">
@@ -82,7 +85,16 @@
     <Compile Include="Configuration\POUs\FB_AdsSumSnapshotReader.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Configuration\POUs\FB_AxisReferenceManager.TcPOU">
+    <Compile Include="Configuration\Interfaces\I_ModuleConfigurationAdapter.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\FB_GCModuleConfigurationAdapter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\FB_ModuleTypeRegistry.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\FB_ReferenceManager.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\POUs\FB_LinkVariableManager.TcPOU">
@@ -171,6 +183,9 @@
     <Compile Include="POUs\00_BaseUnit\Interfaces\I_Axis_BaseUnit.TcIO">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\00_BaseUnit\Interfaces\I_BaseUnit.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\00_BaseUnit\Interfaces\I_ResourceLock.TcIO">
       <SubType>Code</SubType>
     </Compile>
@@ -187,6 +202,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCReferencePort.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService\ST_GCLiftPinAxisMoveAbsParam.TcDUT">
@@ -401,6 +419,7 @@
   <ItemGroup>
     <Folder Include="Configuration" />
     <Folder Include="Configuration\DUTs" />
+    <Folder Include="Configuration\Interfaces" />
     <Folder Include="Configuration\POUs" />
     <Folder Include="DUTs" />
     <Folder Include="DUTs\HwModule" />
@@ -472,8 +491,8 @@
   <ProjectExtensions>
     <PlcProjectOptions>
       <XmlArchive>
-  <Data>
-    <o xml:space="preserve" t="OptionKey">
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
       <v n="Name">"&lt;ProjectRoot&gt;"</v>
       <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
         <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
@@ -549,14 +568,14 @@
       </d>
       <d n="Values" t="Hashtable" />
     </o>
-  </Data>
-  <TypeList>
-    <Type n="Boolean">System.Boolean</Type>
-    <Type n="Hashtable">System.Collections.Hashtable</Type>
-    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
-    <Type n="String">System.String</Type>
-  </TypeList>
-</XmlArchive>
+        </Data>
+        <TypeList>
+          <Type n="Boolean">System.Boolean</Type>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
     </PlcProjectOptions>
   </ProjectExtensions>
 </Project>

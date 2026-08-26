@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_ResourceLock" Id="{c66dc7a3-d4ad-430c-9641-4ad3a02ef796}">
-    <Declaration><![CDATA[INTERFACE I_ResourceLock
+    <Declaration><![CDATA[INTERFACE I_ResourceLock EXTENDS I_BaseUnit
 ]]></Declaration>
     <Method Name="M_AcquireResource" Id="{4d82e03b-401c-4cff-9b03-a14c249856ae}">
       <Declaration><![CDATA[METHOD M_AcquireResource : BOOL

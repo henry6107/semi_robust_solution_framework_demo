@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "adsPort": 851,
   "modules": [
     {
@@ -7,7 +7,6 @@
       "moduleType": "GC",
       "slot": 1,
       "id": 1,
-      "symbol": "GVL_Module.GC[1]",
       "inputMappings": [
         {
           "source": "GVL_IO.Term4_EL1889.Chl[1]",
@@ -34,14 +33,14 @@
           "targetDataType": "BOOL"
         }
       ],
-      "axisReferences": [
+      "referenceBindings": [
         {
           "source": "GVL_IO.NC_Axis1",
-          "target": "SpinAxis_BaseUnit"
+          "targetPort": "SpinAxis_BaseUnit"
         },
         {
           "source": "GVL_IO.NC_Axis2",
-          "target": "LiftPinAxis_BaseUnit"
+          "targetPort": "LiftPinAxis_BaseUnit"
         }
       ],
       "variableList": [

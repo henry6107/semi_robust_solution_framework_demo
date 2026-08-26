@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <DUT Name="ST_AxisReferenceFileConfig" Id="{7f1821b8-9384-4455-9eb8-ed7083d28fb2}">
-    <Declaration><![CDATA[TYPE ST_AxisReferenceFileConfig :
+  <DUT Name="ST_ReferenceBindingFileConfig" Id="{2ba99eb3-f07e-48cb-82b0-27bc4b65be4d}">
+    <Declaration><![CDATA[TYPE ST_ReferenceBindingFileConfig :
 STRUCT
 	Source : STRING(255);
-	Target : STRING(80);
+	TargetPort : STRING(80);
 END_STRUCT
 END_TYPE
 ]]></Declaration>

@@ -8,7 +8,8 @@ VAR_INPUT
 END_VAR
 VAR_IN_OUT
 	LinkVariableManager : FB_LinkVariableManager;
-	AxisReferenceManager : FB_AxisReferenceManager;
+	ReferenceManager : FB_ReferenceManager;
+	ModuleTypeRegistry : FB_ModuleTypeRegistry;
 END_VAR
 VAR_OUTPUT
 	Ready : BOOL;
@@ -24,6 +25,7 @@ VAR
 	_bLoaded : BOOL;
 	_nState : USINT;
 	_nRevision : UDINT;
+	_RuntimeConfigScratch : ST_ModuleRuntimeConfig;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -51,13 +53,17 @@ END_VAR
 				_nState := 2;
 			ELSE
 				Error := TRUE;
-				M_ClearAppliedConfiguration(LinkVariableManager := LinkVariableManager);
+				M_ClearAppliedConfiguration(
+					LinkVariableManager := LinkVariableManager,
+					ModuleTypeRegistry := ModuleTypeRegistry);
 				_nState := 3;
 			END_IF
 		ELSIF NOT _bLoad THEN
 			Error := TRUE;
 			ErrorMessage := 'Unable to load the UTF-8 JSON module configuration file.';
-			M_ClearAppliedConfiguration(LinkVariableManager := LinkVariableManager);
+			M_ClearAppliedConfiguration(
+				LinkVariableManager := LinkVariableManager,
+				ModuleTypeRegistry := ModuleTypeRegistry);
 			_nState := 3;
 		END_IF
 
@@ -65,11 +71,14 @@ END_VAR
 		Busy := TRUE;
 		IF M_ApplyConfiguration(
 			LinkVariableManager := LinkVariableManager,
-			AxisReferenceManager := AxisReferenceManager) THEN
+			ReferenceManager := ReferenceManager,
+			ModuleTypeRegistry := ModuleTypeRegistry) THEN
 			Ready := TRUE;
 		ELSE
 			Error := TRUE;
-			M_ClearAppliedConfiguration(LinkVariableManager := LinkVariableManager);
+			M_ClearAppliedConfiguration(
+				LinkVariableManager := LinkVariableManager,
+				ModuleTypeRegistry := ModuleTypeRegistry);
 		END_IF
 		_nState := 3;
 
@@ -84,27 +93,45 @@ END_CASE]]></ST>
       <Declaration><![CDATA[METHOD PRIVATE M_ApplyConfiguration : BOOL
 VAR_IN_OUT
 	LinkVariableManager : FB_LinkVariableManager;
-	AxisReferenceManager : FB_AxisReferenceManager;
+	ReferenceManager : FB_ReferenceManager;
+	ModuleTypeRegistry : FB_ModuleTypeRegistry;
 END_VAR
 VAR
 	nModule : UINT;
 	nOther : UINT;
 	nItem : UINT;
 	nSlot : UINT;
+	sModuleSymbol : STRING(255);
 	sFullName : STRING(255);
-	Axis : I_Axis_BaseUnit;
+	BaseUnit : I_BaseUnit;
+	Adapter : I_ModuleConfigurationAdapter;
+	sAdapterError : STRING(255);
 END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[M_ApplyConfiguration := FALSE;
-M_ClearAppliedConfiguration(LinkVariableManager := LinkVariableManager);
 
-// Duplicate slots and IDs make external addressing ambiguous and are rejected atomically.
+// Resolve every configured type and reject ambiguous addressing before mutating runtime state.
 FOR nModule := 1 TO _Config.ModuleCount DO
 	IF (_Config.Modules[nModule].Slot < 1)
 		OR (_Config.Modules[nModule].Slot > Param_Config.MaxConfiguredModules) THEN
 		ErrorMessage := 'A module slot is outside the supported range 1..6.';
 		RETURN;
+	END_IF
+	Adapter := ModuleTypeRegistry.M_Resolve(ModuleTypeName := _Config.Modules[nModule].ModuleType);
+	IF Adapter = 0 THEN
+		ErrorMessage := ModuleTypeRegistry.ErrorMessage;
+		RETURN;
+	END_IF
+	IF NOT Adapter.M_IsSlotSupported(Slot := _Config.Modules[nModule].Slot) THEN
+		ErrorMessage := 'Module adapter does not support the configured slot.';
+		RETURN;
+	END_IF
+	IF _Config.Modules[nModule].Enabled THEN
+		IF _Config.Modules[nModule].Id = 0 THEN
+			ErrorMessage := 'Every enabled module requires a non-zero id.';
+			RETURN;
+		END_IF
 	END_IF
 	FOR nOther := nModule + 1 TO _Config.ModuleCount DO
 		IF _Config.Modules[nModule].Slot = _Config.Modules[nOther].Slot THEN
@@ -119,6 +146,10 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 	END_FOR
 END_FOR
 
+M_ClearAppliedConfiguration(
+	LinkVariableManager := LinkVariableManager,
+	ModuleTypeRegistry := ModuleTypeRegistry);
+
 _nRevision := _nRevision + 1;
 IF _nRevision = 0 THEN
 	_nRevision := 1;
@@ -126,29 +157,42 @@ END_IF
 
 FOR nModule := 1 TO _Config.ModuleCount DO
 	nSlot := _Config.Modules[nModule].Slot;
-	GVL_Module.GC_Runtime[nSlot].Enabled := _Config.Modules[nModule].Enabled;
-	GVL_Module.GC_Runtime[nSlot].ModuleId := _Config.Modules[nModule].Id;
-	GVL_Module.GC_Runtime[nSlot].ModuleType := _Config.Modules[nModule].ModuleType;
-	GVL_Module.GC_Runtime[nSlot].Symbol := _Config.Modules[nModule].Symbol;
-	GVL_Module.GC_Runtime[nSlot].AdsPort := _Config.AdsPort;
-	GVL_Module.GC_Runtime[nSlot].Revision := _nRevision;
+	Adapter := ModuleTypeRegistry.M_Resolve(ModuleTypeName := _Config.Modules[nModule].ModuleType);
+	IF Adapter = 0 THEN
+		ErrorMessage := ModuleTypeRegistry.ErrorMessage;
+		RETURN;
+	END_IF
+
+	MEMSET(ADR(_RuntimeConfigScratch), 0, SIZEOF(_RuntimeConfigScratch));
+	_RuntimeConfigScratch.Enabled := _Config.Modules[nModule].Enabled;
+	_RuntimeConfigScratch.ModuleId := _Config.Modules[nModule].Id;
+	_RuntimeConfigScratch.ModuleType := _Config.Modules[nModule].ModuleType;
+	_RuntimeConfigScratch.AdsPort := _Config.AdsPort;
+	_RuntimeConfigScratch.Revision := _nRevision;
 
 	IF NOT _Config.Modules[nModule].Enabled THEN
-		GVL_Module.GC_Runtime[nSlot].Valid := TRUE;
+		_RuntimeConfigScratch.Valid := TRUE;
+		IF NOT Adapter.M_ApplyRuntimeConfig(
+			Slot := nSlot,
+			RuntimeConfig := _RuntimeConfigScratch,
+			ErrorMessage => sAdapterError) THEN
+			ErrorMessage := sAdapterError;
+			RETURN;
+		END_IF
 		CONTINUE;
 	END_IF
 
-	IF _Config.Modules[nModule].ModuleType <> 'GC' THEN
-		ErrorMessage := 'Only moduleType GC is implemented by this project.';
-		RETURN;
-	END_IF
-	IF (_Config.Modules[nModule].Id = 0) OR (_Config.Modules[nModule].Symbol = '') THEN
-		ErrorMessage := 'Every enabled module requires a non-zero id and symbol.';
+	IF NOT Adapter.M_RegisterIo(
+		Slot := nSlot,
+		LinkVariableManager := LinkVariableManager,
+		ModuleSymbol => sModuleSymbol,
+		ErrorMessage => sAdapterError) THEN
+		ErrorMessage := sAdapterError;
 		RETURN;
 	END_IF
 
 	FOR nItem := 1 TO _Config.Modules[nModule].InputMappingCount DO
-		sFullName := CONCAT(CONCAT(_Config.Modules[nModule].Symbol, '.'), _Config.Modules[nModule].InputMappings[nItem].Target);
+		sFullName := CONCAT(CONCAT(sModuleSymbol, '.'), _Config.Modules[nModule].InputMappings[nItem].Target);
 		IF NOT LinkVariableManager.M_AddLink(
 			SourceName := _Config.Modules[nModule].InputMappings[nItem].Source,
 			TargetName := sFullName,
@@ -164,7 +208,7 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 	END_FOR
 
 	FOR nItem := 1 TO _Config.Modules[nModule].OutputMappingCount DO
-		sFullName := CONCAT(CONCAT(_Config.Modules[nModule].Symbol, '.'), _Config.Modules[nModule].OutputMappings[nItem].Source);
+		sFullName := CONCAT(CONCAT(sModuleSymbol, '.'), _Config.Modules[nModule].OutputMappings[nItem].Source);
 		IF NOT LinkVariableManager.M_AddLink(
 			SourceName := sFullName,
 			TargetName := _Config.Modules[nModule].OutputMappings[nItem].Target,
@@ -179,45 +223,53 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 		END_IF
 	END_FOR
 
-	FOR nItem := 1 TO _Config.Modules[nModule].AxisReferenceCount DO
-		Axis := AxisReferenceManager.M_Resolve(Name := _Config.Modules[nModule].AxisReferences[nItem].Source);
-		IF Axis = 0 THEN
-			ErrorMessage := AxisReferenceManager.ErrorMessage;
+	FOR nItem := 1 TO _Config.Modules[nModule].ReferenceBindingCount DO
+		BaseUnit := ReferenceManager.M_Resolve(Name := _Config.Modules[nModule].ReferenceBindings[nItem].Source);
+		IF BaseUnit = 0 THEN
+			ErrorMessage := ReferenceManager.ErrorMessage;
 			RETURN;
 		END_IF
-		IF _Config.Modules[nModule].AxisReferences[nItem].Target = 'SpinAxis_BaseUnit' THEN
-			GVL_Module.GC_SpinAxis[nSlot] := Axis;
-		ELSIF _Config.Modules[nModule].AxisReferences[nItem].Target = 'LiftPinAxis_BaseUnit' THEN
-			GVL_Module.GC_LiftPinAxis[nSlot] := Axis;
-		ELSE
-			ErrorMessage := 'Unknown GC axis reference target.';
+		IF NOT Adapter.M_BindReference(
+			Slot := nSlot,
+			TargetPort := _Config.Modules[nModule].ReferenceBindings[nItem].TargetPort,
+			BaseUnit := BaseUnit,
+			ErrorMessage => sAdapterError) THEN
+			ErrorMessage := sAdapterError;
 			RETURN;
 		END_IF
 	END_FOR
 
-	// Both axes are mandatory in the current GC implementation; an unbound interface keeps it inert.
-	IF (GVL_Module.GC_SpinAxis[nSlot] = 0) OR (GVL_Module.GC_LiftPinAxis[nSlot] = 0) THEN
-		ErrorMessage := 'An enabled GC module requires SpinAxis_BaseUnit and LiftPinAxis_BaseUnit references.';
+	IF NOT Adapter.M_ValidateReferences(
+		Slot := nSlot,
+		ErrorMessage => sAdapterError) THEN
+		ErrorMessage := sAdapterError;
 		RETURN;
 	END_IF
 
-	GVL_Module.GC_Runtime[nSlot].VariableCount := _Config.Modules[nModule].VariableCount;
+	_RuntimeConfigScratch.VariableCount := _Config.Modules[nModule].VariableCount;
 	FOR nItem := 1 TO _Config.Modules[nModule].VariableCount DO
-		GVL_Module.GC_Runtime[nSlot].VariableList[nItem] := _Config.Modules[nModule].VariableList[nItem];
-		GVL_Module.GC_Runtime[nSlot].VariableList[nItem].Source := CONCAT(
-			CONCAT(_Config.Modules[nModule].Symbol, '.'),
+		_RuntimeConfigScratch.VariableList[nItem] := _Config.Modules[nModule].VariableList[nItem];
+		_RuntimeConfigScratch.VariableList[nItem].Source := CONCAT(
+			CONCAT(sModuleSymbol, '.'),
 			_Config.Modules[nModule].VariableList[nItem].Source);
 	END_FOR
 
-	GVL_Module.GC_Runtime[nSlot].AlarmCount := _Config.Modules[nModule].AlarmCount;
+	_RuntimeConfigScratch.AlarmCount := _Config.Modules[nModule].AlarmCount;
 	FOR nItem := 1 TO _Config.Modules[nModule].AlarmCount DO
-		GVL_Module.GC_Runtime[nSlot].AlarmList[nItem] := _Config.Modules[nModule].AlarmList[nItem];
-		GVL_Module.GC_Runtime[nSlot].AlarmList[nItem].Source := CONCAT(
-			CONCAT(_Config.Modules[nModule].Symbol, '.'),
+		_RuntimeConfigScratch.AlarmList[nItem] := _Config.Modules[nModule].AlarmList[nItem];
+		_RuntimeConfigScratch.AlarmList[nItem].Source := CONCAT(
+			CONCAT(sModuleSymbol, '.'),
 			_Config.Modules[nModule].AlarmList[nItem].Source);
 	END_FOR
 
-	GVL_Module.GC_Runtime[nSlot].Valid := TRUE;
+	_RuntimeConfigScratch.Valid := TRUE;
+	IF NOT Adapter.M_ApplyRuntimeConfig(
+		Slot := nSlot,
+		RuntimeConfig := _RuntimeConfigScratch,
+		ErrorMessage => sAdapterError) THEN
+		ErrorMessage := sAdapterError;
+		RETURN;
+	END_IF
 END_FOR
 
 M_ApplyConfiguration := TRUE;]]></ST>
@@ -227,13 +279,12 @@ M_ApplyConfiguration := TRUE;]]></ST>
       <Declaration><![CDATA[METHOD PRIVATE M_ClearAppliedConfiguration
 VAR_IN_OUT
 	LinkVariableManager : FB_LinkVariableManager;
+	ModuleTypeRegistry : FB_ModuleTypeRegistry;
 END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[LinkVariableManager.M_ClearLinks();
-MEMSET(ADR(GVL_Module.GC_Runtime), 0, SIZEOF(GVL_Module.GC_Runtime));
-MEMSET(ADR(GVL_Module.GC_SpinAxis), 0, SIZEOF(GVL_Module.GC_SpinAxis));
-MEMSET(ADR(GVL_Module.GC_LiftPinAxis), 0, SIZEOF(GVL_Module.GC_LiftPinAxis));]]></ST>
+ModuleTypeRegistry.M_ClearAll();]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_ParseDataType" Id="{022c1741-46d1-410b-9554-7e2af6351631}">
@@ -344,11 +395,6 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 	IF Node <> 0 THEN
 		_Config.Modules[nModule].ModuleType := _Json.GetString(Node);
 	END_IF
-	Node := _Json.FindMember(ModuleNode, 'symbol');
-	IF Node <> 0 THEN
-		_Config.Modules[nModule].Symbol := _Json.GetString(Node);
-	END_IF
-
 	// Input mappings
 	ArrayNode := _Json.FindMember(ModuleNode, 'inputMappings');
 	IF ArrayNode <> 0 THEN
@@ -411,21 +457,33 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 		END_FOR
 	END_IF
 
-	// Axis references
-	ArrayNode := _Json.FindMember(ModuleNode, 'axisReferences');
+	// Schema v2 intentionally rejects the former axis-specific shape.
+	Node := _Json.FindMember(ModuleNode, 'axisReferences');
+	IF Node <> 0 THEN
+		ErrorMessage := 'axisReferences is not supported by schemaVersion 2; use referenceBindings.';
+		RETURN;
+	END_IF
+
+	// Generic BaseUnit reference bindings. targetPort is interpreted by the module adapter.
+	ArrayNode := _Json.FindMember(ModuleNode, 'referenceBindings');
 	IF ArrayNode <> 0 THEN
 		nCount := _Json.GetArraySize(ArrayNode);
-		IF nCount > Param_Config.MaxModuleAxisReferences THEN
-			ErrorMessage := 'Too many axisReferences.';
+		IF nCount > Param_Config.MaxModuleReferenceBindings THEN
+			ErrorMessage := 'Too many referenceBindings.';
 			RETURN;
 		END_IF
-		_Config.Modules[nModule].AxisReferenceCount := UDINT_TO_UINT(nCount);
-		FOR nItem := 1 TO _Config.Modules[nModule].AxisReferenceCount DO
+		_Config.Modules[nModule].ReferenceBindingCount := UDINT_TO_UINT(nCount);
+		FOR nItem := 1 TO _Config.Modules[nModule].ReferenceBindingCount DO
 			ItemNode := _Json.GetArrayValueByIdx(ArrayNode, UINT_TO_UDINT(nItem - 1));
-			Node := _Json.FindMember(ItemNode, 'source');
-			IF Node <> 0 THEN _Config.Modules[nModule].AxisReferences[nItem].Source := _Json.GetString(Node); END_IF
 			Node := _Json.FindMember(ItemNode, 'target');
-			IF Node <> 0 THEN _Config.Modules[nModule].AxisReferences[nItem].Target := _Json.GetString(Node); END_IF
+			IF Node <> 0 THEN
+				ErrorMessage := 'target is not supported in referenceBindings; use targetPort.';
+				RETURN;
+			END_IF
+			Node := _Json.FindMember(ItemNode, 'source');
+			IF Node <> 0 THEN _Config.Modules[nModule].ReferenceBindings[nItem].Source := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'targetPort');
+			IF Node <> 0 THEN _Config.Modules[nModule].ReferenceBindings[nItem].TargetPort := _Json.GetString(Node); END_IF
 		END_FOR
 	END_IF
 
@@ -558,6 +616,13 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 			OR (_Config.Modules[nModule].OutputMappings[nItem].SourceDataType = E_ConfigDataType.Unknown)
 			OR (_Config.Modules[nModule].OutputMappings[nItem].TargetDataType = E_ConfigDataType.Unknown) THEN
 			ErrorMessage := 'Invalid output mapping: source, target and both data types are required.';
+			RETURN;
+		END_IF
+	END_FOR
+	FOR nItem := 1 TO _Config.Modules[nModule].ReferenceBindingCount DO
+		IF (_Config.Modules[nModule].ReferenceBindings[nItem].Source = '')
+			OR (_Config.Modules[nModule].ReferenceBindings[nItem].TargetPort = '') THEN
+			ErrorMessage := 'Invalid reference binding: source and targetPort are required.';
 			RETURN;
 		END_IF
 	END_FOR
