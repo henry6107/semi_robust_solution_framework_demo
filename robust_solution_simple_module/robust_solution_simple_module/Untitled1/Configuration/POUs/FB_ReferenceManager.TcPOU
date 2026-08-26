@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_ReferenceManager" Id="{9876fc16-fe16-4cc5-b330-d893d8344748}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_ReferenceManager
@@ -7,23 +7,31 @@ VAR_OUTPUT
 	ErrorMessage : STRING(255);
 END_VAR
 VAR
+	_JsonDataType : FB_JsonReadWriteDataType;
 	_Names : ARRAY[1..Param_Config.MaxConfigReferenceNodes] OF STRING(255);
 	_BaseUnits : ARRAY[1..Param_Config.MaxConfigReferenceNodes] OF I_BaseUnit;
 	_Count : UINT;
 END_VAR
 ]]></Declaration>
-    <Implementation><ST><![CDATA[]]></ST></Implementation>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
     <Method Name="M_RegisterReference" Id="{30f6847e-f317-4205-a8d3-568bd3a0a3e6}">
       <Declaration><![CDATA[METHOD PUBLIC M_RegisterReference : BOOL
 VAR_INPUT
-	Name : STRING(255);
 	BaseUnit : I_BaseUnit;
 END_VAR
 VAR
 	nIndex : UINT;
+	sName : STRING(255);
+	pData : PVOID;
+	nData : UDINT;
+	SymbolProvider : I_AdsSymbolProvider;
+	hrErrorCode : HRESULT;
 END_VAR
 ]]></Declaration>
-      <Implementation><ST><![CDATA[M_RegisterReference := FALSE;
+      <Implementation>
+        <ST><![CDATA[M_RegisterReference := FALSE;
 Error := FALSE;
 ErrorMessage := '';
 IF BaseUnit = 0 THEN
@@ -32,8 +40,33 @@ IF BaseUnit = 0 THEN
 	RETURN;
 END_IF
 
+SymbolProvider := 0;
+IF NOT __QUERYINTERFACE(BaseUnit, SymbolProvider) THEN
+	Error := TRUE;
+	ErrorMessage := 'BaseUnit does not provide ADS symbol metadata.';
+	RETURN;
+END_IF
+
+IF NOT SymbolProvider.M_GetAdsSymbolMetadata(
+	Address => pData,
+	Size => nData) THEN
+	Error := TRUE;
+	ErrorMessage := 'BaseUnit ADS symbol metadata is invalid.';
+	RETURN;
+END_IF
+
+sName := _JsonDataType.GetSymbolNameByAddress(
+	nData := nData,
+	pData := pData,
+	hrErrorCode => hrErrorCode);
+IF (hrErrorCode <> 0) OR (sName = '') THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot resolve the BaseUnit ADS symbol name.';
+	RETURN;
+END_IF
+
 FOR nIndex := 1 TO _Count DO
-	IF _Names[nIndex] = Name THEN
+	IF _Names[nIndex] = sName THEN
 		_BaseUnits[nIndex] := BaseUnit;
 		M_RegisterReference := TRUE;
 		RETURN;
@@ -47,10 +80,11 @@ IF nIndex > Param_Config.MaxConfigReferenceNodes THEN
 	RETURN;
 END_IF
 
-_Names[nIndex] := Name;
+_Names[nIndex] := sName;
 _BaseUnits[nIndex] := BaseUnit;
 _Count := nIndex;
-M_RegisterReference := TRUE;]]></ST></Implementation>
+M_RegisterReference := TRUE;]]></ST>
+      </Implementation>
     </Method>
     <Method Name="M_Resolve" Id="{846010cd-2d2e-466c-a333-6b11259411bc}">
       <Declaration><![CDATA[METHOD PUBLIC M_Resolve : I_BaseUnit
@@ -61,7 +95,8 @@ VAR
 	nIndex : UINT;
 END_VAR
 ]]></Declaration>
-      <Implementation><ST><![CDATA[M_Resolve := 0;
+      <Implementation>
+        <ST><![CDATA[M_Resolve := 0;
 Error := FALSE;
 ErrorMessage := '';
 FOR nIndex := 1 TO _Count DO
@@ -71,7 +106,8 @@ FOR nIndex := 1 TO _Count DO
 	END_IF
 END_FOR
 Error := TRUE;
-ErrorMessage := 'Reference source was not registered.';]]></ST></Implementation>
+ErrorMessage := 'Reference source was not registered.';]]></ST>
+      </Implementation>
     </Method>
   </POU>
 </TcPlcObject>

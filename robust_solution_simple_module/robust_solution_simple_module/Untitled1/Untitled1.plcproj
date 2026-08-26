@@ -85,6 +85,9 @@
     <Compile Include="Configuration\POUs\FB_AdsSumSnapshotReader.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Configuration\Interfaces\I_AdsSymbolProvider.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Configuration\Interfaces\I_ModuleConfigurationAdapter.TcIO">
       <SubType>Code</SubType>
     </Compile>

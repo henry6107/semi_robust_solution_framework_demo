@@ -19,7 +19,7 @@ PLC 啟動時會從 `Param_Config.ModuleConfigFilePath` 載入 UTF-8 JSON；預�
 
 ## 可連結節點
 
-設定檔只能使用 PLC initial 階段已註冊到 `FB_LinkVariableManager`／`FB_ReferenceManager` 的節點。實體 I/O 與 BaseUnit reference 由 `MAIN` 註冊；Module I/O 則由對應 adapter 依 `enabled` 狀態註冊。使用者仍只需修改 JSON 來選擇已公開的節點。
+設定檔只能使用 PLC initial 階段已註冊到 `FB_LinkVariableManager`／`FB_ReferenceManager` 的節點。實體 I/O 與 BaseUnit reference 由 `MAIN` 註冊；兩個 manager 都會從實際變數位址自動取得 ADS symbol，呼叫端不需手寫名稱。Module I/O 則由對應 adapter 依 `enabled` 狀態註冊。使用者仍只需修改 JSON 來選擇已公開的節點。
 
 目前 schemaVersion 為 `2`。舊版 `axisReferences`／`target` 不再接受，必須改為 `referenceBindings`／`targetPort`。Config 不填 interface type，也不接觸 `GVL_Module` 內部 reference 儲存位置；各 Module adapter 會依專屬 enum 契約解析 port，並以 `__QUERYINTERFACE` 驗證實際 BaseUnit 型別。
 

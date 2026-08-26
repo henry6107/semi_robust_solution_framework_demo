@@ -37,12 +37,10 @@ IF NOT _bInfrastructureRegistered THEN
 
 	IF _bRegistrationOk THEN
 		_bRegistrationOk := _ReferenceManager.M_RegisterReference(
-			Name := 'GVL_IO.NC_Axis1',
 			BaseUnit := GVL_IO.NC_Axis1);
 	END_IF
 	IF _bRegistrationOk THEN
 		_bRegistrationOk := _ReferenceManager.M_RegisterReference(
-			Name := 'GVL_IO.NC_Axis2',
 			BaseUnit := GVL_IO.NC_Axis2);
 	END_IF
 	IF _bRegistrationOk THEN
