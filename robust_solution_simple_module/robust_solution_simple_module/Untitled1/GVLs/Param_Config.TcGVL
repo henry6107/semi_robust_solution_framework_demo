@@ -12,7 +12,7 @@ VAR_GLOBAL CONSTANT
 	MaxModuleData : UINT := 50;			// Num of DVID
 	ModuleHeartbeat_Timout : TIME := T#10S;
 
-	// Runtime configuration limits. They also bound PLC memory and ADS Sum Command work.
+	// Runtime configuration limits. They also bound PLC memory and local snapshot work.
 	MaxModuleTypes : UINT := 8;
 
 	// Module type capacities bound type-specific runtime arrays.
@@ -29,15 +29,12 @@ VAR_GLOBAL CONSTANT
 	MaxModuleReferenceBindings : UINT := 50;
 	MaxConfigReferenceNodes : UINT := 100;
 
-	// Ads sum command used
-	MaxConfigSources : UINT := MaxModuleVariable + MaxConfiguredAlarmsPerModule;
+	// Registered-node snapshots used by configured VariableList and AlarmList.
+	MaxConfiguredValueSources : UINT := MaxModuleVariable + MaxConfiguredAlarmsPerModule;
 	MaxConfigValueSize : UINT := 81; // STRING(80), including the terminating zero.
-	MaxAdsSumResponseSize : UINT := (MaxConfigSources * 4) + (MaxConfigSources * MaxConfigValueSize);
 
 	// System config
-	ConfigSchemaVersion : UDINT := 2;
-	DefaultPlcAdsPort : UINT := 851;
-	ConfigAdsTimeout : TIME := T#2S;
+	ConfigSchemaVersion : UDINT := 3;
 	ModuleConfigFilePath : STRING(255) := 'C:\ProgramData\RobustSolution\module-config.json';
 END_VAR]]></Declaration>
   </GVL>

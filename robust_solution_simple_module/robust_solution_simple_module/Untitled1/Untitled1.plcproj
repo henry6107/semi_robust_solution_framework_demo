@@ -40,10 +40,7 @@
     <Compile Include="Configuration\DUTs\E_VariableAccess.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Configuration\DUTs\ST_AdsRawValue.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Configuration\DUTs\ST_AdsSumReadRequest.TcDUT">
+    <Compile Include="Configuration\DUTs\ST_ConfigRawValue.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\DUTs\ST_ReferenceBindingFileConfig.TcDUT">
@@ -53,6 +50,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\DUTs\ST_ConfigVariableInfo.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_RuntimeAlarmBinding.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\DUTs\ST_RuntimeVariableBinding.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\DUTs\ST_LinkVariableNode.TcDUT">
@@ -82,13 +85,16 @@
     <Compile Include="Configuration\POUs\F_ConfigDataTypeToDescriptor.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Configuration\POUs\FB_AdsSumSnapshotReader.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Configuration\Interfaces\I_AdsSymbolProvider.TcIO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\Interfaces\I_ModuleConfigurationAdapter.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\Interfaces\I_VariableNodeReader.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\FB_ConfigValueSnapshotReader.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\POUs\FB_GCModuleConfigurationAdapter.TcPOU">

@@ -16,7 +16,9 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_HwModuleRegister();
+      <ST><![CDATA[IF NOT _bInfrastructureRegistered THEN
+	M_HwModuleRegister();
+END_IF
 
 _ModuleConfigurationManager(
 	Execute := _bInfrastructureRegistered,
@@ -41,6 +43,7 @@ IF _ModuleConfigurationManager.Ready THEN
 				ServiceParam := GVL_Module.GC_Control[_nModule].ServiceParam,
 				SystemContext := _SystemContext,
 				RuntimeConfig := GVL_Module.GC_Runtime[_nModule],
+				VariableNodeReader := _LinkVariableManager,
 				SpinAxis_BaseUnit := GVL_Module.GC_SpinAxis[_nModule],
 				LiftPinAxis_BaseUnit := GVL_Module.GC_LiftPinAxis[_nModule],
 				ModuleStatus => GVL_Module.GC_Control[_nModule].ModuleStatus,
@@ -61,34 +64,37 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Register shared hardware terminals, BaseUnit references and Module adapters before loading configuration.
-IF NOT _bInfrastructureRegistered THEN
-	_bRegistrationOk := _LinkVariableManager.M_RegisterEL1889(
-		Terminal := GVL_IO.Term4_EL1889);
-	IF _bRegistrationOk THEN
-		_bRegistrationOk := _LinkVariableManager.M_RegisterEL3602(
-			Terminal := GVL_IO.Term2_EL3602);
-	END_IF
-	IF _bRegistrationOk THEN
-		_bRegistrationOk := _LinkVariableManager.M_RegisterEL2809(
-			Terminal := GVL_IO.Term3_EL2809);
-	END_IF
+        <ST><![CDATA[// Register shared hardware terminals before loading configuration.
+_bRegistrationOk := _LinkVariableManager.M_RegisterEL1889(
+	Terminal := GVL_IO.Term4_EL1889);
 
-	IF _bRegistrationOk THEN
-		_bRegistrationOk := _ReferenceManager.M_RegisterReference(
-			BaseUnit := GVL_IO.NC_Axis1);
-	END_IF
-	IF _bRegistrationOk THEN
-		_bRegistrationOk := _ReferenceManager.M_RegisterReference(
-			BaseUnit := GVL_IO.NC_Axis2);
-	END_IF
-	IF _bRegistrationOk THEN
-		_bRegistrationOk := _ModuleTypeRegistry.M_Register(
-			ModuleType := E_ModuleType.GC,
-			Adapter := _GCModuleConfigurationAdapter);
-	END_IF
-	_bInfrastructureRegistered := _bRegistrationOk;
-END_IF]]></ST>
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _LinkVariableManager.M_RegisterEL3602(
+		Terminal := GVL_IO.Term2_EL3602);
+END_IF
+
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _LinkVariableManager.M_RegisterEL2809(
+		Terminal := GVL_IO.Term3_EL2809);
+END_IF
+
+// Register BaseUnit references before loading configuration.
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _ReferenceManager.M_RegisterReference(
+		BaseUnit := GVL_IO.NC_Axis1);
+END_IF
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _ReferenceManager.M_RegisterReference(
+		BaseUnit := GVL_IO.NC_Axis2);
+END_IF
+
+// Register Module adapters before loading configuration.
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _ModuleTypeRegistry.M_Register(
+		ModuleType := E_ModuleType.GC,
+		Adapter := _GCModuleConfigurationAdapter);
+END_IF
+_bInfrastructureRegistered := _bRegistrationOk;]]></ST>
       </Implementation>
     </Method>
   </POU>

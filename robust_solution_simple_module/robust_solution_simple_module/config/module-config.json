@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 2,
-  "adsPort": 851,
+  "schemaVersion": 3,
   "modules": [
     {
       "enabled": true,

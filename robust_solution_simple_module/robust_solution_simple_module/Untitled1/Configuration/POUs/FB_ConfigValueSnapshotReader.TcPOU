@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ConfigValueSnapshotReader" Id="{fa4763d6-6117-42aa-a0b3-a48b51b7f4b7}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ConfigValueSnapshotReader
+VAR_INPUT
+	RuntimeConfig : REFERENCE TO ST_ModuleRuntimeConfig;
+	VariableNodeReader : I_VariableNodeReader;
+END_VAR
+VAR_OUTPUT
+	Ready : BOOL;
+	Error : BOOL;
+	ErrorId : UDINT;
+END_VAR
+VAR
+	_SourceCount : UINT;
+	_SourceTypes : ARRAY[1..Param_Config.MaxConfiguredValueSources] OF E_ConfigDataType;
+	_Values : ARRAY[1..Param_Config.MaxConfiguredValueSources] OF ST_ConfigRawValue;
+	_ValueValid : ARRAY[1..Param_Config.MaxConfiguredValueSources] OF BOOL;
+
+END_VAR
+VAR_TEMP
+	_nIndex : UINT;
+	_nSource : UINT;
+	_nReadError : UDINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[Ready := FALSE;
+Error := FALSE;
+ErrorId := 0;
+_SourceCount := 0;
+
+IF NOT __ISVALIDREF(RuntimeConfig) THEN
+	RETURN;
+END_IF
+IF NOT RuntimeConfig.Enabled OR NOT RuntimeConfig.Valid THEN
+	RETURN;
+END_IF
+IF VariableNodeReader = 0 THEN
+	Error := TRUE;
+	ErrorId := 16#7100;
+	RETURN;
+END_IF
+
+_SourceCount := RuntimeConfig.VariableCount + RuntimeConfig.AlarmCount;
+IF _SourceCount > Param_Config.MaxConfiguredValueSources THEN
+	Error := TRUE;
+	ErrorId := 16#7101;
+	RETURN;
+END_IF
+
+MEMSET(ADR(_SourceTypes), 0, SIZEOF(_SourceTypes));
+MEMSET(ADR(_ValueValid), 0, SIZEOF(_ValueValid));
+
+FOR _nIndex := 1 TO RuntimeConfig.VariableCount DO
+	_nSource := _nIndex;
+	_SourceTypes[_nSource] := RuntimeConfig.VariableBindings[_nIndex].Definition.DataType;
+	_ValueValid[_nSource] := VariableNodeReader.M_ReadNode(
+		NodeHandle := RuntimeConfig.VariableBindings[_nIndex].NodeHandle,
+		ExpectedDataType := _SourceTypes[_nSource],
+		Value := _Values[_nSource],
+		ErrorId => _nReadError);
+	IF NOT _ValueValid[_nSource] AND NOT Error THEN
+		Error := TRUE;
+		ErrorId := _nReadError;
+	END_IF
+END_FOR
+
+FOR _nIndex := 1 TO RuntimeConfig.AlarmCount DO
+	_nSource := RuntimeConfig.VariableCount + _nIndex;
+	_SourceTypes[_nSource] := RuntimeConfig.AlarmBindings[_nIndex].Definition.DataType;
+	_ValueValid[_nSource] := VariableNodeReader.M_ReadNode(
+		NodeHandle := RuntimeConfig.AlarmBindings[_nIndex].NodeHandle,
+		ExpectedDataType := _SourceTypes[_nSource],
+		Value := _Values[_nSource],
+		ErrorId => _nReadError);
+	IF NOT _ValueValid[_nSource] AND NOT Error THEN
+		Error := TRUE;
+		ErrorId := _nReadError;
+	END_IF
+END_FOR
+
+Ready := NOT Error;]]></ST>
+    </Implementation>
+    <Method Name="M_GetLReal" Id="{bcad1188-d864-4f96-a59a-b600466465ae}">
+      <Declaration><![CDATA[METHOD PUBLIC M_GetLReal : LREAL
+VAR_INPUT
+	SourceIndex : UINT;
+END_VAR
+VAR_OUTPUT
+	Valid : BOOL;
+END_VAR
+VAR
+	pBool : POINTER TO BOOL;
+	pDInt : POINTER TO DINT;
+	pUDInt : POINTER TO UDINT;
+	pReal : POINTER TO REAL;
+	pLReal : POINTER TO LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Valid := FALSE;
+M_GetLReal := 0.0;
+IF NOT Ready OR (SourceIndex < 1) OR (SourceIndex > _SourceCount)
+	OR NOT _ValueValid[SourceIndex] THEN
+	RETURN;
+END_IF
+
+CASE _SourceTypes[SourceIndex] OF
+	E_ConfigDataType.Boolean:
+		pBool := ADR(_Values[SourceIndex].Data);
+		IF pBool^ THEN M_GetLReal := 1.0; END_IF
+	E_ConfigDataType.Integer32:
+		pDInt := ADR(_Values[SourceIndex].Data);
+		M_GetLReal := DINT_TO_LREAL(pDInt^);
+	E_ConfigDataType.UnsignedInteger32:
+		pUDInt := ADR(_Values[SourceIndex].Data);
+		M_GetLReal := UDINT_TO_LREAL(pUDInt^);
+	E_ConfigDataType.Float32:
+		pReal := ADR(_Values[SourceIndex].Data);
+		M_GetLReal := REAL_TO_LREAL(pReal^);
+	E_ConfigDataType.Float64:
+		pLReal := ADR(_Values[SourceIndex].Data);
+		M_GetLReal := pLReal^;
+ELSE
+	RETURN;
+END_CASE
+Valid := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_GetValueString" Id="{dc1956dd-5919-476c-8521-97aa597c49f0}">
+      <Declaration><![CDATA[METHOD PUBLIC M_GetValueString : STRING(80)
+VAR_INPUT
+	SourceIndex : UINT;
+END_VAR
+VAR_OUTPUT
+	Valid : BOOL;
+END_VAR
+VAR
+	pBool : POINTER TO BOOL;
+	pDInt : POINTER TO DINT;
+	pUDInt : POINTER TO UDINT;
+	pReal : POINTER TO REAL;
+	pLReal : POINTER TO LREAL;
+	sValue : STRING(80);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Valid := FALSE;
+M_GetValueString := '';
+IF NOT Ready OR (SourceIndex < 1) OR (SourceIndex > _SourceCount)
+	OR NOT _ValueValid[SourceIndex] THEN
+	RETURN;
+END_IF
+
+CASE _SourceTypes[SourceIndex] OF
+	E_ConfigDataType.Boolean:
+		pBool := ADR(_Values[SourceIndex].Data);
+		sValue := BOOL_TO_STRING(pBool^);
+	E_ConfigDataType.Integer32:
+		pDInt := ADR(_Values[SourceIndex].Data);
+		sValue := DINT_TO_STRING(pDInt^);
+	E_ConfigDataType.UnsignedInteger32:
+		pUDInt := ADR(_Values[SourceIndex].Data);
+		sValue := UDINT_TO_STRING(pUDInt^);
+	E_ConfigDataType.Float32:
+		pReal := ADR(_Values[SourceIndex].Data);
+		sValue := REAL_TO_STRING(pReal^);
+	E_ConfigDataType.Float64:
+		pLReal := ADR(_Values[SourceIndex].Data);
+		sValue := LREAL_TO_STRING(pLReal^);
+	E_ConfigDataType.String80:
+		MEMCPY(ADR(sValue), ADR(_Values[SourceIndex].Data), SIZEOF(sValue));
+ELSE
+	RETURN;
+END_CASE
+M_GetValueString := sValue;
+Valid := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

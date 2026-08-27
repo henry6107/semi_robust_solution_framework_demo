@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_LinkVariableManager" Id="{32f3e872-0a15-456f-a56c-c9d00d5b9111}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_LinkVariableManager
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_LinkVariableManager IMPLEMENTS I_VariableNodeReader
 VAR_OUTPUT
 	Error : BOOL;
 	ErrorMessage : STRING(255);
@@ -565,6 +565,106 @@ _Nodes[nIndex].Size := DINT_TO_UDINT(Variable.diSize);
 _Nodes[nIndex].DataType := eDataType;
 _Nodes[nIndex].Access := Access;
 M_RegisterNode := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ReadNode" Id="{d9822a9e-23b0-4cd9-ae89-22cb4d6d843b}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ReadNode : BOOL
+VAR_INPUT
+	NodeHandle : UINT;
+	ExpectedDataType : E_ConfigDataType;
+END_VAR
+VAR_IN_OUT
+	Value : ST_ConfigRawValue;
+END_VAR
+VAR_OUTPUT
+	ErrorId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ReadNode := FALSE;
+ErrorId := 0;
+MEMSET(ADR(Value), 0, SIZEOF(Value));
+
+IF (NodeHandle < 1) OR (NodeHandle > _NodeCount) THEN
+	ErrorId := 16#7201;
+	RETURN;
+END_IF
+IF _Nodes[NodeHandle].Access = E_VariableAccess.WriteOnly THEN
+	ErrorId := 16#7202;
+	RETURN;
+END_IF
+IF _Nodes[NodeHandle].Address = 0 THEN
+	ErrorId := 16#7203;
+	RETURN;
+END_IF
+IF (ExpectedDataType = E_ConfigDataType.Unknown)
+	OR (_Nodes[NodeHandle].DataType <> ExpectedDataType) THEN
+	ErrorId := 16#7204;
+	RETURN;
+END_IF
+IF (_Nodes[NodeHandle].Size = 0)
+	OR (_Nodes[NodeHandle].Size > SIZEOF(Value.Data)) THEN
+	ErrorId := 16#7205;
+	RETURN;
+END_IF
+
+MEMCPY(
+	destAddr := ADR(Value.Data),
+	srcAddr := _Nodes[NodeHandle].Address,
+	n := _Nodes[NodeHandle].Size);
+M_ReadNode := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ResolveReadableNode" Id="{b4435bc2-2990-4a3f-8adf-e2a6a6a146e2}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ResolveReadableNode : BOOL
+VAR_INPUT
+	Name : STRING(255);
+	ExpectedDataType : E_ConfigDataType;
+END_VAR
+VAR_OUTPUT
+	NodeHandle : UINT;
+END_VAR
+VAR
+	nNode : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ResolveReadableNode := FALSE;
+NodeHandle := 0;
+Error := FALSE;
+ErrorMessage := '';
+
+nNode := M_FindNode(Name := Name);
+IF nNode = 0 THEN
+	Error := TRUE;
+	ErrorMessage := CONCAT('Configured value source was not registered: ', Name);
+	RETURN;
+END_IF
+IF _Nodes[nNode].Access = E_VariableAccess.WriteOnly THEN
+	Error := TRUE;
+	ErrorMessage := CONCAT('Configured value source is write-only: ', Name);
+	RETURN;
+END_IF
+IF _Nodes[nNode].Address = 0 THEN
+	Error := TRUE;
+	ErrorMessage := CONCAT('Configured value source has no valid address: ', Name);
+	RETURN;
+END_IF
+IF (ExpectedDataType = E_ConfigDataType.Unknown)
+	OR (_Nodes[nNode].DataType <> ExpectedDataType) THEN
+	Error := TRUE;
+	ErrorMessage := CONCAT('Configured value source type does not match the registered node: ', Name);
+	RETURN;
+END_IF
+IF (_Nodes[nNode].Size = 0)
+	OR (_Nodes[nNode].Size > Param_Config.MaxConfigValueSize) THEN
+	Error := TRUE;
+	ErrorMessage := CONCAT('Configured value source size is unsupported: ', Name);
+	RETURN;
+END_IF
+
+NodeHandle := nNode;
+M_ResolveReadableNode := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_WriteNumeric" Id="{638cfbb7-f3ea-46fb-abab-042288179c45}" FolderPath="Private\">

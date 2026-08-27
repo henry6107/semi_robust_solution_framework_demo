@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <Itf Name="I_VariableNodeReader" Id="{8e42e50b-ebb9-4292-8314-ee4355e6fb8d}">
+    <Declaration><![CDATA[INTERFACE I_VariableNodeReader EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Method Name="M_ReadNode" Id="{8312f4a3-150a-4a2c-bd0b-e9750fc7bc45}">
+      <Declaration><![CDATA[METHOD M_ReadNode : BOOL
+VAR_INPUT
+	NodeHandle : UINT;
+	ExpectedDataType : E_ConfigDataType;
+END_VAR
+VAR_IN_OUT
+	Value : ST_ConfigRawValue;
+END_VAR
+VAR_OUTPUT
+	ErrorId : UDINT;
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

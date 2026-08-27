@@ -8,7 +8,7 @@ PLC 啟動時會從 `Param_Config.ModuleConfigFilePath` 載入 UTF-8 JSON；預�
 
 ## 必要欄位
 
-- Root：`schemaVersion`、`modules`；`adsPort` 預設為 851。
+- Root：`schemaVersion`、`modules`。schema v3 不再支援 `adsPort`。
 - Module：`enabled`、`moduleType`、`slot`。`moduleType` 必須與 `E_ModuleType` enum member 完全同名且大小寫一致；`slot` 是該 Module type 自己的 array index，同一 type 內不可重複，但不同 type 可使用相同 slot。啟用時另須非零且跨 type 全域唯一的 `id`。Module ADS symbol 會由 PLC 自動解析，不需在設定檔提供。
 - Mapping：`source`、`target`、`sourceDataType`、`targetDataType`。只有數值型別可使用 `transform`。
 - Reference binding：`source`、`targetPort`。`source` 必須是已註冊的 `I_BaseUnit`；`targetPort` 必須與 Module 專屬 reference-port enum member 完全同名且大小寫一致。GC 目前要求 `E_GCReferencePort` 公開的兩個 port 都存在。
@@ -21,11 +21,13 @@ PLC 啟動時會從 `Param_Config.ModuleConfigFilePath` 載入 UTF-8 JSON；預�
 
 設定檔只能使用 PLC initial 階段已註冊到 `FB_LinkVariableManager`／`FB_ReferenceManager` 的節點。實體 I/O 與 BaseUnit reference 由 `MAIN` 註冊；兩個 manager 都會從實際變數位址自動取得 ADS symbol，呼叫端不需手寫名稱。Module I/O 則由對應 adapter 依 `enabled` 狀態註冊。使用者仍只需修改 JSON 來選擇已公開的節點。
 
-目前 schemaVersion 為 `2`。舊版 `axisReferences`／`target` 不再接受，必須改為 `referenceBindings`／`targetPort`。Config 不填 interface type，也不接觸 `GVL_Module` 內部 reference 儲存位置；各 Module adapter 會依專屬 enum 契約解析 port，並以 `__QUERYINTERFACE` 驗證實際 BaseUnit 型別。
+目前 schemaVersion 為 `3`。schema v2 與 `adsPort` 不再接受；舊版 `axisReferences`／`target` 也必須改為 `referenceBindings`／`targetPort`。Config 不填 interface type，也不接觸 `GVL_Module` 內部 reference 儲存位置；各 Module adapter 會依專屬 enum 契約解析 port，並以 `__QUERYINTERFACE` 驗證實際 BaseUnit 型別。
 
 Module 設定只在 PLC 啟動時套用；變更 `enabled` 狀態後必須重新啟動 PLC。
 
 I/O mapping 的無轉換路徑要求來源與目標的型別和大小完全一致，週期工作只執行 `MEMCPY`。有 `scale`／`offset` 時，manager 會先做明確的數值轉換。
+
+VariableList 與 AlarmList 的 `source` 也必須是該 enabled Module 註冊的可讀節點。Configuration Manager 只在初始化時以完整 Symbol Name 解析節點，並將不透明的 `NodeHandle` 寫入 Runtime Binding；Module 週期執行透過 `I_VariableNodeReader` 直接建立本機資料 snapshot，不再建立 ADS handle 或執行 ADS Sum Command。Config 的 `dataType` 是預期型別，必須與註冊節點的真實 metadata 相同。
 
 ## Module 容量
 
@@ -52,4 +54,4 @@ Module type 自己的 FB、Runtime、Control 與 reference arrays，以及 adapt
 | `MaxModuleReferenceBindings` | 50 | 每個 Module 的 `referenceBindings` 最大數量。 |
 | `MaxConfigReferenceNodes` | 100 | `FB_ReferenceManager` 可註冊的 BaseUnit reference source 總數。 |
 
-`MaxConfigSources` 目前為 `MaxModuleVariable + MaxModuleAlarm`，因此每個 Module 的 ADS Sum Command 最多處理 200 個 Variable／Alarm sources。`MaxAdsSumResponseSize` 會依 source 數量與單筆最大資料大小在編譯期計算。
+`MaxConfiguredValueSources` 為 `MaxModuleVariable + MaxConfiguredAlarmsPerModule`，限制每個 Module 一次本機 snapshot 可包含的 Variable／Alarm sources 總數。`MaxConfigValueSize` 則限制單一節點的原始資料大小，目前可容納 `STRING(80)` 與結尾字元。

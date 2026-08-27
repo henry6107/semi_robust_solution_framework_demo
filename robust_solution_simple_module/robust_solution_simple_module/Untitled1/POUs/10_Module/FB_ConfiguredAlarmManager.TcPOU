@@ -58,11 +58,11 @@ FOR nAlarm := 1 TO RuntimeConfig.AlarmCount DO
 
 	AlarmList[nTarget].ModuleId := ModuleId;
 	AlarmList[nTarget].ServiceId := 0;
-	AlarmList[nTarget].MainErrorId := RuntimeConfig.AlarmList[nAlarm].MainErrorId;
-	AlarmList[nTarget].SourceErrorId := RuntimeConfig.AlarmList[nAlarm].SourceErrorId;
-	AlarmList[nTarget].Message := RuntimeConfig.AlarmList[nAlarm].Message;
-	AlarmList[nTarget].Path := RuntimeConfig.AlarmList[nAlarm].Source;
-	AlarmList[nTarget].Severity := RuntimeConfig.AlarmList[nAlarm].Severity;
+	AlarmList[nTarget].MainErrorId := RuntimeConfig.AlarmBindings[nAlarm].Definition.MainErrorId;
+	AlarmList[nTarget].SourceErrorId := RuntimeConfig.AlarmBindings[nAlarm].Definition.SourceErrorId;
+	AlarmList[nTarget].Message := RuntimeConfig.AlarmBindings[nAlarm].Definition.Message;
+	AlarmList[nTarget].Path := RuntimeConfig.AlarmBindings[nAlarm].Definition.Source;
+	AlarmList[nTarget].Severity := RuntimeConfig.AlarmBindings[nAlarm].Definition.Severity;
 	AlarmList[nTarget].DateTime := _States[nAlarm].FirstOccurrenceDateTime;
 	AlarmList[nTarget].Active := _States[nAlarm].Active;
 	AlarmList[nTarget].Acknowledged := _States[nAlarm].Acknowledged;
@@ -139,7 +139,7 @@ CASE Request.Command OF
 		END_IF
 		FOR nAlarm := 1 TO RuntimeConfig.AlarmCount DO
 			IF _States[nAlarm].Latched
-				AND (RuntimeConfig.AlarmList[nAlarm].MainErrorId = Request.MainErrorId) THEN
+				AND (RuntimeConfig.AlarmBindings[nAlarm].Definition.MainErrorId = Request.MainErrorId) THEN
 				_States[nAlarm].Acknowledged := TRUE;
 				IF NOT _States[nAlarm].Active THEN
 					MEMSET(ADR(_States[nAlarm]), 0, SIZEOF(_States[nAlarm]));

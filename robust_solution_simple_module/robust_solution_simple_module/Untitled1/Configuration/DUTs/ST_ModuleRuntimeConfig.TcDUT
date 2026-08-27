@@ -7,12 +7,11 @@ STRUCT
 	Valid : BOOL;
 	ModuleId : UDINT;
 	ModuleType : STRING(16);
-	AdsPort : UINT;
 	Revision : UDINT;
 	VariableCount : UINT;
-	VariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ConfigVariableInfo;
+	VariableBindings : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_RuntimeVariableBinding;
 	AlarmCount : UINT;
-	AlarmList : ARRAY[1..Param_Config.MaxConfiguredAlarmsPerModule] OF ST_ConfigAlarmInfo;
+	AlarmBindings : ARRAY[1..Param_Config.MaxConfiguredAlarmsPerModule] OF ST_RuntimeAlarmBinding;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

@@ -170,7 +170,6 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 	_RuntimeConfigScratch.Enabled := _Config.Modules[nModule].Enabled;
 	_RuntimeConfigScratch.ModuleId := _Config.Modules[nModule].Id;
 	_RuntimeConfigScratch.ModuleType := _Config.Modules[nModule].ModuleType;
-	_RuntimeConfigScratch.AdsPort := _Config.AdsPort;
 	_RuntimeConfigScratch.Revision := _nRevision;
 
 	IF NOT _Config.Modules[nModule].Enabled THEN
@@ -251,18 +250,32 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 
 	_RuntimeConfigScratch.VariableCount := _Config.Modules[nModule].VariableCount;
 	FOR nItem := 1 TO _Config.Modules[nModule].VariableCount DO
-		_RuntimeConfigScratch.VariableList[nItem] := _Config.Modules[nModule].VariableList[nItem];
-		_RuntimeConfigScratch.VariableList[nItem].Source := CONCAT(
+		_RuntimeConfigScratch.VariableBindings[nItem].Definition := _Config.Modules[nModule].VariableList[nItem];
+		_RuntimeConfigScratch.VariableBindings[nItem].Definition.Source := CONCAT(
 			CONCAT(sModuleSymbol, '.'),
 			_Config.Modules[nModule].VariableList[nItem].Source);
+		IF NOT LinkVariableManager.M_ResolveReadableNode(
+			Name := _RuntimeConfigScratch.VariableBindings[nItem].Definition.Source,
+			ExpectedDataType := _RuntimeConfigScratch.VariableBindings[nItem].Definition.DataType,
+			NodeHandle => _RuntimeConfigScratch.VariableBindings[nItem].NodeHandle) THEN
+			ErrorMessage := LinkVariableManager.ErrorMessage;
+			RETURN;
+		END_IF
 	END_FOR
 
 	_RuntimeConfigScratch.AlarmCount := _Config.Modules[nModule].AlarmCount;
 	FOR nItem := 1 TO _Config.Modules[nModule].AlarmCount DO
-		_RuntimeConfigScratch.AlarmList[nItem] := _Config.Modules[nModule].AlarmList[nItem];
-		_RuntimeConfigScratch.AlarmList[nItem].Source := CONCAT(
+		_RuntimeConfigScratch.AlarmBindings[nItem].Definition := _Config.Modules[nModule].AlarmList[nItem];
+		_RuntimeConfigScratch.AlarmBindings[nItem].Definition.Source := CONCAT(
 			CONCAT(sModuleSymbol, '.'),
 			_Config.Modules[nModule].AlarmList[nItem].Source);
+		IF NOT LinkVariableManager.M_ResolveReadableNode(
+			Name := _RuntimeConfigScratch.AlarmBindings[nItem].Definition.Source,
+			ExpectedDataType := _RuntimeConfigScratch.AlarmBindings[nItem].Definition.DataType,
+			NodeHandle => _RuntimeConfigScratch.AlarmBindings[nItem].NodeHandle) THEN
+			ErrorMessage := LinkVariableManager.ErrorMessage;
+			RETURN;
+		END_IF
 	END_FOR
 
 	_RuntimeConfigScratch.Valid := TRUE;
@@ -351,10 +364,10 @@ IF _Config.SchemaVersion <> Param_Config.ConfigSchemaVersion THEN
 	RETURN;
 END_IF
 
-_Config.AdsPort := Param_Config.DefaultPlcAdsPort;
 Node := _Json.FindMember(Root, 'adsPort');
 IF Node <> 0 THEN
-	_Config.AdsPort := UDINT_TO_UINT(_Json.GetUint(Node));
+	ErrorMessage := 'adsPort is not supported by schemaVersion 3; configured values use registered local nodes.';
+	RETURN;
 END_IF
 
 ModulesNode := _Json.FindMember(Root, 'modules');

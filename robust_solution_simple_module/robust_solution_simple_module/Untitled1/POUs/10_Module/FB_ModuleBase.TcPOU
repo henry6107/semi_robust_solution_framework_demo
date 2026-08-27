@@ -7,6 +7,7 @@ VAR_INPUT
 	SystemContext : REFERENCE TO ST_SystemContext;
 	HeartbeatIndex : UDINT;
 	RuntimeConfig : REFERENCE TO ST_ModuleRuntimeConfig;
+	VariableNodeReader : I_VariableNodeReader;
 END_VAR
 
 VAR_OUTPUT
@@ -26,7 +27,7 @@ VAR
 	_HeartbeatTimer : TON;
 	_LastHeartbeatIndex : UDINT;
 	_IsControlSourceAlive : BOOL;
-	_ConfiguredSnapshot : FB_AdsSumSnapshotReader;
+	_ConfiguredSnapshot : FB_ConfigValueSnapshotReader;
 	_ConfiguredAlarmManager : FB_ConfiguredAlarmManager;
 END_VAR
 ]]></Declaration>
@@ -152,9 +153,9 @@ FOR nAlarm := 1 TO RuntimeConfig.AlarmCount DO
 	IF bValid THEN
 		bConditionMet := F_AlarmConditionMet(
 			Value := fValue,
-			Operator := RuntimeConfig.AlarmList[nAlarm].Operator,
-			Threshold := RuntimeConfig.AlarmList[nAlarm].Threshold,
-			Tolerance := RuntimeConfig.AlarmList[nAlarm].Tolerance);
+			Operator := RuntimeConfig.AlarmBindings[nAlarm].Definition.Operator,
+			Threshold := RuntimeConfig.AlarmBindings[nAlarm].Definition.Threshold,
+			Tolerance := RuntimeConfig.AlarmBindings[nAlarm].Definition.Tolerance);
 	END_IF
 	_ConfiguredAlarmManager.M_UpdateAlarm(
 		AlarmIndex := nAlarm,
@@ -202,10 +203,11 @@ END_IF
 
 MEMSET(ADR(ModuleVariableList), 0, SIZEOF(ModuleVariableList));
 FOR nVariable := 1 TO RuntimeConfig.VariableCount DO
-	ModuleVariableList[nVariable].Id := RuntimeConfig.VariableList[nVariable].Id;
-	ModuleVariableList[nVariable].Name := RuntimeConfig.VariableList[nVariable].Name;
-	ModuleVariableList[nVariable].DataType := F_ConfigDataTypeToDescriptor(DataType := RuntimeConfig.VariableList[nVariable].DataType);
-	ModuleVariableList[nVariable].Unit := RuntimeConfig.VariableList[nVariable].Unit;
+	ModuleVariableList[nVariable].Id := RuntimeConfig.VariableBindings[nVariable].Definition.Id;
+	ModuleVariableList[nVariable].Name := RuntimeConfig.VariableBindings[nVariable].Definition.Name;
+	ModuleVariableList[nVariable].DataType := F_ConfigDataTypeToDescriptor(
+		DataType := RuntimeConfig.VariableBindings[nVariable].Definition.DataType);
+	ModuleVariableList[nVariable].Unit := RuntimeConfig.VariableBindings[nVariable].Definition.Unit;
 	ModuleVariableList[nVariable].Value := _ConfiguredSnapshot.M_GetValueString(
 		SourceIndex := nVariable,
 		Valid => bValid);
@@ -225,7 +227,9 @@ SUPER^();
 
 IF __ISVALIDREF(RuntimeConfig) THEN
 	_ModuleId := RuntimeConfig.ModuleId;
-	_ConfiguredSnapshot(RuntimeConfig := RuntimeConfig);
+	_ConfiguredSnapshot(
+		RuntimeConfig := RuntimeConfig,
+		VariableNodeReader := VariableNodeReader);
 	ModuleStatus.ModuleId := _ModuleId;
 	ModuleStatus.Enabled := RuntimeConfig.Enabled;
 	ModuleStatus.Configuration.Ready := _ConfiguredSnapshot.Ready;
