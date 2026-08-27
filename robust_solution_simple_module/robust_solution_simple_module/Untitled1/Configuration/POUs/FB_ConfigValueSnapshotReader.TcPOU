@@ -9,7 +9,9 @@ END_VAR
 VAR_OUTPUT
 	Ready : BOOL;
 	Error : BOOL;
-	ErrorId : UDINT;
+	ErrorCode : E_ConfigValueError;
+	ErrorMessage : STRING(255);
+	ErrorSource : STRING(255);
 END_VAR
 VAR
 	_SourceCount : UINT;
@@ -21,13 +23,15 @@ END_VAR
 VAR_TEMP
 	_nIndex : UINT;
 	_nSource : UINT;
-	_nReadError : UDINT;
+	_eReadError : E_ConfigValueError;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[Ready := FALSE;
 Error := FALSE;
-ErrorId := 0;
+ErrorCode := E_ConfigValueError.None;
+ErrorMessage := '';
+ErrorSource := '';
 _SourceCount := 0;
 
 IF NOT __ISVALIDREF(RuntimeConfig) THEN
@@ -37,15 +41,17 @@ IF NOT RuntimeConfig.Enabled OR NOT RuntimeConfig.Valid THEN
 	RETURN;
 END_IF
 IF VariableNodeReader = 0 THEN
-	Error := TRUE;
-	ErrorId := 16#7100;
+	M_SetFirstError(
+		ErrorCodeValue := E_ConfigValueError.ReaderUnavailable,
+		SourceName := '');
 	RETURN;
 END_IF
 
 _SourceCount := RuntimeConfig.VariableCount + RuntimeConfig.AlarmCount;
 IF _SourceCount > Param_Config.MaxConfiguredValueSources THEN
-	Error := TRUE;
-	ErrorId := 16#7101;
+	M_SetFirstError(
+		ErrorCodeValue := E_ConfigValueError.SourceCapacityExceeded,
+		SourceName := '');
 	RETURN;
 END_IF
 
@@ -59,10 +65,11 @@ FOR _nIndex := 1 TO RuntimeConfig.VariableCount DO
 		NodeHandle := RuntimeConfig.VariableBindings[_nIndex].NodeHandle,
 		ExpectedDataType := _SourceTypes[_nSource],
 		Value := _Values[_nSource],
-		ErrorId => _nReadError);
+		ErrorCode => _eReadError);
 	IF NOT _ValueValid[_nSource] AND NOT Error THEN
-		Error := TRUE;
-		ErrorId := _nReadError;
+		M_SetFirstError(
+			ErrorCodeValue := _eReadError,
+			SourceName := RuntimeConfig.VariableBindings[_nIndex].Definition.Source);
 	END_IF
 END_FOR
 
@@ -73,15 +80,34 @@ FOR _nIndex := 1 TO RuntimeConfig.AlarmCount DO
 		NodeHandle := RuntimeConfig.AlarmBindings[_nIndex].NodeHandle,
 		ExpectedDataType := _SourceTypes[_nSource],
 		Value := _Values[_nSource],
-		ErrorId => _nReadError);
+		ErrorCode => _eReadError);
 	IF NOT _ValueValid[_nSource] AND NOT Error THEN
-		Error := TRUE;
-		ErrorId := _nReadError;
+		M_SetFirstError(
+			ErrorCodeValue := _eReadError,
+			SourceName := RuntimeConfig.AlarmBindings[_nIndex].Definition.Source);
 	END_IF
 END_FOR
 
 Ready := NOT Error;]]></ST>
     </Implementation>
+    <Method Name="M_SetFirstError" Id="{7c30074d-20d4-415a-a499-1735aa1c13cd}">
+      <Declaration><![CDATA[METHOD PRIVATE M_SetFirstError
+VAR_INPUT
+	ErrorCodeValue : E_ConfigValueError;
+	SourceName : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Error THEN
+	RETURN;
+END_IF
+
+Error := TRUE;
+ErrorCode := ErrorCodeValue;
+ErrorMessage := F_ConfigValueErrorMessage(ErrorCode := ErrorCodeValue);
+ErrorSource := SourceName;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_GetLReal" Id="{bcad1188-d864-4f96-a59a-b600466465ae}">
       <Declaration><![CDATA[METHOD PUBLIC M_GetLReal : LREAL
 VAR_INPUT

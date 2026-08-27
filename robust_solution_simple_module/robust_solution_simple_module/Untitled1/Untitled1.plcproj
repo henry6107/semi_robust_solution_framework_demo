@@ -31,6 +31,9 @@
     <Compile Include="Configuration\DUTs\E_ConfigDataType.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Configuration\DUTs\E_ConfigValueError.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Configuration\DUTs\E_LinkPhase.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -83,6 +86,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\POUs\F_ConfigDataTypeToDescriptor.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\F_ConfigValueErrorMessage.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\Interfaces\I_AdsSymbolProvider.TcIO">

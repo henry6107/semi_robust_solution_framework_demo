@@ -5,7 +5,9 @@
 STRUCT
 	Ready : BOOL;
 	Error : BOOL;
-	ErrorId : UDINT;
+	ErrorCode : E_ConfigValueError;
+	ErrorMessage : STRING(255);
+	ErrorSource : STRING(255);
 END_STRUCT
 END_TYPE
 ]]></Declaration>

@@ -577,34 +577,34 @@ VAR_IN_OUT
 	Value : ST_ConfigRawValue;
 END_VAR
 VAR_OUTPUT
-	ErrorId : UDINT;
+	ErrorCode : E_ConfigValueError;
 END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[M_ReadNode := FALSE;
-ErrorId := 0;
+ErrorCode := E_ConfigValueError.None;
 MEMSET(ADR(Value), 0, SIZEOF(Value));
 
 IF (NodeHandle < 1) OR (NodeHandle > _NodeCount) THEN
-	ErrorId := 16#7201;
+	ErrorCode := E_ConfigValueError.InvalidNodeHandle;
 	RETURN;
 END_IF
 IF _Nodes[NodeHandle].Access = E_VariableAccess.WriteOnly THEN
-	ErrorId := 16#7202;
+	ErrorCode := E_ConfigValueError.NodeReadNotAllowed;
 	RETURN;
 END_IF
 IF _Nodes[NodeHandle].Address = 0 THEN
-	ErrorId := 16#7203;
+	ErrorCode := E_ConfigValueError.InvalidNodeAddress;
 	RETURN;
 END_IF
 IF (ExpectedDataType = E_ConfigDataType.Unknown)
 	OR (_Nodes[NodeHandle].DataType <> ExpectedDataType) THEN
-	ErrorId := 16#7204;
+	ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
 	RETURN;
 END_IF
 IF (_Nodes[NodeHandle].Size = 0)
 	OR (_Nodes[NodeHandle].Size > SIZEOF(Value.Data)) THEN
-	ErrorId := 16#7205;
+	ErrorCode := E_ConfigValueError.InvalidNodeSize;
 	RETURN;
 END_IF
 

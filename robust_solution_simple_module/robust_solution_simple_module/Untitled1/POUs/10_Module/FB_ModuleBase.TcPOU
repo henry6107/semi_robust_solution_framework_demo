@@ -234,7 +234,9 @@ IF __ISVALIDREF(RuntimeConfig) THEN
 	ModuleStatus.Enabled := RuntimeConfig.Enabled;
 	ModuleStatus.Configuration.Ready := _ConfiguredSnapshot.Ready;
 	ModuleStatus.Configuration.Error := _ConfiguredSnapshot.Error;
-	ModuleStatus.Configuration.ErrorId := _ConfiguredSnapshot.ErrorId;
+	ModuleStatus.Configuration.ErrorCode := _ConfiguredSnapshot.ErrorCode;
+	ModuleStatus.Configuration.ErrorMessage := _ConfiguredSnapshot.ErrorMessage;
+	ModuleStatus.Configuration.ErrorSource := _ConfiguredSnapshot.ErrorSource;
 END_IF
 
 _ServiceContext.ModuleId := _ModuleId;

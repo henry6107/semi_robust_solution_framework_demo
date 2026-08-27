@@ -223,10 +223,28 @@ Node reader interface 不會複製 manager 或 registry；Module 只能呼叫 `M
 
 - `ModuleStatus.Configuration.Ready = FALSE`
 - `ModuleStatus.Configuration.Error = TRUE`
-- 保存第一個錯誤碼
+- `ModuleStatus.Configuration.ErrorCode` 保存第一個 `E_ConfigValueError`
+- `ModuleStatus.Configuration.ErrorMessage` 保存固定、可讀的錯誤原因
+- `ModuleStatus.Configuration.ErrorSource` 保存失敗來源的完整 Symbol Name；snapshot 層級錯誤則為空字串
 - 本周期不重新判斷 configured alarm，已鎖存警報維持原狀
 - 不發布失敗 snapshot 的舊值
 - 下一次完整 snapshot 成功後自動恢復
+
+`E_ConfigValueError` 是 configured value acquisition 的錯誤契約。既有數值範圍保留，讓外部系統升級欄位型別後仍可沿用原本的數值診斷：
+
+| Enum member | Value | 發生位置 | 意義 |
+| --- | ---: | --- | --- |
+| `ReaderUnavailable` | `16#7100` | `FB_ConfigValueSnapshotReader` | 未注入 `I_VariableNodeReader`。 |
+| `SourceCapacityExceeded` | `16#7101` | `FB_ConfigValueSnapshotReader` | VariableList 與 AlarmList 的來源總數超過 snapshot 容量。 |
+| `InvalidNodeHandle` | `16#7201` | `FB_LinkVariableManager.M_ReadNode()` | Handle 不在目前 registry 範圍內。 |
+| `NodeReadNotAllowed` | `16#7202` | `FB_LinkVariableManager.M_ReadNode()` | Node 為 `WriteOnly`，不可作為資料來源。 |
+| `InvalidNodeAddress` | `16#7203` | `FB_LinkVariableManager.M_ReadNode()` | Node address 無效。 |
+| `NodeDataTypeMismatch` | `16#7204` | `FB_LinkVariableManager.M_ReadNode()` | Config 預期型別與註冊 metadata 不一致。 |
+| `InvalidNodeSize` | `16#7205` | `FB_LinkVariableManager.M_ReadNode()` | Node size 為零或超過 raw-value buffer。 |
+
+`F_ConfigValueErrorMessage()` 集中管理固定訊息；`FB_ConfigValueSnapshotReader` 另以 `ErrorSource` 保存失敗來源的 Symbol Name，避免將 machine-readable path 拼入訊息後發生截斷或要求上位解析文字。這樣底層 reader seam 維持精簡的 typed error，而對外的 Module Status 仍具有足夠的排錯脈絡。
+
+Beckhoff Motion FB 的 `ErrorId` 與 JSON library 的 `HRESULT` 不納入此 enum。它們是外部 library 的 source error contract，應保留原始型別與數值，並由上層 domain error／message 補充操作情境。
 
 ### 3.8 失敗處理
 
