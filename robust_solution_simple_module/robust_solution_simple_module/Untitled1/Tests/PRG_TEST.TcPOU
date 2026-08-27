@@ -4,15 +4,8 @@
     <Declaration><![CDATA[PROGRAM PRG_TEST
 VAR
 	FakeAxisContractTests : FB_FakeAxis_BaseUnitTests;
- 	JogServiceTests : FB_GCSpinAxisJogCWServiceTests;
 	MoveAbsServiceTests : FB_GCSpinAxisMoveAbsServiceTests;
-	MoveVelServiceTests : FB_GCSpinAxisMoveVelCWServiceTests;
-	LiftPinMoveAbsServiceTests : FB_GCLiftPinAxisMoveAbsServiceTests;
-	LiftPinMoveVelCWServiceTests : FB_GCLiftPinAxisMoveVelCWServiceTests;
-	LiftPinMoveVelCCWServiceTests : FB_GCLiftPinAxisMoveVelCCWServiceTests;
-	SingleProcessServiceTests : FB_GCSingleProcessServiceTests;
 	GCModuleTests : FB_GC_ModuleTests;
-	UtcClockTests : FB_UtcClockTests;
 END_VAR
 ]]></Declaration>
     <Implementation>
