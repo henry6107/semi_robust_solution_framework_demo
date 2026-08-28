@@ -69,6 +69,18 @@ CASE nPhase OF
 			ServiceParam:= ServiceParam,
 			SpinAxis_BaseUnit:= SpinAxis,
 			LiftPinAxis_BaseUnit:= LiftAxis);
+
+		AssertTrue(
+			Condition := (RoutingModule.ServiceStatus.SpinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.SingleProcess.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion),
+			Message := 'Finite GC Services must publish NaturalCompletion on their first cyclic update.');
+		AssertTrue(
+			Condition := (RoutingModule.ServiceStatus.SpinAxisJogCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
+				AND (RoutingModule.ServiceStatus.SpinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop),
+			Message := 'Continuous GC Services must publish ExecuteUntilExternalStop on their first cyclic update.');
 		nPhase := 1;
 
 	1:
@@ -183,6 +195,15 @@ CASE nPhase OF
 		AssertTrue(Condition := RoutingModule.ServiceStatus.SpinAxisMoveAbs.ResponseId = 2001, Message := 'Selected Service must acknowledge its RequestId.');
 		AssertTrue(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisMoveAbs), Message := 'SpinAxisMoveAbs must acquire Spin Axis with its assigned OwnerId.');
 		AssertTrue(
+			Condition := (RoutingModule.ServiceStatus.SpinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.SingleProcess.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.SpinAxisJogCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
+				AND (RoutingModule.ServiceStatus.SpinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop),
+			Message := 'Completion behavior must remain stable after Module and Service state transitions.');
+		AssertTrue(
 			Condition := (RoutingModule.ServiceStatus.SpinAxisJogCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
 				AND (RoutingModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
 				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
@@ -276,6 +297,15 @@ CASE nPhase OF
 				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Undefined)
 				AND (MissingAxisModule.ServiceStatus.SingleProcess.PackMLOut.eStateCurrent = E_PackMLState.Undefined),
 			Message := 'Missing LiftPin Axis must prevent every Service update.');
+		AssertTrue(
+			Condition := (MissingAxisModule.ServiceStatus.SpinAxisJogCW.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
+				AND (MissingAxisModule.ServiceStatus.SpinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
+				AND (MissingAxisModule.ServiceStatus.SpinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
+				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
+				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveVelCCW.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
+				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
+				AND (MissingAxisModule.ServiceStatus.SingleProcess.CompletionBehavior = E_ServiceCompletionBehavior.Unknown),
+			Message := 'Services that have not run a cyclic update must keep Unknown completion behavior.');
 		nPhase := 1;
 
 	1:

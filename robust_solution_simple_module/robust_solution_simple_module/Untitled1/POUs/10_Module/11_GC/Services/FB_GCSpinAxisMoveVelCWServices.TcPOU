@@ -13,7 +13,7 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateService();
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.ExecuteUntilExternalStop);
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{49ed7549-95d2-4542-8c09-83ad057d2672}" />

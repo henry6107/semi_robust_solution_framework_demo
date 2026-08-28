@@ -32,6 +32,9 @@ CASE nPhase OF
 		AssertTrue(
 			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Aborted,
 			Message := 'Initial Service update must reach Aborted.');
+		AssertTrue(
+			Condition := TestService.Status.CompletionBehavior = E_ServiceCompletionBehavior.Unknown,
+			Message := 'The test Service must publish its configured Unknown completion behavior.');
 		nPhase := 1;
 
 	1:
@@ -155,6 +158,9 @@ CASE nPhase OF
 		AssertTrue(
 			Condition := TestService.Status.ResponseId = 1004,
 			Message := 'Service must acknowledge the fresh Reset request.');
+		AssertTrue(
+			Condition := TestService.Status.CompletionBehavior = E_ServiceCompletionBehavior.Unknown,
+			Message := 'Completion behavior must remain stable across PackML state transitions.');
 
 		nPhase := 0;
 		TEST_FINISHED();

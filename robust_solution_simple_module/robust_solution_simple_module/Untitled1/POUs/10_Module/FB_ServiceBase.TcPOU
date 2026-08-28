@@ -78,6 +78,7 @@ M_AddError := TRUE;]]></ST>
     <Method Name="M_UpdateService" Id="{8ae05b1d-81f7-4b0b-9f3f-42116c68a842}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateService
 VAR_INPUT
+	CompletionBehavior : E_ServiceCompletionBehavior;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -88,6 +89,7 @@ _CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
 
 // Updata status
 Status.PackMLOut := PackMLOut;
+Status.CompletionBehavior := CompletionBehavior;
 IF _CmdRequestOneShot.Q THEN // Acknowledge to upper controller that command received
 	Status.ResponseId := Ctrl.RequestId;
 END_IF]]></ST>

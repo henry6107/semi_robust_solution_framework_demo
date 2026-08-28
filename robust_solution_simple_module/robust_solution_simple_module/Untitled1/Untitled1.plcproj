@@ -178,6 +178,9 @@
     <Compile Include="DUTs\ST_ServiceContext.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\E_ServiceCompletionBehavior.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\ST_ServiceStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>

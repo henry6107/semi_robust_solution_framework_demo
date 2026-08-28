@@ -33,7 +33,7 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateService();
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);
 
 // Update process status
 ProcessStatus.CurrentStage := _CurrentStage;

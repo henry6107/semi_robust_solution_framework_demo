@@ -7,6 +7,7 @@ STRUCT
 	PackMLOut : ST_PML_Base_Out;
 	ErrorList : ARRAY[1..Param_Config.MaxServiceError] OF ST_ExtAlarm;
 	ServiceErrorId : UDINT;
+	CompletionBehavior : E_ServiceCompletionBehavior;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

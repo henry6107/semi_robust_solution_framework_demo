@@ -4,7 +4,7 @@
     <Declaration><![CDATA[FUNCTION_BLOCK FB_TestableServiceBase EXTENDS FB_ServiceBase
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateService();]]></ST>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.Unknown);]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>
