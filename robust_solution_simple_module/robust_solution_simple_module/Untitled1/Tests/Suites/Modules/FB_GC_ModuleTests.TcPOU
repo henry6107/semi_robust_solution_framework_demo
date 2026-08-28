@@ -18,13 +18,18 @@ VAR
 	StoppingModule : FB_GC_Module;
 	StoppingSpinFake : FB_FakeAxis_BaseUnit;
 	StoppingLiftFake : FB_FakeAxis_BaseUnit;
+
+	AlarmModule : FB_GC_Module;
+	AlarmSpinFake : FB_FakeAxis_BaseUnit;
+	AlarmLiftFake : FB_FakeAxis_BaseUnit;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[MissingAxisPreventsModuleUpdate();
 ModuleClearResetAndAutoStartSynchronizesAllServices();
 ExecuteRoutesSelectedServiceControlAndParameters();
-ModuleStopOverridesServiceControlAndWaitsForCleanup();]]></ST>
+ModuleStopOverridesServiceControlAndWaitsForCleanup();
+SingleProcessFailureUsesUnifiedModuleAlarmLifecycle();]]></ST>
     </Implementation>
     <Method Name="ExecuteRoutesSelectedServiceControlAndParameters" Id="{b62fdc5d-8b55-4c68-93ae-3ba6effe2911}">
       <Declaration><![CDATA[METHOD ExecuteRoutesSelectedServiceControlAndParameters
@@ -823,6 +828,106 @@ CASE nPhase OF
 		AssertFalse(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_GCServiceId.SpinAxisJogCW), Message := 'Ignored external Jog Start must not acquire ownership later.');
 		nPhase := 0;
 
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SingleProcessFailureUsesUnifiedModuleAlarmLifecycle" Id="{f9468e9f-4d68-4786-8d2b-f286d682c729}">
+      <Declaration><![CDATA[METHOD SingleProcessFailureUsesUnifiedModuleAlarmLifecycle
+VAR_INST
+	SpinAxis : I_Axis_BaseUnit;
+	LiftAxis : I_Axis_BaseUnit;
+	RuntimeConfig : ST_ModuleRuntimeConfig;
+	VariableNodeReader : FB_LinkVariableManager;
+	ModuleCtrl : ST_ModuleCtrl;
+	ServiceCtrl : ST_GC_ServiceCtrl;
+	ServiceParam : ST_GC_ServiceParam;
+	SystemContext : ST_SystemContext;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('SingleProcessFailureUsesUnifiedModuleAlarmLifecycle');
+
+CASE nPhase OF
+	0:
+		AlarmSpinFake.M_ResetScenario();
+		AlarmLiftFake.M_ResetScenario();
+		SpinAxis := AlarmSpinFake;
+		LiftAxis := AlarmLiftFake;
+		RuntimeConfig.ModuleId := 77;
+		SystemContext.UtcDateTime := '20260828130000000';
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 1;
+
+	1:
+		ModuleCtrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		ModuleCtrl.PackMLIn.bCommandChangeRequest := TRUE;
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 2;
+
+	2:
+		ModuleCtrl.PackMLIn.bCommandChangeRequest := FALSE;
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 3;
+
+	3:
+		ModuleCtrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		ModuleCtrl.PackMLIn.bCommandChangeRequest := TRUE;
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 4;
+
+	4:
+		ModuleCtrl.PackMLIn.bCommandChangeRequest := FALSE;
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 5;
+
+	5:
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 6;
+
+	6:
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := AlarmModule.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Test setup must bring the Module to Execute.');
+		nPhase := 7;
+
+	7:
+		// Default SingleProcess parameters are invalid and fail during Starting.
+		ServiceCtrl.SingleProcess.RequestId := 7001;
+		ServiceCtrl.SingleProcess.PackMLIn.eCommand := E_PackMLCommand.Start;
+		ServiceCtrl.SingleProcess.PackMLIn.bCommandChangeRequest := TRUE;
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := AlarmModule.ServiceStatus.SingleProcess.ErrorList[1].MainErrorId = E_GCErrorCode.Invalid_Param, Message := 'SingleProcess first failure must enter its Service ErrorList.');
+		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].ModuleId = 77, Message := 'The unified manager must normalize the Module identity.');
+		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].ServiceId = E_GCServiceId.SingleProcess, Message := 'The GC Module must submit the SingleProcess Service identity.');
+		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].MainErrorId = E_GCErrorCode.Invalid_Param, Message := 'The GC Module must publish the Service failure.');
+		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].Active AND (AlarmModule.ModuleAlarmList[1].OccurrenceCount = 1), Message := 'First Service failure must publish active with one occurrence.');
+		AssertTrue(Condition := FIND(AlarmModule.ModuleAlarmList[1].Message, 'Axis=None') > 0, Message := 'SingleProcess alarm message must identify the failed axis.');
+		AssertTrue(Condition := FIND(AlarmModule.ModuleAlarmList[1].Message, 'Stage=Prepare') > 0, Message := 'SingleProcess alarm message must identify the failed stage.');
+		nPhase := 8;
+
+	8:
+		ServiceCtrl.SingleProcess.PackMLIn.bCommandChangeRequest := FALSE;
+		ModuleCtrl.AlarmAckRequest.RequestId := 9001;
+		ModuleCtrl.AlarmAckRequest.Command := E_AlarmAckCommand.AcknowledgeOne;
+		ModuleCtrl.AlarmAckRequest.MainErrorId := E_GCErrorCode.Invalid_Param;
+		ModuleCtrl.AlarmAckRequest.bChangeRequest := TRUE;
+		ModuleCtrl.AlarmAckRequest.ServiceId := E_GCServiceId.SingleProcess;
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := AlarmModule.ModuleStatus.Alarm.AckAccepted AND (AlarmModule.ModuleStatus.Alarm.AckResponseId = 9001), Message := 'Module Ack response must confirm the exact Service alarm.');
+		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].Active AND AlarmModule.ModuleAlarmList[1].Acknowledged, Message := 'Ack-before-reset must retain the active lifecycle.');
+		nPhase := 9;
+
+	9:
+		ModuleCtrl.AlarmAckRequest.bChangeRequest := FALSE;
+		ServiceCtrl.SingleProcess.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		ServiceCtrl.SingleProcess.PackMLIn.bCommandChangeRequest := TRUE;
+		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := AlarmModule.ServiceStatus.SingleProcess.ServiceErrorId = E_GCErrorCode.None, Message := 'SingleProcess Resetting must clear ServiceErrorId.');
+		AssertTrue(Condition := AlarmModule.ServiceStatus.SingleProcess.ErrorList[1].MainErrorId = 0, Message := 'SingleProcess Resetting must clear its Service ErrorList.');
+		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].MainErrorId = 0, Message := 'Inactive and acknowledged Service alarm must be removed in the reset scan.');
+		AssertTrue(Condition := AlarmModule.ModuleStatus.Alarm.ServiceLatchedCount = 0, Message := 'Service latched count must follow same-scan removal.');
+		nPhase := 0;
 		TEST_FINISHED();
 END_CASE]]></ST>
       </Implementation>

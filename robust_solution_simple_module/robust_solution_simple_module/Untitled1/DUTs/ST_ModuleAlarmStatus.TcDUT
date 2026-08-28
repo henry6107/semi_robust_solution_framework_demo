@@ -8,6 +8,7 @@ STRUCT
 	AckError : E_AlarmAckError;
 	ConfiguredLatchedCount : UINT;
 	Overflow : BOOL;
+	ServiceLatchedCount : UINT;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

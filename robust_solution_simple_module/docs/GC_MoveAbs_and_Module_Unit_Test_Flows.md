@@ -286,4 +286,4 @@
 
 - 本文件描述的是 TcUnit runtime 預期行為；PLC Build 只能驗證 XML、型別與語法，不能取代 runtime assertion 執行。
 - 本批工作不執行 TcUnit runtime，也不連線、下載、啟動或切換 TwinCAT Runtime。
-- Alarm aggregation 與 SingleProcess ModuleDataList 測試尚未納入本批 Module suite。
+- Module alarm aggregation 已納入 Module suite，包含 SingleProcess failure 進入 Service ErrorList、複合 identity Ack 與 Resetting 後同 scan 移除；SingleProcess ModuleDataList 仍不在本文件涵蓋範圍。

@@ -433,6 +433,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[Status.ServiceErrorId := E_GCErrorCode.None;
+MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
 _CurrentStage := E_GCSingleProcessStage.None;
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -705,10 +706,56 @@ END_VAR
 IF NOT _bFailurePending THEN
 	_bFailurePending := TRUE;
 	Status.ServiceErrorId := ErrorCode;
+	M_AddError(
+		MainErrorId := ErrorCode,
+		SourceErrorId := 0,
+		Message := M_BuildFailureMessage(
+			ErrorCode := ErrorCode,
+			FailedAxis := FailedAxis,
+			FailedStage := _CurrentStage));
 	ProcessStatus.CurrentCycle.Result := E_GCSingleProcessResult.Failed;
 	ProcessStatus.CurrentCycle.FailedStage := _CurrentStage;
 	ProcessStatus.CurrentCycle.FailedAxis := FailedAxis;
 END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_BuildFailureMessage" Id="{a15d2461-092d-4ac0-bc46-cf0bbc9303e0}" FolderPath="PrivateMethods\">
+      <Declaration><![CDATA[METHOD PRIVATE M_BuildFailureMessage : STRING
+VAR_INPUT
+	ErrorCode : E_GCErrorCode;
+	FailedAxis : E_GCSingleProcessAxis;
+	FailedStage : E_GCSingleProcessStage;
+END_VAR
+VAR
+	sMessage : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE ErrorCode OF
+	E_GCErrorCode.Invalid_Param:
+		sMessage := 'Invalid parameters';
+	E_GCErrorCode.Resource_Acquire_Failed_During_Starting:
+		sMessage := 'Resource acquire failed';
+	E_GCErrorCode.Axis_Not_Servo_On_During_Starting:
+		sMessage := 'Axis not servo on';
+	E_GCErrorCode.Axis_Is_Busy_During_Starting:
+		sMessage := 'Axis busy';
+	E_GCErrorCode.Axis_Command_Error_During_Execute:
+		sMessage := 'Axis command failed';
+	E_GCErrorCode.Error_While_Stop_Axis:
+		sMessage := 'Axis stop failed';
+	E_GCErrorCode.Error_While_Reset_Axis:
+		sMessage := 'Axis reset failed';
+	E_GCErrorCode.Stage_Timeout:
+		sMessage := 'Stage timeout';
+ELSE
+	sMessage := 'SingleProcess failed';
+END_CASE
+
+sMessage := CONCAT(sMessage, '; Axis=');
+sMessage := CONCAT(sMessage, TO_STRING(FailedAxis));
+sMessage := CONCAT(sMessage, '; Stage=');
+M_BuildFailureMessage := CONCAT(sMessage, TO_STRING(FailedStage));]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_StartStage" Id="{2e7ecaf9-8db8-4431-8155-68161a71b148}" FolderPath="PrivateMethods\">

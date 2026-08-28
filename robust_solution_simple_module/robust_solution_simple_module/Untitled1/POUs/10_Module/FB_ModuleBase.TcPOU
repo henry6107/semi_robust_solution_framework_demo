@@ -28,7 +28,7 @@ VAR
 	_LastHeartbeatIndex : UDINT;
 	_IsControlSourceAlive : BOOL;
 	_ConfiguredSnapshot : FB_ConfigValueSnapshotReader;
-	_ConfiguredAlarmManager : FB_ConfiguredAlarmManager;
+	_AlarmManager : FB_ModuleAlarmManager;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -44,8 +44,8 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_UpdateAlarmList" Id="{1fa94b87-c1b3-4d82-ad65-41d1be8293f7}" FolderPath="HookMethod\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateAlarmList
+    <Method Name="H_UpdateServiceAlarms" Id="{1fa94b87-c1b3-4d82-ad65-41d1be8293f7}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceAlarms
 VAR_INPUT
 END_VAR
 ]]></Declaration>
@@ -89,24 +89,14 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_AppendConfiguredAlarms" Id="{c8fa70cf-350e-4481-b23f-7b026067b9af}">
-      <Declaration><![CDATA[METHOD PRIVATE M_AppendConfiguredAlarms
+    <Method Name="M_ObserveServiceAlarm" Id="{c8fa70cf-350e-4481-b23f-7b026067b9af}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ObserveServiceAlarm : BOOL
+VAR_IN_OUT CONSTANT
+	Alarm : ST_ExtAlarm;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF __ISVALIDREF(RuntimeConfig) THEN
-	IF RuntimeConfig.Valid THEN
-		_ConfiguredAlarmManager.M_AppendToList(
-			ModuleId := _ModuleId,
-			RuntimeConfig := RuntimeConfig,
-			AlarmList := ModuleAlarmList);
-	END_IF
-END_IF
-
-ModuleStatus.Alarm.AckResponseId := _ConfiguredAlarmManager.AckResponseId;
-ModuleStatus.Alarm.AckAccepted := _ConfiguredAlarmManager.AckAccepted;
-ModuleStatus.Alarm.AckError := _ConfiguredAlarmManager.AckError;
-ModuleStatus.Alarm.ConfiguredLatchedCount := _ConfiguredAlarmManager.LatchedCount;
-ModuleStatus.Alarm.Overflow := _ConfiguredAlarmManager.Overflow;]]></ST>
+        <ST><![CDATA[M_ObserveServiceAlarm := _AlarmManager.M_ObserveServiceAlarm(Alarm := Alarm);]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_CheckHeartbeat" Id="{95356be4-c779-4a0a-84d9-ca5fd7d93bc1}">
@@ -133,8 +123,8 @@ _LastHeartbeatIndex := HeartbeatIndex;
 _IsControlSourceAlive := NOT _HeartbeatTimer.Q;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_UpdateConfiguredAlarmState" Id="{6b9b6538-c160-4a7b-93a1-a430b340815a}">
-      <Declaration><![CDATA[METHOD PRIVATE M_UpdateConfiguredAlarmState
+    <Method Name="M_UpdateAlarmState" Id="{6b9b6538-c160-4a7b-93a1-a430b340815a}">
+      <Declaration><![CDATA[METHOD PRIVATE M_UpdateAlarmState
 VAR
 	nAlarm : UINT;
 	nSource : UINT;
@@ -142,6 +132,7 @@ VAR
 	fValue : LREAL;
 	bValid : BOOL;
 	bConditionMet : BOOL;
+	Alarm : ST_ExtAlarm;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -151,42 +142,59 @@ IF __ISVALIDREF(RuntimeConfig) THEN
 		nRevision := RuntimeConfig.Revision;
 	END_IF
 END_IF
-_ConfiguredAlarmManager.M_BeginCycle(Revision := nRevision);
-
-IF NOT __ISVALIDREF(RuntimeConfig) THEN
-	RETURN;
-END_IF
-IF NOT RuntimeConfig.Valid THEN
-	RETURN;
-END_IF
+_AlarmManager.M_BeginCycle(
+	ModuleId := _ModuleId,
+	ConfigurationRevision := nRevision);
 
 // Process acknowledgements before evaluating this cycle so AckAll cannot consume
 // a new event that the upper controller has not observed yet.
-_ConfiguredAlarmManager.M_ProcessAcknowledgement(
-	Request := ModuleCtrl.AlarmAckRequest,
-	RuntimeConfig := RuntimeConfig);
+_AlarmManager.M_ProcessAcknowledgement(Request := ModuleCtrl.AlarmAckRequest);
 
-IF NOT _ConfiguredSnapshot.Ready THEN
-	RETURN;
+IF __ISVALIDREF(RuntimeConfig) AND RuntimeConfig.Valid AND _ConfiguredSnapshot.Ready THEN
+	FOR nAlarm := 1 TO RuntimeConfig.AlarmCount DO
+		nSource := RuntimeConfig.VariableCount + nAlarm;
+		fValue := _ConfiguredSnapshot.M_GetLReal(SourceIndex := nSource, Valid => bValid);
+		bConditionMet := FALSE;
+		IF bValid THEN
+			bConditionMet := F_AlarmConditionMet(
+				Value := fValue,
+				Operator := RuntimeConfig.AlarmBindings[nAlarm].Definition.Operator,
+				Threshold := RuntimeConfig.AlarmBindings[nAlarm].Definition.Threshold,
+				Tolerance := RuntimeConfig.AlarmBindings[nAlarm].Definition.Tolerance);
+		END_IF
+
+		MEMSET(ADR(Alarm), 0, SIZEOF(Alarm));
+		Alarm.ModuleId := _ModuleId;
+		Alarm.ServiceId := 0;
+		Alarm.MainErrorId := RuntimeConfig.AlarmBindings[nAlarm].Definition.MainErrorId;
+		Alarm.SourceErrorId := RuntimeConfig.AlarmBindings[nAlarm].Definition.SourceErrorId;
+		Alarm.Message := RuntimeConfig.AlarmBindings[nAlarm].Definition.Message;
+		Alarm.Path := RuntimeConfig.AlarmBindings[nAlarm].Definition.Source;
+		Alarm.Severity := RuntimeConfig.AlarmBindings[nAlarm].Definition.Severity;
+		_AlarmManager.M_UpdateConfiguredAlarm(
+			AlarmIndex := nAlarm,
+			SampleValid := bValid,
+			ConditionMet := bConditionMet,
+			Alarm := Alarm,
+			UtcDateTime := _ServiceContext.UtcDateTime);
+	END_FOR
 END_IF
 
-FOR nAlarm := 1 TO RuntimeConfig.AlarmCount DO
-	nSource := RuntimeConfig.VariableCount + nAlarm;
-	fValue := _ConfiguredSnapshot.M_GetLReal(SourceIndex := nSource, Valid => bValid);
-	bConditionMet := FALSE;
-	IF bValid THEN
-		bConditionMet := F_AlarmConditionMet(
-			Value := fValue,
-			Operator := RuntimeConfig.AlarmBindings[nAlarm].Definition.Operator,
-			Threshold := RuntimeConfig.AlarmBindings[nAlarm].Definition.Threshold,
-			Tolerance := RuntimeConfig.AlarmBindings[nAlarm].Definition.Tolerance);
-	END_IF
-	_ConfiguredAlarmManager.M_UpdateAlarm(
-		AlarmIndex := nAlarm,
-		SampleValid := bValid,
-		ConditionMet := bConditionMet,
-		UtcDateTime := _ServiceContext.UtcDateTime);
-END_FOR]]></ST>
+H_UpdateServiceAlarms();
+_AlarmManager.M_EndCycle();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_PublishAlarmState" Id="{055c5419-f6a5-46d2-bb31-19f68a24d121}">
+      <Declaration><![CDATA[METHOD PRIVATE M_PublishAlarmState
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_AlarmManager.M_Publish(AlarmList := ModuleAlarmList);
+ModuleStatus.Alarm.AckResponseId := _AlarmManager.AckResponseId;
+ModuleStatus.Alarm.AckAccepted := _AlarmManager.AckAccepted;
+ModuleStatus.Alarm.AckError := _AlarmManager.AckError;
+ModuleStatus.Alarm.ConfiguredLatchedCount := _AlarmManager.ConfiguredLatchedCount;
+ModuleStatus.Alarm.Overflow := _AlarmManager.Overflow;
+ModuleStatus.Alarm.ServiceLatchedCount := _AlarmManager.ServiceLatchedCount;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_UpdateConfiguredVariableList" Id="{6e5b225f-a33a-409e-827d-1330e9e22088}">
@@ -260,9 +268,8 @@ IF _CmdRequestOneShot.Q OR _ModeRequestOneShot.Q THEN
 END_IF
 ModuleStatus.PackMLOut := PackMLOut;
 
-M_UpdateConfiguredAlarmState();
-H_UpdateAlarmList();
-M_AppendConfiguredAlarms();
+M_UpdateAlarmState();
+M_PublishAlarmState();
 H_UpdateServiceDataList();
 M_UpdateConfiguredVariableList();]]></ST>
       </Implementation>

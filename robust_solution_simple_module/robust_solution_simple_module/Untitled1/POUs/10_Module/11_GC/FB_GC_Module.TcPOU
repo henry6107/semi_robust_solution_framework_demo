@@ -300,31 +300,24 @@ ELSE
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_UpdateAlarmList" Id="{05cb1d79-8999-497c-aa97-eff4f365f571}" FolderPath="ModuleUpdate\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateAlarmList
+    <Method Name="H_UpdateServiceAlarms" Id="{05cb1d79-8999-497c-aa97-eff4f365f571}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceAlarms
 VAR_INPUT
 END_VAR
 
 VAR
 	nServiceIndex : UINT;
 	nErrorIndex : UINT;
-	nModuleAlarmIndex : UINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Rebuild a dense snapshot every scan so cleared Service errors cannot leave stale gaps.
-MEMSET(ADR(ModuleAlarmList), 0, SIZEOF(ModuleAlarmList));
-nModuleAlarmIndex := 1;
-
+        <ST><![CDATA[// Submit the currently observable Service errors. The manager owns lifecycle state
+// and marks identities not observed in this scan inactive during M_EndCycle.
 FOR nServiceIndex := 1 TO GVL_GC_Config.cServiceCount DO
 	FOR nErrorIndex := 1 TO Param_Config.MaxServiceError DO
 		IF _ServiceStatusView.ByIndex[nServiceIndex].ErrorList[nErrorIndex].MainErrorId <> 0 THEN
-			IF nModuleAlarmIndex > Param_Config.MaxPublishedModuleAlarms THEN
-				RETURN;
-			END_IF
-
-			ModuleAlarmList[nModuleAlarmIndex] := _ServiceStatusView.ByIndex[nServiceIndex].ErrorList[nErrorIndex];
-			nModuleAlarmIndex := nModuleAlarmIndex + 1;
+			M_ObserveServiceAlarm(
+				Alarm := _ServiceStatusView.ByIndex[nServiceIndex].ErrorList[nErrorIndex]);
 		END_IF
 	END_FOR
 END_FOR]]></ST>

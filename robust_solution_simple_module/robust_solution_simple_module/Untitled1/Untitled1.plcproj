@@ -151,7 +151,7 @@
     <Compile Include="DUTs\ST_AlarmAckRequest.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ConfiguredAlarmState.TcDUT">
+    <Compile Include="DUTs\ST_AlarmLifecycleState.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ExtDescriptor.TcDUT">
@@ -343,7 +343,7 @@
     <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveVelCWServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\FB_ConfiguredAlarmManager.TcPOU">
+    <Compile Include="POUs\10_Module\FB_ModuleAlarmManager.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\FB_ModuleBase.TcPOU">
@@ -422,6 +422,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Modules\FB_GC_ModuleTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\Modules\FB_ModuleAlarmManagerTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Services\FB_GCSpinAxisMoveAbsServiceTests.TcPOU">

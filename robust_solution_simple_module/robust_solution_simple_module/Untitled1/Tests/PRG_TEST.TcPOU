@@ -6,6 +6,7 @@ VAR
 	FakeAxisContractTests : FB_FakeAxis_BaseUnitTests;
 	ServiceBaseTests : FB_ServiceBaseTests;
 	MoveAbsServiceTests : FB_GCSpinAxisMoveAbsServiceTests;
+	ModuleAlarmManagerTests : FB_ModuleAlarmManagerTests;
 	GCModuleTests : FB_GC_ModuleTests;
 END_VAR
 ]]></Declaration>
