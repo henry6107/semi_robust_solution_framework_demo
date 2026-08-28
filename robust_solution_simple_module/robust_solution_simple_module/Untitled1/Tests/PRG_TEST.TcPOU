@@ -4,6 +4,7 @@
     <Declaration><![CDATA[PROGRAM PRG_TEST
 VAR
 	FakeAxisContractTests : FB_FakeAxis_BaseUnitTests;
+	ServiceBaseTests : FB_ServiceBaseTests;
 	MoveAbsServiceTests : FB_GCSpinAxisMoveAbsServiceTests;
 	GCModuleTests : FB_GC_ModuleTests;
 END_VAR
