@@ -427,9 +427,6 @@
     <Compile Include="Tests\Suites\Services\FB_ServiceBaseTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\FB_UtcClockTests.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="TestTask.TcTTO">
       <SubType>Code</SubType>
     </Compile>
