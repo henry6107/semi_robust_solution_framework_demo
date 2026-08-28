@@ -5,9 +5,9 @@
 STRUCT
 	ResponseId : UDINT;
 	PackMLOut : ST_PML_Base_Out;
-	ErrorList : ARRAY[1..Param_Config.MaxServiceError] OF ST_ExtAlarm;
-	ServiceErrorId : UDINT;
 	CompletionBehavior : E_ServiceCompletionBehavior;
+	ServiceErrorId : UDINT;
+	ErrorList : ARRAY[1..Param_Config.MaxServiceError] OF ST_ExtAlarm;
 END_STRUCT
 END_TYPE
 ]]></Declaration>
