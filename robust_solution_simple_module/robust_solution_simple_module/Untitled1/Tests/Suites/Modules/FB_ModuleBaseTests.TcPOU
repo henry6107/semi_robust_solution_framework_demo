@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ModuleBaseTests" Id="{3170a529-e67e-4e46-840e-5bb9e458cb55}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleBaseTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	// Keep the large Module instance at Test Suite scope to avoid Method stack overflow.
+	HeartbeatModule : FB_TestableModuleBase;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[HeartbeatChangeResetsTimeoutAndRestoresControlSource();]]></ST>
+    </Implementation>
+    <Method Name="HeartbeatChangeResetsTimeoutAndRestoresControlSource" Id="{915b3734-1cf3-4fad-8f9c-42ab465f0820}">
+      <Declaration><![CDATA[METHOD HeartbeatChangeResetsTimeoutAndRestoresControlSource
+VAR_INST
+	ModuleCtrl : ST_ModuleCtrl;
+	SystemContext : ST_SystemContext;
+	RuntimeConfig : ST_ModuleRuntimeConfig;
+	VariableNodeReader : FB_LinkVariableManager;
+	HeartbeatIndex : UDINT;
+	PhaseTimer : TON;
+	WatchdogTimer : TON;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HeartbeatChangeResetsTimeoutAndRestoresControlSource');
+
+CASE nPhase OF
+	0:
+		SystemContext.ModuleHeartbeatTimeout := T#50MS;
+		HeartbeatIndex := 100;
+		HeartbeatModule(
+			ModuleCtrl := ModuleCtrl,
+			SystemContext := SystemContext,
+			HeartbeatIndex := HeartbeatIndex,
+			RuntimeConfig := RuntimeConfig,
+			VariableNodeReader := VariableNodeReader);
+		AssertTrue(
+			Condition := HeartbeatModule.ModuleStatus.IsControlSourceAlive,
+			Message := 'A changed HeartbeatIndex must publish an alive Control Source.');
+		PhaseTimer(IN := FALSE, PT := T#30MS);
+		WatchdogTimer(IN := FALSE, PT := T#100MS);
+		nPhase := 1;
+
+	1:
+		// Hold the first index for less than the injected timeout.
+		HeartbeatModule(
+			ModuleCtrl := ModuleCtrl,
+			SystemContext := SystemContext,
+			HeartbeatIndex := HeartbeatIndex,
+			RuntimeConfig := RuntimeConfig,
+			VariableNodeReader := VariableNodeReader);
+		PhaseTimer(IN := TRUE, PT := T#30MS);
+		AssertTrue(
+			Condition := HeartbeatModule.ModuleStatus.IsControlSourceAlive,
+			Message := 'An unchanged HeartbeatIndex must remain alive before its timeout.');
+		IF PhaseTimer.Q THEN
+			PhaseTimer(IN := FALSE, PT := T#30MS);
+			HeartbeatIndex := 101;
+			nPhase := 2;
+		END_IF
+
+	2:
+		// A new index must reset the heartbeat timeout in the same Module scan.
+		HeartbeatModule(
+			ModuleCtrl := ModuleCtrl,
+			SystemContext := SystemContext,
+			HeartbeatIndex := HeartbeatIndex,
+			RuntimeConfig := RuntimeConfig,
+			VariableNodeReader := VariableNodeReader);
+		AssertTrue(
+			Condition := HeartbeatModule.ModuleStatus.IsControlSourceAlive,
+			Message := 'A new HeartbeatIndex must reset the timeout immediately.');
+		PhaseTimer(IN := FALSE, PT := T#30MS);
+		nPhase := 3;
+
+	3:
+		// The total time since the first index stopped changing now exceeds 50 ms,
+		// while the latest index has remained unchanged for only 30 ms.
+		HeartbeatModule(
+			ModuleCtrl := ModuleCtrl,
+			SystemContext := SystemContext,
+			HeartbeatIndex := HeartbeatIndex,
+			RuntimeConfig := RuntimeConfig,
+			VariableNodeReader := VariableNodeReader);
+		PhaseTimer(IN := TRUE, PT := T#30MS);
+		AssertTrue(
+			Condition := HeartbeatModule.ModuleStatus.IsControlSourceAlive,
+			Message := 'The reset timeout must remain alive for its own pre-timeout interval.');
+		IF PhaseTimer.Q THEN
+			PhaseTimer(IN := FALSE, PT := T#30MS);
+			WatchdogTimer(IN := FALSE, PT := T#100MS);
+			nPhase := 4;
+		END_IF
+
+	4:
+		// Keep the second index stable until the injected timeout expires.
+		HeartbeatModule(
+			ModuleCtrl := ModuleCtrl,
+			SystemContext := SystemContext,
+			HeartbeatIndex := HeartbeatIndex,
+			RuntimeConfig := RuntimeConfig,
+			VariableNodeReader := VariableNodeReader);
+		WatchdogTimer(IN := TRUE, PT := T#100MS);
+		IF HeartbeatModule.ModuleStatus.IsControlSourceAlive THEN
+			IF WatchdogTimer.Q THEN
+				AssertTrue(
+					Condition := FALSE,
+					Message := 'A stable HeartbeatIndex must time out before the watchdog expires.');
+				PhaseTimer(IN := FALSE, PT := T#30MS);
+				WatchdogTimer(IN := FALSE, PT := T#100MS);
+				SystemContext.ModuleHeartbeatTimeout := T#0S;
+				HeartbeatIndex := 0;
+				nPhase := 0;
+				TEST_FINISHED();
+			END_IF
+		ELSE
+			AssertFalse(
+				Condition := HeartbeatModule.ModuleStatus.IsControlSourceAlive,
+				Message := 'A stable HeartbeatIndex must publish a dead Control Source after timeout.');
+			WatchdogTimer(IN := FALSE, PT := T#100MS);
+			nPhase := 5;
+		END_IF
+
+	5:
+		// The next changed index must recover the public status immediately.
+		HeartbeatIndex := 102;
+		HeartbeatModule(
+			ModuleCtrl := ModuleCtrl,
+			SystemContext := SystemContext,
+			HeartbeatIndex := HeartbeatIndex,
+			RuntimeConfig := RuntimeConfig,
+			VariableNodeReader := VariableNodeReader);
+		AssertTrue(
+			Condition := HeartbeatModule.ModuleStatus.IsControlSourceAlive,
+			Message := 'A changed HeartbeatIndex must recover a timed-out Control Source immediately.');
+
+		PhaseTimer(IN := FALSE, PT := T#30MS);
+		WatchdogTimer(IN := FALSE, PT := T#100MS);
+		SystemContext.ModuleHeartbeatTimeout := T#0S;
+		HeartbeatIndex := 0;
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

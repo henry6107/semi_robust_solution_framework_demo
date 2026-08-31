@@ -3,114 +3,100 @@
   <POU Name="MAIN" Id="{732eef67-564b-4eae-a87a-e2bb58901008}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
-	GC1_Module : FB_GC_Module(ModuleId := E_ModuleId.GC1);
-	GC1_SpinAxis_BaseUnit : FB_Axis_BaseUnit;
-	GC1_LiftPinAxis_BaseUnit : FB_Axis_BaseUnit;
-	_GC1 : ST_GC_CtrlStatus;
-	GC1_HwIn :  U_GC_HW_In;
-	GC_HwOut : U_GC_HW_Out;
 	_UtcClock : FB_UtcClock;
 	_SystemContext : ST_SystemContext;
-	
-	_bTest : BOOL;
-	_bTestHearbeat : BOOL;
+	_LinkVariableManager : FB_LinkVariableManager;
+	_ReferenceManager : FB_ReferenceManager;
+	_ModuleTypeRegistry : FB_ModuleTypeRegistry;
+	_GCModuleConfigurationAdapter : FB_GCModuleConfigurationAdapter;
+	_ModuleConfigurationManager : FB_ModuleConfigurationManager;
+	_bInfrastructureRegistered : BOOL;
+	_bRegistrationOk : BOOL;
+	_nModule : UINT;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[// Map the right channel to _GC1 for module control
-// IF GC1_Module.ModuleStatus.eModeCurrent = E_PackMLMode.Manual THEN
-// 	_GC1 := GVL_GUI.GC1;
-//
-// ELSIF GC1_Module.ModuleStatus.eModeCurrent = E_PackMLMode.Production THEN
-// 	_GC1 := GVL_CSharp.GC1;
-// END_IF
-
-_UtcClock(UtcDateTime => _SystemContext.UtcDateTime);
-
-IF _bTestHearbeat THEN
-	_GC1.HeartbeatIndex := _GC1.HeartbeatIndex + 1;
+      <ST><![CDATA[IF NOT _bInfrastructureRegistered THEN
+	M_HwModuleRegister();
 END_IF
 
-GC1_Module(
-	HwInput:= GC1_HwIn.Signal, 
-	HwOutput:= GC_HwOut.Signal,
-	HeartbeatIndex := _GC1.HeartbeatIndex,
-	ModuleCtrl:= _GC1.ModuleCtrl, 
-	ServiceCtrl:= _GC1.ServiceCtrl,
-	ServiceParam:= _GC1.ServiceParam, 
-	SystemContext:= _SystemContext,
-	SpinAxis_BaseUnit:= GC1_SpinAxis_BaseUnit,
-	LiftPinAxis_BaseUnit:= GC1_LiftPinAxis_BaseUnit,
-	ModuleStatus=> _GC1.ModuleStatus,
-	ServiceStatus=> _GC1.ServiceStatus, 
-	ModuleAlarmList=> _GC1.ModuleAlarmList , 
-	ModuleDataList=> _GC1.ModuleDataList, 
-	ModuleVariableList=> _GC1.ModuleVariableList);
+_ModuleConfigurationManager(
+	Execute := _bInfrastructureRegistered,
+	FilePath := Param_Config.ModuleConfigFilePath,
+	LinkVariableManager := _LinkVariableManager,
+	ReferenceManager := _ReferenceManager,
+	ModuleTypeRegistry := _ModuleTypeRegistry);
+
+_UtcClock(UtcDateTime => _SystemContext.UtcDateTime);
+_SystemContext.ModuleHeartbeatTimeout := Param_Config.ModuleHeartbeat_Timeout;
+
+IF _ModuleConfigurationManager.Ready THEN
+	// Update hardward input signal 
+	_LinkVariableManager.M_CyclicInput();
 	
-IF _bTest THEN
-	_bTest := FALSE;
+	// Call module instance
+	FOR _nModule := 1 TO Param_Config.MaxModulePerType DO
+		IF GVL_Module.GC_Runtime[_nModule].Enabled AND GVL_Module.GC_Runtime[_nModule].Valid THEN
+			GVL_Module.GC[_nModule](
+				HeartbeatIndex := GVL_Module.GC_Control[_nModule].HeartbeatIndex,
+				ModuleCtrl := GVL_Module.GC_Control[_nModule].ModuleCtrl,
+				ServiceCtrl := GVL_Module.GC_Control[_nModule].ServiceCtrl,
+				ServiceParam := GVL_Module.GC_Control[_nModule].ServiceParam,
+				SystemContext := _SystemContext,
+				RuntimeConfig := GVL_Module.GC_Runtime[_nModule],
+				VariableNodeReader := _LinkVariableManager,
+				SpinAxis_BaseUnit := GVL_Module.GC_SpinAxis[_nModule],
+				LiftPinAxis_BaseUnit := GVL_Module.GC_LiftPinAxis[_nModule],
+				ModuleStatus => GVL_Module.GC_Control[_nModule].ModuleStatus,
+				ServiceStatus => GVL_Module.GC_Control[_nModule].ServiceStatus,
+				ModuleAlarmList => GVL_Module.GC_Control[_nModule].ModuleAlarmList,
+				ModuleDataList => GVL_Module.GC_Control[_nModule].ModuleDataList,
+				ModuleVariableList => GVL_Module.GC_Control[_nModule].ModuleVariableList);
+		END_IF
+	END_FOR
 	
-	(* LiftPin：待機 0 → Ready 10 → Process 20 *)
-	_GC1.ServiceParam.SingleProcess.LiftReady.Position := 10.0;
-	_GC1.ServiceParam.SingleProcess.LiftReady.Velocity := 5.0;
-	_GC1.ServiceParam.SingleProcess.LiftReady.Acceleration := 10.0;
-	_GC1.ServiceParam.SingleProcess.LiftReady.Deceleration := 10.0;
-	
-	(* Spin：先對位至 90° *)
-	_GC1.ServiceParam.SingleProcess.SpinAlign.Position := 90.0;
-	_GC1.ServiceParam.SingleProcess.SpinAlign.Velocity := 30.0;
-	
-	(* 同步進入製程：Spin 180°、LiftPin 20 mm *)
-	_GC1.ServiceParam.SingleProcess.ProcessEntrySpin.Position := 180.0;
-	_GC1.ServiceParam.SingleProcess.ProcessEntrySpin.Velocity := 30.0;
-	
-	_GC1.ServiceParam.SingleProcess.ProcessEntryLift.Position := 20.0;
-	_GC1.ServiceParam.SingleProcess.ProcessEntryLift.Velocity := 5.0;
-	
-	(* 製程旋轉：CW 120 *)
-	_GC1.ServiceParam.SingleProcess.SpinProcess.Velocity := 120.0;
-	
-	(* 同步退出：LiftPin 回到 Standby *)
-	_GC1.ServiceParam.SingleProcess.ProcessExitLift.Position := 0.0;
-	_GC1.ServiceParam.SingleProcess.ProcessExitLift.Velocity := 5.0;
-	
-	(* Spin 回待機角度 *)
-	_GC1.ServiceParam.SingleProcess.SpinStandby.Position := 0.0;
-	_GC1.ServiceParam.SingleProcess.SpinStandby.Velocity := 300.0;
-	
-	(* Stop／Abort 減速度 *)
-	_GC1.ServiceParam.SingleProcess.SpinStopDeceleration := 100.0;
-	_GC1.ServiceParam.SingleProcess.LiftStopDeceleration := 200.0;
-	
-	(* 各階段預期時間與逾時 *)
-	_GC1.ServiceParam.SingleProcess.StageTiming.Prepare.TargetTime := T#100MS;
-	_GC1.ServiceParam.SingleProcess.StageTiming.Prepare.Timeout := T#2S;
-	
-	_GC1.ServiceParam.SingleProcess.StageTiming.LiftReady.TargetTime := T#2500MS;
-	_GC1.ServiceParam.SingleProcess.StageTiming.LiftReady.Timeout := T#8S;
-	
-	_GC1.ServiceParam.SingleProcess.StageTiming.SpinAlign.TargetTime := T#3500MS;
-	_GC1.ServiceParam.SingleProcess.StageTiming.SpinAlign.Timeout := T#10S;
-	
-	_GC1.ServiceParam.SingleProcess.StageTiming.ConcurrentProcessEntry.TargetTime := T#3500MS;
-	_GC1.ServiceParam.SingleProcess.StageTiming.ConcurrentProcessEntry.Timeout := T#10S;
-	
-	_GC1.ServiceParam.SingleProcess.StageTiming.SpinRampUp.TargetTime := T#1500MS;
-	_GC1.ServiceParam.SingleProcess.StageTiming.SpinRampUp.Timeout := T#6S;
-	
-	(* 這個 TargetTime 會實際決定製程保持時間 *)
-	_GC1.ServiceParam.SingleProcess.StageTiming.ProcessHold.TargetTime := T#5S;
-	_GC1.ServiceParam.SingleProcess.StageTiming.ProcessHold.Timeout := T#7S;
-	
-	_GC1.ServiceParam.SingleProcess.StageTiming.ConcurrentProcessExit.TargetTime := T#4500MS;
-	_GC1.ServiceParam.SingleProcess.StageTiming.ConcurrentProcessExit.Timeout := T#12S;
-	
-	_GC1.ServiceParam.SingleProcess.StageTiming.SpinStandby.TargetTime := T#6500MS;
-	_GC1.ServiceParam.SingleProcess.StageTiming.SpinStandby.Timeout := T#15S;
-	
-	_GC1.ServiceParam.SingleProcess.StopTimeout := T#10S;
-	_GC1.ServiceParam.SingleProcess.ResetTimeout := T#5S;
+	// Update hardward output signal 
+	_LinkVariableManager.M_CyclicOutput();
 END_IF]]></ST>
     </Implementation>
+    <Method Name="M_HwModuleRegister" Id="{046a91b2-6210-4144-b43e-89faaf1ecae8}">
+      <Declaration><![CDATA[METHOD PRIVATE M_HwModuleRegister
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Register shared hardware terminals before loading configuration.
+_bRegistrationOk := _LinkVariableManager.M_RegisterEL1889(
+	Terminal := GVL_IO.Term4_EL1889);
+
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _LinkVariableManager.M_RegisterEL3602(
+		Terminal := GVL_IO.Term2_EL3602);
+END_IF
+
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _LinkVariableManager.M_RegisterEL2809(
+		Terminal := GVL_IO.Term3_EL2809);
+END_IF
+
+// Register BaseUnit references before loading configuration.
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _ReferenceManager.M_RegisterReference(
+		BaseUnit := GVL_IO.NC_Axis1);
+END_IF
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _ReferenceManager.M_RegisterReference(
+		BaseUnit := GVL_IO.NC_Axis2);
+END_IF
+
+// Register Module adapters before loading configuration.
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _ModuleTypeRegistry.M_Register(
+		ModuleType := E_ModuleType.GC,
+		Adapter := _GCModuleConfigurationAdapter);
+END_IF
+_bInfrastructureRegistered := _bRegistrationOk;]]></ST>
+      </Implementation>
+    </Method>
   </POU>
 </TcPlcObject>

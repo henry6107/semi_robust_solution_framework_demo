@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <Itf Name="I_AdsSymbolProvider" Id="{4cd1d14e-87eb-418a-b098-5ff22d172d55}">
+    <Declaration><![CDATA[INTERFACE I_AdsSymbolProvider EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Method Name="M_GetAdsSymbolMetadata" Id="{d2bb261d-3ba0-42c1-ac00-7071b4b599f7}">
+      <Declaration><![CDATA[METHOD M_GetAdsSymbolMetadata : BOOL
+VAR_OUTPUT
+	Address : PVOID;
+	Size : UDINT;
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

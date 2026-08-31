@@ -3,11 +3,40 @@
   <GVL Name="Param_Config" Id="{aee02a59-14c8-4392-aff7-2b6206c787f0}" ParameterList="True">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 VAR_GLOBAL CONSTANT
-	MaxModuleVariable : UINT := 100;
-	MaxModuleAlarm : UINT := 100;
-	MaxServiceError : UINT := 10;
-	MaxModuleData : UINT := 50;
-	ModuleHeartbeat_Timout : TIME := T#10S;
+	MaxModuleVariable : UINT := 100;	// Num of SVID
+	MaxConfiguredAlarmsPerModule : UINT := 30;	// Num of configured ALIDs.
+	MaxServiceAlarmsPerModule : UINT := 70;		// Reserved capacity for aggregated Service errors.
+	MaxPublishedModuleAlarms : UINT := MaxConfiguredAlarmsPerModule + MaxServiceAlarmsPerModule;
+	MaxModuleAlarm : UINT := MaxPublishedModuleAlarms;	// Compatibility alias for existing consumers.
+	MaxServiceError : UINT := 10;		// Num of Service Error per round
+	MaxServiceData : UINT := 30;		// Num of persistent Data descriptors per Service
+	MaxModuleData : UINT := 50;			// Num of DVID
+	ModuleHeartbeat_Timeout : TIME := T#10S;
+
+	// Runtime configuration limits. They also bound PLC memory and local snapshot work.
+	MaxModuleTypes : UINT := 8;
+
+	// Module type capacities bound type-specific runtime arrays.
+	MaxModulePerType : UINT := 6;
+
+	// Total config capacity is the compile-time sum of every supported Module type capacity.
+	MaxTotalConfiguredModules : UINT := MaxModulePerType * MaxModuleTypes;
+
+	// Variable mapping
+	MaxModuleMappings : UINT := 256;
+	MaxConfigVariableNodes : UINT := 512;
+
+	// Reference binding
+	MaxModuleReferenceBindings : UINT := 50;
+	MaxConfigReferenceNodes : UINT := 100;
+
+	// Registered-node snapshots used by configured VariableList and AlarmList.
+	MaxConfiguredValueSources : UINT := MaxModuleVariable + MaxConfiguredAlarmsPerModule;
+	MaxConfigValueSize : UINT := 81; // STRING(80), including the terminating zero.
+
+	// System config
+	ConfigSchemaVersion : UDINT := 3;
+	ModuleConfigFilePath : STRING(255) := 'C:\ProgramData\RobustSolution\module-config.json';
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

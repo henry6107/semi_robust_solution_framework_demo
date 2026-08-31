@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_GCReferencePort" Id="{f3d6003e-e138-43f3-80ae-32d05bb7b77f}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE E_GCReferencePort :
+(
+	Unknown := 0,
+	// I_Axis_BaseUnit used by the chamber spin services.
+	SpinAxis_BaseUnit := 1,
+	// I_Axis_BaseUnit used by the lift-pin motion services.
+	LiftPinAxis_BaseUnit := 2
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

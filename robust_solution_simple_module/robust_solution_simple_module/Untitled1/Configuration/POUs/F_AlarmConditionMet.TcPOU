@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_AlarmConditionMet" Id="{a52ed4cc-3088-40b0-86ef-668bf24ca468}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_AlarmConditionMet : BOOL
+VAR_INPUT
+	Value : LREAL;
+	Operator : E_AlarmOperator;
+	Threshold : LREAL;
+	Tolerance : LREAL;
+END_VAR
+VAR
+	fTolerance : LREAL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[fTolerance := ABS(Tolerance);
+
+CASE Operator OF
+	E_AlarmOperator.GreaterThan:
+		F_AlarmConditionMet := Value > Threshold;
+	E_AlarmOperator.LessThan:
+		F_AlarmConditionMet := Value < Threshold;
+	E_AlarmOperator.Equal:
+		F_AlarmConditionMet := ABS(Value - Threshold) <= fTolerance;
+	E_AlarmOperator.GreaterOrEqual:
+		F_AlarmConditionMet := Value >= Threshold;
+	E_AlarmOperator.LessOrEqual:
+		F_AlarmConditionMet := Value <= Threshold;
+ELSE
+	F_AlarmConditionMet := FALSE;
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

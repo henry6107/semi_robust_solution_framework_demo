@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ServiceBaseTests" Id="{fde3765a-e13a-4360-9569-478f164a3111}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ServiceBaseTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	// Keep the Service instance at Test Suite scope so its state persists across test phases.
+	TestService : FB_TestableServiceBase;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[StartCommandIsRejectedWhileStopped();]]></ST>
+    </Implementation>
+    <Method Name="StartCommandIsRejectedWhileStopped" Id="{0675f0af-6974-4ab9-b7ad-5bef50694169}">
+      <Declaration><![CDATA[METHOD StartCommandIsRejectedWhileStopped
+VAR_INST
+	Ctrl : ST_ServiceCtrl;
+	Context : ST_ServiceContext;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('StartCommandIsRejectedWhileStopped');
+
+CASE nPhase OF
+	0:
+		// Initial cyclic update leaves Undefined through the normal ServiceBase path.
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Aborted,
+			Message := 'Initial Service update must reach Aborted.');
+		AssertTrue(
+			Condition := TestService.Status.CompletionBehavior = E_ServiceCompletionBehavior.Unknown,
+			Message := 'The test Service must publish its configured Unknown completion behavior.');
+		nPhase := 1;
+
+	1:
+		// Clear is valid from Aborted and establishes Stopped through a public command.
+		Ctrl.RequestId := 1001;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped,
+			Message := 'Valid Clear from Aborted must establish Stopped.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.bCommandAccepted
+				AND NOT TestService.Status.PackMLOut.bCommandRejected,
+			Message := 'Clear must be accepted while establishing the test state.');
+		AssertTrue(
+			Condition := TestService.Status.ResponseId = 1001,
+			Message := 'Service must acknowledge the Clear request.');
+		nPhase := 2;
+
+	2:
+		// Withdraw Clear so the next command creates a new request edge.
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := (TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
+				AND NOT TestService.Status.PackMLOut.bCommandAccepted
+				AND NOT TestService.Status.PackMLOut.bCommandRejected
+				AND (TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.NoError),
+			Message := 'Withdrawing Clear must leave a clean Stopped command interface.');
+		nPhase := 3;
+
+	3:
+		// Start is only valid from Idle, so Stopped must reject it without transitioning.
+		Ctrl.RequestId := 1002;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped,
+			Message := 'Rejected Start must not leave Stopped.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.bCommandRejected
+				AND NOT TestService.Status.PackMLOut.bCommandAccepted,
+			Message := 'Start must be rejected while the Service is Stopped.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.StartNotAllowedFromCurrentState,
+			Message := 'Rejected Start must report the state-specific PackML ErrorID.');
+		AssertTrue(
+			Condition := TestService.Status.ResponseId = 1002,
+			Message := 'Service must acknowledge the rejected Start request.');
+		nPhase := 4;
+
+	4:
+		// A held request is already consumed; changing its payload must not execute Reset.
+		Ctrl.RequestId := 1003;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped,
+			Message := 'A command request held TRUE must not be processed again.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.bCommandRejected
+				AND (TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.StartNotAllowedFromCurrentState),
+			Message := 'Rejected Start feedback must stay latched while the request remains TRUE.');
+		AssertTrue(
+			Condition := TestService.Status.ResponseId = 1002,
+			Message := 'Changing request data without a falling edge must not update ResponseId.');
+		nPhase := 5;
+
+	5:
+		// The request falling edge clears rejection feedback and arms the next command.
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := (TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
+				AND NOT TestService.Status.PackMLOut.bCommandAccepted
+				AND NOT TestService.Status.PackMLOut.bCommandRejected
+				AND (TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.NoError),
+			Message := 'The request falling edge must clear rejected command feedback.');
+		nPhase := 6;
+
+	6:
+		// A fresh Reset request proves rejection did not block later valid commands.
+		Ctrl.RequestId := 1004;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Idle,
+			Message := 'Fresh Reset from Stopped must remain operable after a rejected Start.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.bCommandAccepted
+				AND NOT TestService.Status.PackMLOut.bCommandRejected
+				AND (TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.NoError),
+			Message := 'Fresh Reset must be accepted after rejection feedback is cleared.');
+		AssertTrue(
+			Condition := TestService.Status.ResponseId = 1004,
+			Message := 'Service must acknowledge the fresh Reset request.');
+		AssertTrue(
+			Condition := TestService.Status.CompletionBehavior = E_ServiceCompletionBehavior.Unknown,
+			Message := 'Completion behavior must remain stable across PackML state transitions.');
+
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

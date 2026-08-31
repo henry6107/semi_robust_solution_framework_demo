@@ -33,7 +33,7 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateService();
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);
 
 // Update process status
 ProcessStatus.CurrentStage := _CurrentStage;
@@ -432,7 +432,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Status.ServiceErrorId := E_GCErrorCode.None;
+        <ST><![CDATA[MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
 _CurrentStage := E_GCSingleProcessStage.None;
 H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
@@ -617,8 +617,7 @@ _bCycleActive := TRUE;
 _bCycleFinalized := FALSE;
 _bFailurePending := FALSE;
 _bStageFrozen := FALSE;
-ProcessStatus.CurrentCycle.Result := E_GCSingleProcessResult.Running;
-Status.ServiceErrorId := E_GCErrorCode.None;]]></ST>
+ProcessStatus.CurrentCycle.Result := E_GCSingleProcessResult.Running;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_CompleteStage" Id="{82c2ba89-3e0f-49ee-82f7-24d710c7fd7b}" FolderPath="PrivateMethods\">
@@ -646,6 +645,106 @@ IF NextStage <> E_GCSingleProcessStage.None THEN
 END_IF]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_PublishCompletedCycleData" Id="{14659769-2f79-4411-8bf9-2392a0083977}" FolderPath="PrivateMethods\">
+      <Declaration><![CDATA[METHOD PRIVATE M_PublishCompletedCycleData
+VAR
+	TimingView : U_GCSingleProcessStageTimingView;
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF ProcessStatus.LastCycle.Result <> E_GCSingleProcessResult.Completed THEN
+	RETURN;
+END_IF
+
+TimingView.ByName := ProcessStatus.LastCycle.StageTiming;
+FOR nIndex := 1 TO 8 DO
+	IF NOT TimingView.ByIndex[nIndex].Completed THEN
+		RETURN;
+	END_IF
+END_FOR
+
+M_PublishStageData(
+	StartDataId := E_GCDataId.SingleProcess_Prepare_StartUtc,
+	EndDataId := E_GCDataId.SingleProcess_Prepare_EndUtc,
+	ActualDataId := E_GCDataId.SingleProcess_Prepare_ActualMs,
+	StageName := 'Prepare',
+	StageTiming := TimingView.ByName.Prepare);
+M_PublishStageData(
+	StartDataId := E_GCDataId.SingleProcess_LiftReady_StartUtc,
+	EndDataId := E_GCDataId.SingleProcess_LiftReady_EndUtc,
+	ActualDataId := E_GCDataId.SingleProcess_LiftReady_ActualMs,
+	StageName := 'LiftReady',
+	StageTiming := TimingView.ByName.LiftReady);
+M_PublishStageData(
+	StartDataId := E_GCDataId.SingleProcess_SpinAlign_StartUtc,
+	EndDataId := E_GCDataId.SingleProcess_SpinAlign_EndUtc,
+	ActualDataId := E_GCDataId.SingleProcess_SpinAlign_ActualMs,
+	StageName := 'SpinAlign',
+	StageTiming := TimingView.ByName.SpinAlign);
+M_PublishStageData(
+	StartDataId := E_GCDataId.SingleProcess_ConcurrentProcessEntry_StartUtc,
+	EndDataId := E_GCDataId.SingleProcess_ConcurrentProcessEntry_EndUtc,
+	ActualDataId := E_GCDataId.SingleProcess_ConcurrentProcessEntry_ActualMs,
+	StageName := 'ConcurrentProcessEntry',
+	StageTiming := TimingView.ByName.ConcurrentProcessEntry);
+M_PublishStageData(
+	StartDataId := E_GCDataId.SingleProcess_SpinRampUp_StartUtc,
+	EndDataId := E_GCDataId.SingleProcess_SpinRampUp_EndUtc,
+	ActualDataId := E_GCDataId.SingleProcess_SpinRampUp_ActualMs,
+	StageName := 'SpinRampUp',
+	StageTiming := TimingView.ByName.SpinRampUp);
+M_PublishStageData(
+	StartDataId := E_GCDataId.SingleProcess_ProcessHold_StartUtc,
+	EndDataId := E_GCDataId.SingleProcess_ProcessHold_EndUtc,
+	ActualDataId := E_GCDataId.SingleProcess_ProcessHold_ActualMs,
+	StageName := 'ProcessHold',
+	StageTiming := TimingView.ByName.ProcessHold);
+M_PublishStageData(
+	StartDataId := E_GCDataId.SingleProcess_ConcurrentProcessExit_StartUtc,
+	EndDataId := E_GCDataId.SingleProcess_ConcurrentProcessExit_EndUtc,
+	ActualDataId := E_GCDataId.SingleProcess_ConcurrentProcessExit_ActualMs,
+	StageName := 'ConcurrentProcessExit',
+	StageTiming := TimingView.ByName.ConcurrentProcessExit);
+M_PublishStageData(
+	StartDataId := E_GCDataId.SingleProcess_SpinStandby_StartUtc,
+	EndDataId := E_GCDataId.SingleProcess_SpinStandby_EndUtc,
+	ActualDataId := E_GCDataId.SingleProcess_SpinStandby_ActualMs,
+	StageName := 'SpinStandby',
+	StageTiming := TimingView.ByName.SpinStandby);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_PublishStageData" Id="{6f0188dd-ab9d-4b96-9248-74a942e61fd2}" FolderPath="PrivateMethods\">
+      <Declaration><![CDATA[METHOD PRIVATE M_PublishStageData
+VAR_INPUT
+	StartDataId : E_GCDataId;
+	EndDataId : E_GCDataId;
+	ActualDataId : E_GCDataId;
+	StageName : STRING(22);
+	StageTiming : ST_GCSingleProcessStageTiming;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_UpdateData(
+	DataId := TO_UDINT(StartDataId),
+	Name := CONCAT(StageName, 'StartUtc'),
+	DataType := E_DescriptorType.DateTime,
+	Unit := 'UTC',
+	Value := StageTiming.StartUtc);
+M_UpdateData(
+	DataId := TO_UDINT(EndDataId),
+	Name := CONCAT(StageName, 'EndUtc'),
+	DataType := E_DescriptorType.DateTime,
+	Unit := 'UTC',
+	Value := StageTiming.EndUtc);
+M_UpdateData(
+	DataId := TO_UDINT(ActualDataId),
+	Name := CONCAT(StageName, 'ActualMs'),
+	DataType := E_DescriptorType.Integer_32bit,
+	Unit := 'ms',
+	Value := DINT_TO_STRING(TIME_TO_DINT(StageTiming.ActualTime)));]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_FinalizeCycle" Id="{1b5eb052-b68e-4624-9e00-b9b246911983}" FolderPath="PrivateMethods\">
       <Declaration><![CDATA[METHOD PRIVATE M_FinalizeCycle
 VAR_INPUT
@@ -666,6 +765,7 @@ END_IF
 ProcessStatus.CurrentCycle.TotalActualTime := _CompletedTotalTime;
 ProcessStatus.CurrentCycle.StageTiming := _CurrentTimingView.ByName;
 ProcessStatus.LastCycle := ProcessStatus.CurrentCycle;
+M_PublishCompletedCycleData();
 _bCycleFinalized := TRUE;
 _bCycleActive := FALSE;
 _CurrentStage := E_GCSingleProcessStage.None;]]></ST>
@@ -704,11 +804,56 @@ END_VAR
         <ST><![CDATA[M_FreezeStage(TimedOut := TimedOut);
 IF NOT _bFailurePending THEN
 	_bFailurePending := TRUE;
-	Status.ServiceErrorId := ErrorCode;
+	M_AddError(
+		MainErrorId := ErrorCode,
+		SourceErrorId := 0,
+		Message := M_BuildFailureMessage(
+			ErrorCode := ErrorCode,
+			FailedAxis := FailedAxis,
+			FailedStage := _CurrentStage));
 	ProcessStatus.CurrentCycle.Result := E_GCSingleProcessResult.Failed;
 	ProcessStatus.CurrentCycle.FailedStage := _CurrentStage;
 	ProcessStatus.CurrentCycle.FailedAxis := FailedAxis;
 END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_BuildFailureMessage" Id="{a15d2461-092d-4ac0-bc46-cf0bbc9303e0}" FolderPath="PrivateMethods\">
+      <Declaration><![CDATA[METHOD PRIVATE M_BuildFailureMessage : STRING
+VAR_INPUT
+	ErrorCode : E_GCErrorCode;
+	FailedAxis : E_GCSingleProcessAxis;
+	FailedStage : E_GCSingleProcessStage;
+END_VAR
+VAR
+	sMessage : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE ErrorCode OF
+	E_GCErrorCode.Invalid_Param:
+		sMessage := 'Invalid parameters';
+	E_GCErrorCode.Resource_Acquire_Failed_During_Starting:
+		sMessage := 'Resource acquire failed';
+	E_GCErrorCode.Axis_Not_Servo_On_During_Starting:
+		sMessage := 'Axis not servo on';
+	E_GCErrorCode.Axis_Is_Busy_During_Starting:
+		sMessage := 'Axis busy';
+	E_GCErrorCode.Axis_Command_Error_During_Execute:
+		sMessage := 'Axis command failed';
+	E_GCErrorCode.Error_While_Stop_Axis:
+		sMessage := 'Axis stop failed';
+	E_GCErrorCode.Error_While_Reset_Axis:
+		sMessage := 'Axis reset failed';
+	E_GCErrorCode.Stage_Timeout:
+		sMessage := 'Stage timeout';
+ELSE
+	sMessage := 'SingleProcess failed';
+END_CASE
+
+sMessage := CONCAT(sMessage, '; Axis=');
+sMessage := CONCAT(sMessage, TO_STRING(FailedAxis));
+sMessage := CONCAT(sMessage, '; Stage=');
+M_BuildFailureMessage := CONCAT(sMessage, TO_STRING(FailedStage));]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_StartStage" Id="{2e7ecaf9-8db8-4431-8155-68161a71b148}" FolderPath="PrivateMethods\">

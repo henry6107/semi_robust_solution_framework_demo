@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_ConfigValueErrorMessage" Id="{14d72e43-0089-4a39-9a4f-209a31fd2be5}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_ConfigValueErrorMessage : STRING(160)
+VAR_INPUT
+	ErrorCode : E_ConfigValueError;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE ErrorCode OF
+	E_ConfigValueError.None:
+		F_ConfigValueErrorMessage := '';
+	E_ConfigValueError.ReaderUnavailable:
+		F_ConfigValueErrorMessage := 'Variable node reader is not available.';
+	E_ConfigValueError.SourceCapacityExceeded:
+		F_ConfigValueErrorMessage := 'Configured value source count exceeds snapshot capacity.';
+	E_ConfigValueError.InvalidNodeHandle:
+		F_ConfigValueErrorMessage := 'Configured value node handle is invalid.';
+	E_ConfigValueError.NodeReadNotAllowed:
+		F_ConfigValueErrorMessage := 'Configured value node is write-only.';
+	E_ConfigValueError.InvalidNodeAddress:
+		F_ConfigValueErrorMessage := 'Configured value node address is invalid.';
+	E_ConfigValueError.NodeDataTypeMismatch:
+		F_ConfigValueErrorMessage := 'Configured value type does not match the registered node.';
+	E_ConfigValueError.InvalidNodeSize:
+		F_ConfigValueErrorMessage := 'Configured value node size is invalid or exceeds the snapshot buffer.';
+ELSE
+	F_ConfigValueErrorMessage := 'Unknown configured value read error.';
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

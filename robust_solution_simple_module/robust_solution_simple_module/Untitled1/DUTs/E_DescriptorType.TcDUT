@@ -9,7 +9,10 @@ TYPE E_DescriptorType :
 	Integer_32bit := 1,	// TwinCAT DINT, CSharp int
 	Float_32bit,		// TwinCAT REAL, CSharp float
 	String_80byte,
-	DateTime	// ex: YYYYMMDDHHMMSSUU
+	DateTime,	// ex: YYYYMMDDHHMMSSUU
+	Boolean,
+	Unsigned_32bit,
+	Float_64bit
 );
 END_TYPE
 ]]></Declaration>

@@ -7,7 +7,7 @@ STRUCT
 	ModuleCtrl : ST_ModuleCtrl;
 	ModuleStatus : ST_ModuleStatus;
 	ModuleVariableList : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_ExtDescriptor;
-	ModuleAlarmList : ARRAY[1..Param_Config.MaxModuleAlarm] OF ST_ExtAlarm; 
+	ModuleAlarmList : ARRAY[1..Param_Config.MaxPublishedModuleAlarms] OF ST_ExtAlarm;
 	ModuleDataList : ARRAY[1..Param_Config.MaxModuleData] OF ST_ExtDescriptor;
 END_STRUCT
 END_TYPE

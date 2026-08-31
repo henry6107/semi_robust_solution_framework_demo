@@ -26,6 +26,41 @@ END_VAR
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
+    <Method Name="M_ClearAllData" Id="{9ce708c8-fcc2-41b9-921d-4cf31cb789df}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ClearAllData
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(Status.Data), 0, SIZEOF(Status.Data));]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearData" Id="{bda59455-e3cd-4825-a537-585be96d2e4e}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ClearData : BOOL
+VAR_INPUT
+	DataId : UDINT;
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ClearData := FALSE;
+IF DataId = 0 THEN
+	RETURN;
+END_IF
+
+FOR nIndex := 1 TO Param_Config.MaxServiceData DO
+	IF Status.Data.DataList[nIndex].Id = DataId THEN
+		MEMSET(ADR(Status.Data.DataList[nIndex]), 0, SIZEOF(Status.Data.DataList[nIndex]));
+		IF Status.Data.Count > 0 THEN
+			Status.Data.Count := Status.Data.Count - 1;
+		END_IF
+		Status.Data.Overflow := FALSE;
+		M_ClearData := TRUE;
+		RETURN;
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_AddError" Id="{4e62615f-0e50-466e-9f56-aa0713d5e3ab}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_AddError : BOOL
 VAR_INPUT
@@ -69,12 +104,65 @@ Status.ErrorList[nFirstEmpty].Message := Message;
 Status.ErrorList[nFirstEmpty].Path := _Path;
 Status.ErrorList[nFirstEmpty].Severity := E_Severity.Alarm;
 Status.ErrorList[nFirstEmpty].DateTime := Context.UtcDateTime;
+Status.ErrorList[nFirstEmpty].Active := TRUE;
+Status.ErrorList[nFirstEmpty].Acknowledged := FALSE;
+Status.ErrorList[nFirstEmpty].OccurrenceCount := 1;
 M_AddError := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateData" Id="{52f20474-69d8-45fd-9268-a22bd550dba9}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateData : BOOL
+VAR_INPUT
+	DataId : UDINT;
+	Name : STRING(30);
+	DataType : E_DescriptorType;
+	Unit : STRING(10);
+	Value : STRING(80);
+END_VAR
+VAR
+	nIndex : UINT;
+	nTargetIndex : UINT;
+	nFirstEmpty : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_UpdateData := FALSE;
+IF DataId = 0 THEN
+	RETURN;
+END_IF
+
+nTargetIndex := 0;
+nFirstEmpty := 0;
+FOR nIndex := 1 TO Param_Config.MaxServiceData DO
+	IF Status.Data.DataList[nIndex].Id = DataId THEN
+		nTargetIndex := nIndex;
+		EXIT;
+	ELSIF (Status.Data.DataList[nIndex].Id = 0) AND (nFirstEmpty = 0) THEN
+		nFirstEmpty := nIndex;
+	END_IF
+END_FOR
+
+IF nTargetIndex = 0 THEN
+	IF nFirstEmpty = 0 THEN
+		Status.Data.Overflow := TRUE;
+		RETURN;
+	END_IF
+	nTargetIndex := nFirstEmpty;
+	Status.Data.Count := Status.Data.Count + 1;
+END_IF
+
+Status.Data.DataList[nTargetIndex].Id := DataId;
+Status.Data.DataList[nTargetIndex].Name := Name;
+Status.Data.DataList[nTargetIndex].DataType := DataType;
+Status.Data.DataList[nTargetIndex].Unit := Unit;
+Status.Data.DataList[nTargetIndex].Value := Value;
+M_UpdateData := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_UpdateService" Id="{8ae05b1d-81f7-4b0b-9f3f-42116c68a842}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateService
 VAR_INPUT
+	CompletionBehavior : E_ServiceCompletionBehavior;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -85,6 +173,7 @@ _CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
 
 // Updata status
 Status.PackMLOut := PackMLOut;
+Status.CompletionBehavior := CompletionBehavior;
 IF _CmdRequestOneShot.Q THEN // Acknowledge to upper controller that command received
 	Status.ResponseId := Ctrl.RequestId;
 END_IF]]></ST>

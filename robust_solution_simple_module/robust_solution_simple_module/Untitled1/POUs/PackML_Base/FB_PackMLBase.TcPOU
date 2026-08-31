@@ -703,7 +703,7 @@ PackMLOut.eModeErrorID		:= eErrorID;]]></ST>
     </Method>
     <Method Name="RequestCommand" Id="{acc2f90f-ee3a-48ba-968f-939630ff093a}">
       <Declaration><![CDATA[// Used for requesting PackML command inside state machine itself 
-METHOD PROTECTED RequestCommand : BOOL
+METHOD PROTECTED FINAL RequestCommand : BOOL
 VAR_INPUT
 	eTargetCmd	: E_PackMLCommand;
 END_VAR

@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_ConfigDataTypeToDescriptor" Id="{d87099bf-2c80-471a-8705-6f7f692e8255}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_ConfigDataTypeToDescriptor : E_DescriptorType
+VAR_INPUT
+	DataType : E_ConfigDataType;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE DataType OF
+	E_ConfigDataType.Boolean:
+		F_ConfigDataTypeToDescriptor := E_DescriptorType.Boolean;
+	E_ConfigDataType.Integer32:
+		F_ConfigDataTypeToDescriptor := E_DescriptorType.Integer_32bit;
+	E_ConfigDataType.UnsignedInteger32:
+		F_ConfigDataTypeToDescriptor := E_DescriptorType.Unsigned_32bit;
+	E_ConfigDataType.Float32:
+		F_ConfigDataTypeToDescriptor := E_DescriptorType.Float_32bit;
+	E_ConfigDataType.Float64:
+		F_ConfigDataTypeToDescriptor := E_DescriptorType.Float_64bit;
+	E_ConfigDataType.String80:
+		F_ConfigDataTypeToDescriptor := E_DescriptorType.String_80byte;
+ELSE
+	F_ConfigDataTypeToDescriptor := E_DescriptorType.String_80byte;
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

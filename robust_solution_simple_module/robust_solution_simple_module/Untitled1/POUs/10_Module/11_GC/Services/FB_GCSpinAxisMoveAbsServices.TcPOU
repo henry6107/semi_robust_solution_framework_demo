@@ -7,7 +7,7 @@ VAR_INPUT
 	Axis_BaseUnit : I_Axis_BaseUnit;
 END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateService();
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{ca59d4b8-ca7f-493a-9fc5-3adf146e1d0b}" />

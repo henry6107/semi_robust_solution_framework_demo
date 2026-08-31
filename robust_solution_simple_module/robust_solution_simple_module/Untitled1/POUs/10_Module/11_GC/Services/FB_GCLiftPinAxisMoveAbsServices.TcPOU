@@ -8,7 +8,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateService();]]></ST>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{a1ab0002-6b2c-4d3e-8f90-a1ab00000002}" />
     <Method Name="H_OnAborted" Id="{a1ab0003-6b2c-4d3e-8f90-a1ab00000003}" FolderPath="StateAction\">

@@ -1,0 +1,371 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ModuleAlarmManager" Id="{e2237d1c-454a-422d-b95c-4d640d5109f4}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleAlarmManager
+VAR_OUTPUT
+	AckResponseId : UDINT;
+	AckAccepted : BOOL;
+	AckError : E_AlarmAckError;
+	ConfiguredLatchedCount : UINT;
+	ServiceLatchedCount : UINT;
+	Overflow : BOOL;
+END_VAR
+VAR
+	_ConfiguredStates : ARRAY[1..Param_Config.MaxConfiguredAlarmsPerModule] OF ST_AlarmLifecycleState;
+	_ServiceStates : ARRAY[1..Param_Config.MaxServiceAlarmsPerModule] OF ST_AlarmLifecycleState;
+	_AckRequestOneShot : R_TRIG;
+	_LastAckRequestId : UDINT;
+	_ModuleId : UDINT;
+	_ConfigurationRevision : UDINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="M_AcknowledgeState" Id="{2d19a99e-948f-4c2d-90cc-ec8e73c3874e}">
+      <Declaration><![CDATA[METHOD PRIVATE M_AcknowledgeState
+VAR_IN_OUT
+	State : ST_AlarmLifecycleState;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[State.Alarm.Acknowledged := TRUE;
+IF NOT State.Alarm.Active THEN
+	MEMSET(ADR(State), 0, SIZEOF(State));
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_BeginCycle" Id="{774a7c7b-f497-416b-9910-4fbf2792e84e}">
+      <Declaration><![CDATA[METHOD PUBLIC M_BeginCycle
+VAR_INPUT
+	ModuleId : UDINT;
+	ConfigurationRevision : UDINT;
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF ModuleId <> _ModuleId THEN
+	MEMSET(ADR(_ConfiguredStates), 0, SIZEOF(_ConfiguredStates));
+	MEMSET(ADR(_ServiceStates), 0, SIZEOF(_ServiceStates));
+	M_ResetAcknowledgement();
+	_ModuleId := ModuleId;
+	_ConfigurationRevision := ConfigurationRevision;
+
+ELSIF ConfigurationRevision <> _ConfigurationRevision THEN
+	// Configuration reload owns only configured alarm definitions. Service lifecycles survive it.
+	MEMSET(ADR(_ConfiguredStates), 0, SIZEOF(_ConfiguredStates));
+	_ConfigurationRevision := ConfigurationRevision;
+END_IF
+
+Overflow := FALSE;
+FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
+	_ServiceStates[nIndex].SeenThisCycle := FALSE;
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_EndCycle" Id="{9f4b7076-d45f-4212-9d8e-78c187c2113d}">
+      <Declaration><![CDATA[METHOD PUBLIC M_EndCycle
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
+	IF NOT _ServiceStates[nIndex].Latched THEN
+		CONTINUE;
+	END_IF
+
+	IF NOT _ServiceStates[nIndex].SeenThisCycle THEN
+		_ServiceStates[nIndex].Alarm.Active := FALSE;
+	END_IF
+
+	IF NOT _ServiceStates[nIndex].Alarm.Active
+		AND _ServiceStates[nIndex].Alarm.Acknowledged THEN
+		MEMSET(ADR(_ServiceStates[nIndex]), 0, SIZEOF(_ServiceStates[nIndex]));
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_LatchState" Id="{26276cee-8ad6-4095-a89c-e38954021c7c}">
+      <Declaration><![CDATA[METHOD PRIVATE M_LatchState
+VAR_INPUT
+	ServiceId : UDINT;
+	DateTime : STRING(20);
+END_VAR
+VAR_IN_OUT
+	State : ST_AlarmLifecycleState;
+END_VAR
+VAR_IN_OUT CONSTANT
+	Snapshot : ST_ExtAlarm;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(State), 0, SIZEOF(State));
+State.Latched := TRUE;
+State.Alarm := Snapshot;
+State.Alarm.ModuleId := _ModuleId;
+State.Alarm.ServiceId := ServiceId;
+State.Alarm.DateTime := DateTime;
+State.Alarm.Active := TRUE;
+State.Alarm.Acknowledged := FALSE;
+State.Alarm.OccurrenceCount := 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ObserveServiceAlarm" Id="{6bbcf809-ad76-4d50-a240-9947403c8215}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ObserveServiceAlarm : BOOL
+VAR_IN_OUT CONSTANT
+	Alarm : ST_ExtAlarm;
+END_VAR
+VAR
+	nIndex : UINT;
+	nFirstEmpty : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ObserveServiceAlarm := FALSE;
+nFirstEmpty := 0;
+
+IF (Alarm.ServiceId = 0) OR (Alarm.MainErrorId = 0) THEN
+	RETURN;
+END_IF
+
+FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
+
+	// If slot has been used
+	IF _ServiceStates[nIndex].Latched THEN
+
+		// If alarm has already in latched queue
+		IF (_ServiceStates[nIndex].Alarm.ServiceId = Alarm.ServiceId)
+			AND (_ServiceStates[nIndex].Alarm.MainErrorId = Alarm.MainErrorId) THEN
+			_ServiceStates[nIndex].SeenThisCycle := TRUE;
+
+			// Refresh active signal
+			IF NOT _ServiceStates[nIndex].Alarm.Active THEN
+				_ServiceStates[nIndex].Alarm.Active := TRUE;
+				_ServiceStates[nIndex].Alarm.Acknowledged := FALSE;
+				_ServiceStates[nIndex].Alarm.OccurrenceCount := _ServiceStates[nIndex].Alarm.OccurrenceCount + 1;
+			END_IF
+			M_ObserveServiceAlarm := TRUE;
+			RETURN;
+		END_IF
+
+	// Update first empty slot index
+	ELSIF nFirstEmpty = 0 THEN
+		nFirstEmpty := nIndex;
+	END_IF
+END_FOR
+
+IF nFirstEmpty = 0 THEN
+	Overflow := TRUE;
+	RETURN;
+END_IF
+
+M_LatchState(
+	State := _ServiceStates[nFirstEmpty],
+	Snapshot := Alarm,
+	ServiceId := Alarm.ServiceId,
+	DateTime := Alarm.DateTime);
+_ServiceStates[nFirstEmpty].SeenThisCycle := TRUE;
+M_ObserveServiceAlarm := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ProcessAcknowledgement" Id="{e03234f9-366d-46c7-9c10-209d7a815c24}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ProcessAcknowledgement
+VAR_IN_OUT CONSTANT
+	Request : ST_AlarmAckRequest;
+END_VAR
+VAR
+	nIndex : UINT;
+	bFound : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_AckRequestOneShot(CLK := Request.bChangeRequest);
+
+// Keep the response visible until the upper controller releases the request.
+IF NOT Request.bChangeRequest THEN
+	AckAccepted := FALSE;
+	AckError := E_AlarmAckError.None;
+	RETURN;
+END_IF
+
+IF NOT _AckRequestOneShot.Q THEN
+	RETURN;
+END_IF
+
+AckResponseId := Request.RequestId;
+AckAccepted := FALSE;
+AckError := E_AlarmAckError.None;
+bFound := FALSE;
+
+IF Request.RequestId = 0 THEN
+	AckError := E_AlarmAckError.InvalidRequestId;
+	RETURN;
+END_IF
+IF Request.RequestId = _LastAckRequestId THEN
+	AckError := E_AlarmAckError.DuplicateRequest;
+	RETURN;
+END_IF
+_LastAckRequestId := Request.RequestId;
+
+CASE Request.Command OF
+	E_AlarmAckCommand.AcknowledgeOne:
+		IF Request.MainErrorId = 0 THEN
+			AckError := E_AlarmAckError.AlarmNotFound;
+			RETURN;
+		END_IF
+
+		IF Request.ServiceId = 0 THEN
+			FOR nIndex := 1 TO Param_Config.MaxConfiguredAlarmsPerModule DO
+				IF _ConfiguredStates[nIndex].Latched
+					AND (_ConfiguredStates[nIndex].Alarm.MainErrorId = Request.MainErrorId) THEN
+					M_AcknowledgeState(State := _ConfiguredStates[nIndex]);
+					bFound := TRUE;
+					EXIT;
+				END_IF
+			END_FOR
+
+		ELSE
+			FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
+				IF _ServiceStates[nIndex].Latched
+					AND (_ServiceStates[nIndex].Alarm.ServiceId = Request.ServiceId)
+					AND (_ServiceStates[nIndex].Alarm.MainErrorId = Request.MainErrorId) THEN
+					M_AcknowledgeState(State := _ServiceStates[nIndex]);
+					bFound := TRUE;
+					EXIT;
+				END_IF
+			END_FOR
+		END_IF
+
+		IF NOT bFound THEN
+			AckError := E_AlarmAckError.AlarmNotFound;
+			RETURN;
+		END_IF
+
+	E_AlarmAckCommand.AcknowledgeAll:
+		FOR nIndex := 1 TO Param_Config.MaxConfiguredAlarmsPerModule DO
+			IF _ConfiguredStates[nIndex].Latched THEN
+				M_AcknowledgeState(State := _ConfiguredStates[nIndex]);
+			END_IF
+		END_FOR
+		FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
+			IF _ServiceStates[nIndex].Latched THEN
+				M_AcknowledgeState(State := _ServiceStates[nIndex]);
+			END_IF
+		END_FOR
+
+ELSE
+	AckError := E_AlarmAckError.InvalidCommand;
+	RETURN;
+END_CASE
+
+AckAccepted := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Publish" Id="{79c0f72a-db09-4b93-9761-8934a000d62d}">
+      <Declaration><![CDATA[METHOD PUBLIC M_Publish
+VAR_IN_OUT
+	AlarmList : ARRAY[1..Param_Config.MaxPublishedModuleAlarms] OF ST_ExtAlarm;
+END_VAR
+VAR
+	nIndex : UINT;
+	nTarget : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(AlarmList), 0, SIZEOF(AlarmList));
+ConfiguredLatchedCount := 0;
+ServiceLatchedCount := 0;
+nTarget := 1;
+
+// Preserve the existing public ordering: Service alarms first, configured alarms second.
+FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
+	IF NOT _ServiceStates[nIndex].Latched THEN
+		CONTINUE;
+	END_IF
+	ServiceLatchedCount := ServiceLatchedCount + 1;
+	IF nTarget > Param_Config.MaxPublishedModuleAlarms THEN
+		Overflow := TRUE;
+		CONTINUE;
+	END_IF
+	AlarmList[nTarget] := _ServiceStates[nIndex].Alarm;
+	nTarget := nTarget + 1;
+END_FOR
+
+FOR nIndex := 1 TO Param_Config.MaxConfiguredAlarmsPerModule DO
+	IF NOT _ConfiguredStates[nIndex].Latched THEN
+		CONTINUE;
+	END_IF
+	ConfiguredLatchedCount := ConfiguredLatchedCount + 1;
+	IF nTarget > Param_Config.MaxPublishedModuleAlarms THEN
+		Overflow := TRUE;
+		CONTINUE;
+	END_IF
+	AlarmList[nTarget] := _ConfiguredStates[nIndex].Alarm;
+	nTarget := nTarget + 1;
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ResetAcknowledgement" Id="{ad88f60e-5fdb-4132-a3bc-1dd7b12e8df1}">
+      <Declaration><![CDATA[METHOD PRIVATE M_ResetAcknowledgement
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AckResponseId := 0;
+AckAccepted := FALSE;
+AckError := E_AlarmAckError.None;
+_LastAckRequestId := 0;
+_AckRequestOneShot(CLK := FALSE);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateConfiguredAlarm" Id="{43ba68c0-8a75-44de-9e21-4e5f64971ab7}">
+      <Declaration><![CDATA[METHOD PUBLIC M_UpdateConfiguredAlarm
+VAR_INPUT
+	AlarmIndex : UINT;
+	SampleValid : BOOL;
+	ConditionMet : BOOL;
+	UtcDateTime : STRING(20);
+END_VAR
+VAR_IN_OUT CONSTANT
+	Alarm : ST_ExtAlarm;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF (AlarmIndex < 1)
+	OR (AlarmIndex > Param_Config.MaxConfiguredAlarmsPerModule)
+	OR NOT SampleValid THEN
+	RETURN;
+END_IF
+
+IF ConditionMet THEN
+	IF NOT _ConfiguredStates[AlarmIndex].PreviousActive THEN
+		IF NOT _ConfiguredStates[AlarmIndex].Latched THEN
+			M_LatchState(
+				State := _ConfiguredStates[AlarmIndex],
+				Snapshot := Alarm,
+				ServiceId := 0,
+				DateTime := UtcDateTime);
+		ELSE
+			_ConfiguredStates[AlarmIndex].Alarm.Active := TRUE;
+			_ConfiguredStates[AlarmIndex].Alarm.Acknowledged := FALSE;
+			_ConfiguredStates[AlarmIndex].Alarm.OccurrenceCount := _ConfiguredStates[AlarmIndex].Alarm.OccurrenceCount + 1;
+		END_IF
+	END_IF
+	_ConfiguredStates[AlarmIndex].Alarm.Active := TRUE;
+
+ELSE
+	IF _ConfiguredStates[AlarmIndex].PreviousActive
+		AND _ConfiguredStates[AlarmIndex].Latched THEN
+		_ConfiguredStates[AlarmIndex].Alarm.Active := FALSE;
+		IF _ConfiguredStates[AlarmIndex].Alarm.Acknowledged THEN
+			MEMSET(ADR(_ConfiguredStates[AlarmIndex]), 0, SIZEOF(_ConfiguredStates[AlarmIndex]));
+		END_IF
+	END_IF
+END_IF
+
+_ConfiguredStates[AlarmIndex].PreviousActive := ConditionMet;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

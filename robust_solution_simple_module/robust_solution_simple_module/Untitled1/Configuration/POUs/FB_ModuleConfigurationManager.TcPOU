@@ -1,0 +1,677 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ModuleConfigurationManager" Id="{6995747e-9e93-4057-9291-03683018d67d}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleConfigurationManager
+VAR_INPUT
+	Execute : BOOL;
+	FilePath : STRING(255);
+END_VAR
+VAR_IN_OUT
+	LinkVariableManager : FB_LinkVariableManager;
+	ReferenceManager : FB_ReferenceManager;
+	ModuleTypeRegistry : FB_ModuleTypeRegistry;
+END_VAR
+VAR_OUTPUT
+	Ready : BOOL;
+	Busy : BOOL;
+	Error : BOOL;
+	ErrorCode : HRESULT;
+	ErrorMessage : STRING(255);
+END_VAR
+VAR
+	_Json : FB_JsonDomParser;
+	_Config : ST_SystemFileConfig;
+	_bLoad : BOOL;
+	_bLoaded : BOOL;
+	_nState : USINT;
+	_nRevision : UDINT;
+	_RuntimeConfigScratch : ST_ModuleRuntimeConfig;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE _nState OF
+	0:
+		Busy := FALSE;
+		IF Execute THEN
+			Ready := FALSE;
+			Error := FALSE;
+			ErrorCode := 0;
+			ErrorMessage := '';
+			_bLoad := TRUE;
+			Busy := TRUE;
+			_nState := 1;
+		END_IF
+
+	1:
+		Busy := TRUE;
+		_bLoaded := _Json.LoadDocumentFromFile(
+			sFile := FilePath,
+			bExec := _bLoad,
+			hrErrorCode => ErrorCode);
+		IF _bLoaded THEN
+			IF M_ParseDocument() THEN
+				_nState := 2;
+			ELSE
+				Error := TRUE;
+				M_ClearAppliedConfiguration(
+					LinkVariableManager := LinkVariableManager,
+					ModuleTypeRegistry := ModuleTypeRegistry);
+				_nState := 3;
+			END_IF
+		ELSIF NOT _bLoad THEN
+			Error := TRUE;
+			ErrorMessage := 'Unable to load the UTF-8 JSON module configuration file.';
+			M_ClearAppliedConfiguration(
+				LinkVariableManager := LinkVariableManager,
+				ModuleTypeRegistry := ModuleTypeRegistry);
+			_nState := 3;
+		END_IF
+
+	2:
+		Busy := TRUE;
+		IF M_ApplyConfiguration(
+			LinkVariableManager := LinkVariableManager,
+			ReferenceManager := ReferenceManager,
+			ModuleTypeRegistry := ModuleTypeRegistry) THEN
+			Ready := TRUE;
+		ELSE
+			Error := TRUE;
+			M_ClearAppliedConfiguration(
+				LinkVariableManager := LinkVariableManager,
+				ModuleTypeRegistry := ModuleTypeRegistry);
+		END_IF
+		_nState := 3;
+
+	3:
+		Busy := FALSE;
+		IF NOT Execute THEN
+			_nState := 0;
+		END_IF
+END_CASE]]></ST>
+    </Implementation>
+    <Method Name="M_ApplyConfiguration" Id="{f770ad4e-60c7-4573-82d2-9e340dbed049}">
+      <Declaration><![CDATA[METHOD PRIVATE M_ApplyConfiguration : BOOL
+VAR_IN_OUT
+	LinkVariableManager : FB_LinkVariableManager;
+	ReferenceManager : FB_ReferenceManager;
+	ModuleTypeRegistry : FB_ModuleTypeRegistry;
+END_VAR
+VAR
+	nModule : UINT;
+	nOther : UINT;
+	nItem : UINT;
+	nSlot : UINT;
+	sModuleSymbol : STRING(255);
+	sFullName : STRING(255);
+	BaseUnit : I_BaseUnit;
+	Adapter : I_ModuleConfigurationAdapter;
+	sAdapterError : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ApplyConfiguration := FALSE;
+
+// Resolve every configured type and reject ambiguous addressing before mutating runtime state.
+FOR nModule := 1 TO _Config.ModuleCount DO
+	IF (_Config.Modules[nModule].Slot < 1)
+		OR (_Config.Modules[nModule].Slot > Param_Config.MaxModulePerType) THEN
+		ErrorMessage := CONCAT(
+			CONCAT('A module slot is outside the supported range 1..', TO_STRING(Param_Config.MaxModulePerType)),
+			'.');
+		RETURN;
+	END_IF
+	Adapter := ModuleTypeRegistry.M_Resolve(ModuleTypeName := _Config.Modules[nModule].ModuleType);
+	IF Adapter = 0 THEN
+		ErrorMessage := ModuleTypeRegistry.ErrorMessage;
+		RETURN;
+	END_IF
+	IF NOT Adapter.M_IsSlotSupported(Slot := _Config.Modules[nModule].Slot) THEN
+		ErrorMessage := 'Module adapter does not support the configured slot.';
+		RETURN;
+	END_IF
+	IF _Config.Modules[nModule].Enabled THEN
+		IF _Config.Modules[nModule].Id = 0 THEN
+			ErrorMessage := 'Every enabled module requires a non-zero id.';
+			RETURN;
+		END_IF
+	END_IF
+	FOR nOther := nModule + 1 TO _Config.ModuleCount DO
+		IF (_Config.Modules[nModule].ModuleType = _Config.Modules[nOther].ModuleType)
+			AND (_Config.Modules[nModule].Slot = _Config.Modules[nOther].Slot) THEN
+			ErrorMessage := 'Duplicate module slot for the same module type.';
+			RETURN;
+		END_IF
+		IF _Config.Modules[nModule].Enabled AND _Config.Modules[nOther].Enabled
+			AND (_Config.Modules[nModule].Id = _Config.Modules[nOther].Id) THEN
+			ErrorMessage := 'Duplicate enabled module ID in configuration.';
+			RETURN;
+		END_IF
+	END_FOR
+END_FOR
+
+M_ClearAppliedConfiguration(
+	LinkVariableManager := LinkVariableManager,
+	ModuleTypeRegistry := ModuleTypeRegistry);
+
+_nRevision := _nRevision + 1;
+IF _nRevision = 0 THEN
+	_nRevision := 1;
+END_IF
+
+FOR nModule := 1 TO _Config.ModuleCount DO
+	nSlot := _Config.Modules[nModule].Slot;
+	Adapter := ModuleTypeRegistry.M_Resolve(ModuleTypeName := _Config.Modules[nModule].ModuleType);
+	IF Adapter = 0 THEN
+		ErrorMessage := ModuleTypeRegistry.ErrorMessage;
+		RETURN;
+	END_IF
+
+	MEMSET(ADR(_RuntimeConfigScratch), 0, SIZEOF(_RuntimeConfigScratch));
+	_RuntimeConfigScratch.Enabled := _Config.Modules[nModule].Enabled;
+	_RuntimeConfigScratch.ModuleId := _Config.Modules[nModule].Id;
+	_RuntimeConfigScratch.ModuleType := _Config.Modules[nModule].ModuleType;
+	_RuntimeConfigScratch.Revision := _nRevision;
+
+	IF NOT _Config.Modules[nModule].Enabled THEN
+		_RuntimeConfigScratch.Valid := TRUE;
+		IF NOT Adapter.M_ApplyRuntimeConfig(
+			Slot := nSlot,
+			RuntimeConfig := _RuntimeConfigScratch,
+			ErrorMessage => sAdapterError) THEN
+			ErrorMessage := sAdapterError;
+			RETURN;
+		END_IF
+		CONTINUE;
+	END_IF
+
+	IF NOT Adapter.M_RegisterIo(
+		Slot := nSlot,
+		LinkVariableManager := LinkVariableManager,
+		ModuleSymbol => sModuleSymbol,
+		ErrorMessage => sAdapterError) THEN
+		ErrorMessage := sAdapterError;
+		RETURN;
+	END_IF
+
+	FOR nItem := 1 TO _Config.Modules[nModule].InputMappingCount DO
+		sFullName := CONCAT(CONCAT(sModuleSymbol, '.'), _Config.Modules[nModule].InputMappings[nItem].Target);
+		IF NOT LinkVariableManager.M_AddLink(
+			SourceName := _Config.Modules[nModule].InputMappings[nItem].Source,
+			TargetName := sFullName,
+			SourceDataType := _Config.Modules[nModule].InputMappings[nItem].SourceDataType,
+			TargetDataType := _Config.Modules[nModule].InputMappings[nItem].TargetDataType,
+			Phase := E_LinkPhase.InputToModule,
+			HasTransform := _Config.Modules[nModule].InputMappings[nItem].HasTransform,
+			Scale := _Config.Modules[nModule].InputMappings[nItem].Scale,
+			Offset := _Config.Modules[nModule].InputMappings[nItem].Offset) THEN
+			ErrorMessage := LinkVariableManager.ErrorMessage;
+			RETURN;
+		END_IF
+	END_FOR
+
+	FOR nItem := 1 TO _Config.Modules[nModule].OutputMappingCount DO
+		sFullName := CONCAT(CONCAT(sModuleSymbol, '.'), _Config.Modules[nModule].OutputMappings[nItem].Source);
+		IF NOT LinkVariableManager.M_AddLink(
+			SourceName := sFullName,
+			TargetName := _Config.Modules[nModule].OutputMappings[nItem].Target,
+			SourceDataType := _Config.Modules[nModule].OutputMappings[nItem].SourceDataType,
+			TargetDataType := _Config.Modules[nModule].OutputMappings[nItem].TargetDataType,
+			Phase := E_LinkPhase.ModuleToOutput,
+			HasTransform := _Config.Modules[nModule].OutputMappings[nItem].HasTransform,
+			Scale := _Config.Modules[nModule].OutputMappings[nItem].Scale,
+			Offset := _Config.Modules[nModule].OutputMappings[nItem].Offset) THEN
+			ErrorMessage := LinkVariableManager.ErrorMessage;
+			RETURN;
+		END_IF
+	END_FOR
+
+	FOR nItem := 1 TO _Config.Modules[nModule].ReferenceBindingCount DO
+		BaseUnit := ReferenceManager.M_Resolve(Name := _Config.Modules[nModule].ReferenceBindings[nItem].Source);
+		IF BaseUnit = 0 THEN
+			ErrorMessage := ReferenceManager.ErrorMessage;
+			RETURN;
+		END_IF
+		IF NOT Adapter.M_BindReference(
+			Slot := nSlot,
+			TargetPort := _Config.Modules[nModule].ReferenceBindings[nItem].TargetPort,
+			BaseUnit := BaseUnit,
+			ErrorMessage => sAdapterError) THEN
+			ErrorMessage := sAdapterError;
+			RETURN;
+		END_IF
+	END_FOR
+
+	IF NOT Adapter.M_ValidateReferences(
+		Slot := nSlot,
+		ErrorMessage => sAdapterError) THEN
+		ErrorMessage := sAdapterError;
+		RETURN;
+	END_IF
+
+	_RuntimeConfigScratch.VariableCount := _Config.Modules[nModule].VariableCount;
+	FOR nItem := 1 TO _Config.Modules[nModule].VariableCount DO
+		_RuntimeConfigScratch.VariableBindings[nItem].Definition := _Config.Modules[nModule].VariableList[nItem];
+		_RuntimeConfigScratch.VariableBindings[nItem].Definition.Source := CONCAT(
+			CONCAT(sModuleSymbol, '.'),
+			_Config.Modules[nModule].VariableList[nItem].Source);
+		IF NOT LinkVariableManager.M_ResolveReadableNode(
+			Name := _RuntimeConfigScratch.VariableBindings[nItem].Definition.Source,
+			ExpectedDataType := _RuntimeConfigScratch.VariableBindings[nItem].Definition.DataType,
+			NodeHandle => _RuntimeConfigScratch.VariableBindings[nItem].NodeHandle) THEN
+			ErrorMessage := LinkVariableManager.ErrorMessage;
+			RETURN;
+		END_IF
+	END_FOR
+
+	_RuntimeConfigScratch.AlarmCount := _Config.Modules[nModule].AlarmCount;
+	FOR nItem := 1 TO _Config.Modules[nModule].AlarmCount DO
+		_RuntimeConfigScratch.AlarmBindings[nItem].Definition := _Config.Modules[nModule].AlarmList[nItem];
+		_RuntimeConfigScratch.AlarmBindings[nItem].Definition.Source := CONCAT(
+			CONCAT(sModuleSymbol, '.'),
+			_Config.Modules[nModule].AlarmList[nItem].Source);
+		IF NOT LinkVariableManager.M_ResolveReadableNode(
+			Name := _RuntimeConfigScratch.AlarmBindings[nItem].Definition.Source,
+			ExpectedDataType := _RuntimeConfigScratch.AlarmBindings[nItem].Definition.DataType,
+			NodeHandle => _RuntimeConfigScratch.AlarmBindings[nItem].NodeHandle) THEN
+			ErrorMessage := LinkVariableManager.ErrorMessage;
+			RETURN;
+		END_IF
+	END_FOR
+
+	_RuntimeConfigScratch.Valid := TRUE;
+	IF NOT Adapter.M_ApplyRuntimeConfig(
+		Slot := nSlot,
+		RuntimeConfig := _RuntimeConfigScratch,
+		ErrorMessage => sAdapterError) THEN
+		ErrorMessage := sAdapterError;
+		RETURN;
+	END_IF
+END_FOR
+
+M_ApplyConfiguration := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearAppliedConfiguration" Id="{9d1be96f-abd7-4cba-bf0a-bfd9d74f68c8}">
+      <Declaration><![CDATA[METHOD PRIVATE M_ClearAppliedConfiguration
+VAR_IN_OUT
+	LinkVariableManager : FB_LinkVariableManager;
+	ModuleTypeRegistry : FB_ModuleTypeRegistry;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[LinkVariableManager.M_ClearLinks();
+ModuleTypeRegistry.M_ClearAll();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ParseDataType" Id="{022c1741-46d1-410b-9554-7e2af6351631}">
+      <Declaration><![CDATA[METHOD PRIVATE M_ParseDataType : E_ConfigDataType
+VAR_INPUT
+	Value : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF (Value = 'BOOL') OR (Value = 'Bool') OR (Value = 'Boolean') THEN
+	M_ParseDataType := E_ConfigDataType.Boolean;
+ELSIF (Value = 'DINT') OR (Value = 'DInt') OR (Value = 'Integer_32bit') THEN
+	M_ParseDataType := E_ConfigDataType.Integer32;
+ELSIF (Value = 'UDINT') OR (Value = 'UDInt') OR (Value = 'Unsigned_32bit') THEN
+	M_ParseDataType := E_ConfigDataType.UnsignedInteger32;
+ELSIF (Value = 'REAL') OR (Value = 'Real') OR (Value = 'Float_32bit') THEN
+	M_ParseDataType := E_ConfigDataType.Float32;
+ELSIF (Value = 'LREAL') OR (Value = 'LReal') OR (Value = 'Float_64bit') THEN
+	M_ParseDataType := E_ConfigDataType.Float64;
+ELSIF (Value = 'STRING') OR (Value = 'String80') OR (Value = 'String_80byte') THEN
+	M_ParseDataType := E_ConfigDataType.String80;
+ELSE
+	M_ParseDataType := E_ConfigDataType.Unknown;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ParseDocument" Id="{8347d846-e903-4be9-85a2-f33b4c9f0927}">
+      <Declaration><![CDATA[METHOD PRIVATE M_ParseDocument : BOOL
+VAR
+	Root : SJsonValue;
+	Node : SJsonValue;
+	ModulesNode : SJsonValue;
+	ModuleNode : SJsonValue;
+	ArrayNode : SJsonValue;
+	ItemNode : SJsonValue;
+	TransformNode : SJsonValue;
+	ConditionNode : SJsonValue;
+	nModule : UINT;
+	nItem : UINT;
+	nCount : UDINT;
+	sValue : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ParseDocument := FALSE;
+MEMSET(ADR(_Config), 0, SIZEOF(_Config));
+Root := _Json.GetDocumentRoot();
+IF Root = 0 THEN
+	ErrorMessage := 'JSON document has no root object.';
+	RETURN;
+END_IF
+
+Node := _Json.FindMember(Root, 'schemaVersion');
+IF Node = 0 THEN
+	ErrorMessage := 'schemaVersion is required.';
+	RETURN;
+END_IF
+_Config.SchemaVersion := _Json.GetUint(Node);
+IF _Config.SchemaVersion <> Param_Config.ConfigSchemaVersion THEN
+	ErrorMessage := 'Unsupported module configuration schemaVersion.';
+	RETURN;
+END_IF
+
+Node := _Json.FindMember(Root, 'adsPort');
+IF Node <> 0 THEN
+	ErrorMessage := 'adsPort is not supported by schemaVersion 3; configured values use registered local nodes.';
+	RETURN;
+END_IF
+
+ModulesNode := _Json.FindMember(Root, 'modules');
+IF (ModulesNode = 0) OR NOT _Json.IsArray(ModulesNode) THEN
+	ErrorMessage := 'modules must be a JSON array.';
+	RETURN;
+END_IF
+nCount := _Json.GetArraySize(ModulesNode);
+IF nCount > Param_Config.MaxTotalConfiguredModules THEN
+	ErrorMessage := CONCAT(
+		CONCAT('Configuration contains more than ', TO_STRING(Param_Config.MaxTotalConfiguredModules)),
+		' modules.');
+	RETURN;
+END_IF
+_Config.ModuleCount := UDINT_TO_UINT(nCount);
+
+FOR nModule := 1 TO _Config.ModuleCount DO
+	ModuleNode := _Json.GetArrayValueByIdx(ModulesNode, UINT_TO_UDINT(nModule - 1));
+	IF ModuleNode = 0 THEN
+		ErrorMessage := 'Invalid module object.';
+		RETURN;
+	END_IF
+
+	Node := _Json.FindMember(ModuleNode, 'enabled');
+	IF Node = 0 THEN
+		ErrorMessage := 'Every module requires enabled.';
+		RETURN;
+	END_IF
+	_Config.Modules[nModule].Enabled := _Json.GetBool(Node);
+
+	Node := _Json.FindMember(ModuleNode, 'slot');
+	IF Node = 0 THEN
+		ErrorMessage := 'Every module requires slot.';
+		RETURN;
+	END_IF
+	_Config.Modules[nModule].Slot := UDINT_TO_UINT(_Json.GetUint(Node));
+
+	Node := _Json.FindMember(ModuleNode, 'id');
+	IF Node <> 0 THEN
+		_Config.Modules[nModule].Id := _Json.GetUint(Node);
+	END_IF
+	Node := _Json.FindMember(ModuleNode, 'moduleType');
+	IF Node <> 0 THEN
+		_Config.Modules[nModule].ModuleType := _Json.GetString(Node);
+	END_IF
+	// Input mappings
+	ArrayNode := _Json.FindMember(ModuleNode, 'inputMappings');
+	IF ArrayNode <> 0 THEN
+		nCount := _Json.GetArraySize(ArrayNode);
+		IF nCount > Param_Config.MaxModuleMappings THEN
+			ErrorMessage := 'Too many inputMappings.';
+			RETURN;
+		END_IF
+		_Config.Modules[nModule].InputMappingCount := UDINT_TO_UINT(nCount);
+		FOR nItem := 1 TO _Config.Modules[nModule].InputMappingCount DO
+			ItemNode := _Json.GetArrayValueByIdx(ArrayNode, UINT_TO_UDINT(nItem - 1));
+			Node := _Json.FindMember(ItemNode, 'source');
+			IF Node <> 0 THEN _Config.Modules[nModule].InputMappings[nItem].Source := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'target');
+			IF Node <> 0 THEN _Config.Modules[nModule].InputMappings[nItem].Target := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'sourceDataType');
+			IF Node <> 0 THEN _Config.Modules[nModule].InputMappings[nItem].SourceDataType := M_ParseDataType(Value := _Json.GetString(Node)); END_IF
+			Node := _Json.FindMember(ItemNode, 'targetDataType');
+			IF Node <> 0 THEN _Config.Modules[nModule].InputMappings[nItem].TargetDataType := M_ParseDataType(Value := _Json.GetString(Node)); END_IF
+			_Config.Modules[nModule].InputMappings[nItem].Scale := 1.0;
+			TransformNode := _Json.FindMember(ItemNode, 'transform');
+			IF TransformNode <> 0 THEN
+				_Config.Modules[nModule].InputMappings[nItem].HasTransform := TRUE;
+				Node := _Json.FindMember(TransformNode, 'scale');
+				IF Node <> 0 THEN _Config.Modules[nModule].InputMappings[nItem].Scale := _Json.GetDouble(Node); END_IF
+				Node := _Json.FindMember(TransformNode, 'offset');
+				IF Node <> 0 THEN _Config.Modules[nModule].InputMappings[nItem].Offset := _Json.GetDouble(Node); END_IF
+			END_IF
+		END_FOR
+	END_IF
+
+	// Output mappings
+	ArrayNode := _Json.FindMember(ModuleNode, 'outputMappings');
+	IF ArrayNode <> 0 THEN
+		nCount := _Json.GetArraySize(ArrayNode);
+		IF nCount > Param_Config.MaxModuleMappings THEN
+			ErrorMessage := 'Too many outputMappings.';
+			RETURN;
+		END_IF
+		_Config.Modules[nModule].OutputMappingCount := UDINT_TO_UINT(nCount);
+		FOR nItem := 1 TO _Config.Modules[nModule].OutputMappingCount DO
+			ItemNode := _Json.GetArrayValueByIdx(ArrayNode, UINT_TO_UDINT(nItem - 1));
+			Node := _Json.FindMember(ItemNode, 'source');
+			IF Node <> 0 THEN _Config.Modules[nModule].OutputMappings[nItem].Source := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'target');
+			IF Node <> 0 THEN _Config.Modules[nModule].OutputMappings[nItem].Target := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'sourceDataType');
+			IF Node <> 0 THEN _Config.Modules[nModule].OutputMappings[nItem].SourceDataType := M_ParseDataType(Value := _Json.GetString(Node)); END_IF
+			Node := _Json.FindMember(ItemNode, 'targetDataType');
+			IF Node <> 0 THEN _Config.Modules[nModule].OutputMappings[nItem].TargetDataType := M_ParseDataType(Value := _Json.GetString(Node)); END_IF
+			_Config.Modules[nModule].OutputMappings[nItem].Scale := 1.0;
+			TransformNode := _Json.FindMember(ItemNode, 'transform');
+			IF TransformNode <> 0 THEN
+				_Config.Modules[nModule].OutputMappings[nItem].HasTransform := TRUE;
+				Node := _Json.FindMember(TransformNode, 'scale');
+				IF Node <> 0 THEN _Config.Modules[nModule].OutputMappings[nItem].Scale := _Json.GetDouble(Node); END_IF
+				Node := _Json.FindMember(TransformNode, 'offset');
+				IF Node <> 0 THEN _Config.Modules[nModule].OutputMappings[nItem].Offset := _Json.GetDouble(Node); END_IF
+			END_IF
+		END_FOR
+	END_IF
+
+	// Schema v2 intentionally rejects the former axis-specific shape.
+	Node := _Json.FindMember(ModuleNode, 'axisReferences');
+	IF Node <> 0 THEN
+		ErrorMessage := 'axisReferences is not supported by schemaVersion 2; use referenceBindings.';
+		RETURN;
+	END_IF
+
+	// Generic BaseUnit reference bindings. targetPort is interpreted by the module adapter.
+	ArrayNode := _Json.FindMember(ModuleNode, 'referenceBindings');
+	IF ArrayNode <> 0 THEN
+		nCount := _Json.GetArraySize(ArrayNode);
+		IF nCount > Param_Config.MaxModuleReferenceBindings THEN
+			ErrorMessage := 'Too many referenceBindings.';
+			RETURN;
+		END_IF
+		_Config.Modules[nModule].ReferenceBindingCount := UDINT_TO_UINT(nCount);
+		FOR nItem := 1 TO _Config.Modules[nModule].ReferenceBindingCount DO
+			ItemNode := _Json.GetArrayValueByIdx(ArrayNode, UINT_TO_UDINT(nItem - 1));
+			Node := _Json.FindMember(ItemNode, 'target');
+			IF Node <> 0 THEN
+				ErrorMessage := 'target is not supported in referenceBindings; use targetPort.';
+				RETURN;
+			END_IF
+			Node := _Json.FindMember(ItemNode, 'source');
+			IF Node <> 0 THEN _Config.Modules[nModule].ReferenceBindings[nItem].Source := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'targetPort');
+			IF Node <> 0 THEN _Config.Modules[nModule].ReferenceBindings[nItem].TargetPort := _Json.GetString(Node); END_IF
+		END_FOR
+	END_IF
+
+	// Variable list
+	ArrayNode := _Json.FindMember(ModuleNode, 'variableList');
+	IF ArrayNode <> 0 THEN
+		nCount := _Json.GetArraySize(ArrayNode);
+		IF nCount > Param_Config.MaxModuleVariable THEN
+			ErrorMessage := 'Too many variableList entries.';
+			RETURN;
+		END_IF
+		_Config.Modules[nModule].VariableCount := UDINT_TO_UINT(nCount);
+		FOR nItem := 1 TO _Config.Modules[nModule].VariableCount DO
+			ItemNode := _Json.GetArrayValueByIdx(ArrayNode, UINT_TO_UDINT(nItem - 1));
+			Node := _Json.FindMember(ItemNode, 'source');
+			IF Node <> 0 THEN _Config.Modules[nModule].VariableList[nItem].Source := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'id');
+			IF Node <> 0 THEN _Config.Modules[nModule].VariableList[nItem].Id := _Json.GetUint(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'name');
+			IF Node <> 0 THEN _Config.Modules[nModule].VariableList[nItem].Name := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'unit');
+			IF Node <> 0 THEN _Config.Modules[nModule].VariableList[nItem].Unit := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'dataType');
+			IF Node <> 0 THEN _Config.Modules[nModule].VariableList[nItem].DataType := M_ParseDataType(Value := _Json.GetString(Node)); END_IF
+		END_FOR
+	END_IF
+
+	// Alarm list; condition is an object to avoid parsing a mini expression language.
+	ArrayNode := _Json.FindMember(ModuleNode, 'alarmList');
+	IF ArrayNode <> 0 THEN
+		nCount := _Json.GetArraySize(ArrayNode);
+		IF nCount > Param_Config.MaxConfiguredAlarmsPerModule THEN
+			ErrorMessage := 'Too many alarmList entries.';
+			RETURN;
+		END_IF
+		_Config.Modules[nModule].AlarmCount := UDINT_TO_UINT(nCount);
+		FOR nItem := 1 TO _Config.Modules[nModule].AlarmCount DO
+			ItemNode := _Json.GetArrayValueByIdx(ArrayNode, UINT_TO_UDINT(nItem - 1));
+			Node := _Json.FindMember(ItemNode, 'source');
+			IF Node <> 0 THEN _Config.Modules[nModule].AlarmList[nItem].Source := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'dataType');
+			IF Node <> 0 THEN _Config.Modules[nModule].AlarmList[nItem].DataType := M_ParseDataType(Value := _Json.GetString(Node)); END_IF
+			ConditionNode := _Json.FindMember(ItemNode, 'condition');
+			IF ConditionNode = 0 THEN
+				ErrorMessage := 'Every alarm requires a condition object.';
+				RETURN;
+			END_IF
+			Node := _Json.FindMember(ConditionNode, 'operator');
+			IF Node <> 0 THEN _Config.Modules[nModule].AlarmList[nItem].Operator := M_ParseOperator(Value := _Json.GetString(Node)); END_IF
+			Node := _Json.FindMember(ConditionNode, 'value');
+			IF Node <> 0 THEN _Config.Modules[nModule].AlarmList[nItem].Threshold := _Json.GetDouble(Node); END_IF
+			Node := _Json.FindMember(ConditionNode, 'tolerance');
+			IF Node <> 0 THEN _Config.Modules[nModule].AlarmList[nItem].Tolerance := _Json.GetDouble(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'mainErrorId');
+			IF Node <> 0 THEN _Config.Modules[nModule].AlarmList[nItem].MainErrorId := _Json.GetUint(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'sourceErrorId');
+			IF Node <> 0 THEN _Config.Modules[nModule].AlarmList[nItem].SourceErrorId := _Json.GetUint(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'message');
+			IF Node <> 0 THEN _Config.Modules[nModule].AlarmList[nItem].Message := _Json.GetString(Node); END_IF
+			Node := _Json.FindMember(ItemNode, 'severity');
+			IF Node <> 0 THEN
+				sValue := _Json.GetString(Node);
+				_Config.Modules[nModule].AlarmList[nItem].Severity := M_ParseSeverity(Value := sValue);
+			ELSE
+				_Config.Modules[nModule].AlarmList[nItem].Severity := E_Severity.Alarm;
+			END_IF
+		END_FOR
+	END_IF
+END_FOR
+
+IF NOT M_ValidateParsedConfiguration() THEN
+	RETURN;
+END_IF
+M_ParseDocument := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ParseOperator" Id="{5380311e-74dc-446d-b9fe-245336ba6cd3}">
+      <Declaration><![CDATA[METHOD PRIVATE M_ParseOperator : E_AlarmOperator
+VAR_INPUT
+	Value : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Value = 'gt' THEN M_ParseOperator := E_AlarmOperator.GreaterThan;
+ELSIF Value = 'lt' THEN M_ParseOperator := E_AlarmOperator.LessThan;
+ELSIF Value = 'eq' THEN M_ParseOperator := E_AlarmOperator.Equal;
+ELSIF Value = 'ge' THEN M_ParseOperator := E_AlarmOperator.GreaterOrEqual;
+ELSIF Value = 'le' THEN M_ParseOperator := E_AlarmOperator.LessOrEqual;
+ELSE M_ParseOperator := E_AlarmOperator.Invalid;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ParseSeverity" Id="{cd759fa6-7080-433c-bccc-61c93cff4d06}">
+      <Declaration><![CDATA[METHOD PRIVATE M_ParseSeverity : E_Severity
+VAR_INPUT
+	Value : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Value = TO_STRING(E_Severity.Warning) THEN M_ParseSeverity := E_Severity.Warning;
+ELSE M_ParseSeverity := E_Severity.Alarm;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ValidateParsedConfiguration" Id="{073726de-ab08-4e67-b141-de935497db16}">
+      <Declaration><![CDATA[METHOD PRIVATE M_ValidateParsedConfiguration : BOOL
+VAR
+	nModule : UINT;
+	nItem : UINT;
+	nOther : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ValidateParsedConfiguration := FALSE;
+FOR nModule := 1 TO _Config.ModuleCount DO
+	IF NOT _Config.Modules[nModule].Enabled THEN
+		CONTINUE;
+	END_IF
+	FOR nItem := 1 TO _Config.Modules[nModule].InputMappingCount DO
+		IF (_Config.Modules[nModule].InputMappings[nItem].Source = '')
+			OR (_Config.Modules[nModule].InputMappings[nItem].Target = '')
+			OR (_Config.Modules[nModule].InputMappings[nItem].SourceDataType = E_ConfigDataType.Unknown)
+			OR (_Config.Modules[nModule].InputMappings[nItem].TargetDataType = E_ConfigDataType.Unknown) THEN
+			ErrorMessage := 'Invalid input mapping: source, target and both data types are required.';
+			RETURN;
+		END_IF
+	END_FOR
+	FOR nItem := 1 TO _Config.Modules[nModule].OutputMappingCount DO
+		IF (_Config.Modules[nModule].OutputMappings[nItem].Source = '')
+			OR (_Config.Modules[nModule].OutputMappings[nItem].Target = '')
+			OR (_Config.Modules[nModule].OutputMappings[nItem].SourceDataType = E_ConfigDataType.Unknown)
+			OR (_Config.Modules[nModule].OutputMappings[nItem].TargetDataType = E_ConfigDataType.Unknown) THEN
+			ErrorMessage := 'Invalid output mapping: source, target and both data types are required.';
+			RETURN;
+		END_IF
+	END_FOR
+	FOR nItem := 1 TO _Config.Modules[nModule].ReferenceBindingCount DO
+		IF (_Config.Modules[nModule].ReferenceBindings[nItem].Source = '')
+			OR (_Config.Modules[nModule].ReferenceBindings[nItem].TargetPort = '') THEN
+			ErrorMessage := 'Invalid reference binding: source and targetPort are required.';
+			RETURN;
+		END_IF
+	END_FOR
+	FOR nItem := 1 TO _Config.Modules[nModule].VariableCount DO
+		IF (_Config.Modules[nModule].VariableList[nItem].Source = '')
+			OR (_Config.Modules[nModule].VariableList[nItem].Id = 0)
+			OR (_Config.Modules[nModule].VariableList[nItem].DataType = E_ConfigDataType.Unknown) THEN
+			ErrorMessage := 'Invalid variableList entry.';
+			RETURN;
+		END_IF
+	END_FOR
+	FOR nItem := 1 TO _Config.Modules[nModule].AlarmCount DO
+		IF (_Config.Modules[nModule].AlarmList[nItem].Source = '')
+			OR (_Config.Modules[nModule].AlarmList[nItem].DataType = E_ConfigDataType.Unknown)
+			OR (_Config.Modules[nModule].AlarmList[nItem].Operator = E_AlarmOperator.Invalid)
+			OR (_Config.Modules[nModule].AlarmList[nItem].MainErrorId = 0) THEN
+			ErrorMessage := 'Invalid alarmList entry.';
+			RETURN;
+		END_IF
+		FOR nOther := nItem + 1 TO _Config.Modules[nModule].AlarmCount DO
+			IF _Config.Modules[nModule].AlarmList[nItem].MainErrorId
+				= _Config.Modules[nModule].AlarmList[nOther].MainErrorId THEN
+				ErrorMessage := 'Duplicate configured alarm mainErrorId in module.';
+				RETURN;
+			END_IF
+		END_FOR
+	END_FOR
+END_FOR
+M_ValidateParsedConfiguration := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

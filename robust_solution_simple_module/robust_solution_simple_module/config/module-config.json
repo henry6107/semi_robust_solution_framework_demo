@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 3,
+  "modules": [
+    {
+      "enabled": true,
+      "moduleType": "GC",
+      "slot": 1,
+      "id": 1,
+      "inputMappings": [
+        {
+          "source": "GVL_IO.Term4_EL1889.Chl[1]",
+          "target": "HwInput.bDoorClosed",
+          "sourceDataType": "BOOL",
+          "targetDataType": "BOOL"
+        },
+        {
+          "source": "GVL_IO.Term2_EL3602.Chl[1]",
+          "target": "HwInput.rTemperature",
+          "sourceDataType": "DINT",
+          "targetDataType": "REAL",
+          "transform": {
+            "scale": 0.01,
+            "offset": 50.0
+          }
+        }
+      ],
+      "outputMappings": [
+        {
+          "source": "HwOutput.bVaccumOn",
+          "target": "GVL_IO.Term3_EL2809.Chl[1]",
+          "sourceDataType": "BOOL",
+          "targetDataType": "BOOL"
+        }
+      ],
+      "referenceBindings": [
+        {
+          "source": "GVL_IO.NC_Axis1",
+          "targetPort": "SpinAxis_BaseUnit"
+        },
+        {
+          "source": "GVL_IO.NC_Axis2",
+          "targetPort": "LiftPinAxis_BaseUnit"
+        }
+      ],
+      "variableList": [
+        {
+          "source": "HwInput.rTemperature",
+          "id": 1,
+          "name": "Chamber Temperature",
+          "unit": "degC",
+          "dataType": "REAL"
+        }
+      ],
+      "alarmList": [
+        {
+          "source": "HwInput.rTemperature",
+          "dataType": "REAL",
+          "condition": {
+            "operator": "gt",
+            "value": 100.0,
+            "tolerance": 0.01
+          },
+          "mainErrorId": 123,
+          "sourceErrorId": 0,
+          "message": "Chamber Temperature too high",
+          "severity": "Alarm"
+        }
+      ]
+    }
+  ]
+}
