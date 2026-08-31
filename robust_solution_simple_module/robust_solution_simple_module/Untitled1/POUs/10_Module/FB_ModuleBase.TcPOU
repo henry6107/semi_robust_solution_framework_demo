@@ -29,19 +29,77 @@ VAR
 	_IsControlSourceAlive : BOOL;
 	_ConfiguredSnapshot : FB_ConfigValueSnapshotReader;
 	_AlarmManager : FB_ModuleAlarmManager;
+	_AllServicesAborted : BOOL;
+	_AllServicesStopped : BOOL;
+	_AllServicesIdle : BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
     <Folder Name="HookMethod" Id="{0b542957-3892-4df2-b0e7-9c93700d86b5}" />
-    <Method Name="H_SelectServiceControlSource" Id="{64c4ffc3-20ab-48f6-9187-96b7127a8944}" FolderPath="HookMethod\">
-      <Declaration><![CDATA[METHOD PROTECTED H_SelectServiceControlSource
+    <Folder Name="StateAction" Id="{11d8fc2a-f5c5-4f28-ab4c-743399b9bdc9}" />
+    <Method Name="H_OnAborting" Id="{8915d7ec-4b86-49c6-9413-c27372315251}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnAborting : E_PackMLHookResult
 VAR_INPUT
+	bFirstScan : BOOL;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
+IF _AllServicesAborted THEN
+	H_OnAborting := E_PackMLHookResult.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnClearing" Id="{f0397c47-1f8c-451b-93d5-b31f3f0b03fb}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnClearing : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Busy;
+IF _AllServicesStopped THEN
+	H_OnClearing := E_PackMLHookResult.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnIdle" Id="{1f951a38-751e-4488-9f76-b0388bffa732}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnIdle
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Transfer to execute automatically
+RequestCommand(E_PackMLCommand.Start);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnResetting" Id="{9a955b11-d840-4734-887a-1f112a090756}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnResetting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Busy;
+IF _AllServicesIdle THEN
+	H_OnResetting := E_PackMLHookResult.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopping" Id="{59c31d14-1773-47ac-a868-c25bd37caf0c}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnStopping : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Busy;
+IF _AllServicesStopped THEN
+	H_OnStopping := E_PackMLHookResult.Done;
+END_IF]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_UpdateBaseUnit" Id="{cce9c8f5-b668-43c6-ab47-4d2999638c8f}" FolderPath="HookMethod\">
@@ -55,15 +113,6 @@ END_VAR
     </Method>
     <Method Name="H_UpdateService" Id="{d906a778-6b57-49b8-9e25-ec7461c4759a}" FolderPath="HookMethod\">
       <Declaration><![CDATA[METHOD PROTECTED H_UpdateService
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_UpdateServiceAlarms" Id="{1fa94b87-c1b3-4d82-ad65-41d1be8293f7}" FolderPath="HookMethod\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceAlarms
 VAR_INPUT
 END_VAR
 ]]></Declaration>
@@ -119,16 +168,6 @@ _LastHeartbeatIndex := HeartbeatIndex;
 _IsControlSourceAlive := NOT _HeartbeatTimer.Q;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_ObserveServiceAlarm" Id="{c8fa70cf-350e-4481-b23f-7b026067b9af}">
-      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ObserveServiceAlarm : BOOL
-VAR_IN_OUT CONSTANT
-	Alarm : ST_ExtAlarm;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[M_ObserveServiceAlarm := _AlarmManager.M_ObserveServiceAlarm(Alarm := Alarm);]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_PublishAlarmState" Id="{055c5419-f6a5-46d2-bb31-19f68a24d121}">
       <Declaration><![CDATA[METHOD PRIVATE M_PublishAlarmState
 ]]></Declaration>
@@ -142,8 +181,34 @@ ModuleStatus.Alarm.Overflow := _AlarmManager.Overflow;
 ModuleStatus.Alarm.ServiceLatchedCount := _AlarmManager.ServiceLatchedCount;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_SelectServiceControlSource" Id="{d665ea40-9568-4646-8c96-ecfd2fd02a57}">
+      <Declaration><![CDATA[METHOD PRIVATE M_SelectServiceControlSource
+VAR_IN_OUT
+	ServiceControls : ARRAY[*] OF ST_ServiceCtrl;
+END_VAR
+VAR
+	nServiceIndex : DINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF PackMLOut.eStateCurrent = E_PackMLState.Idle
+	OR PackMLOut.eStateCurrent = E_PackMLState.Starting
+	OR PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
+	// The caller preloads external Service controls for these states.
+	RETURN;
+END_IF
+
+FOR nServiceIndex := LOWER_BOUND(ServiceControls, 1) TO UPPER_BOUND(ServiceControls, 1) DO
+	ServiceControls[nServiceIndex].PackMLIn := ModuleCtrl.PackMLIn;
+	ServiceControls[nServiceIndex].RequestId := ModuleCtrl.RequestId;
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_UpdateAlarmState" Id="{6b9b6538-c160-4a7b-93a1-a430b340815a}">
       <Declaration><![CDATA[METHOD PRIVATE M_UpdateAlarmState
+VAR_IN_OUT CONSTANT
+	ServiceStatuses : ARRAY[*] OF ST_ServiceStatus;
+END_VAR
 VAR
 	nAlarm : UINT;
 	nSource : UINT;
@@ -199,7 +264,7 @@ IF __ISVALIDREF(RuntimeConfig) AND RuntimeConfig.Valid AND _ConfiguredSnapshot.R
 	END_FOR
 END_IF
 
-H_UpdateServiceAlarms();
+M_UpdateServiceAlarms(ServiceStatuses := ServiceStatuses);
 _AlarmManager.M_EndCycle();]]></ST>
       </Implementation>
     </Method>
@@ -230,7 +295,9 @@ END_FOR]]></ST>
     </Method>
     <Method Name="M_UpdateModule" Id="{a3ee927e-c27b-49bf-8f5e-1ddb1a222fc5}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateModule
-VAR_INPUT
+VAR_IN_OUT
+	ServiceControls : ARRAY[*] OF ST_ServiceCtrl;
+	ServiceStatuses : ARRAY[*] OF ST_ServiceStatus;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -239,6 +306,7 @@ ModuleStatus.IsControlSourceAlive := _IsControlSourceAlive;
 
 // Update module state machine
 PackMLIn := ModuleCtrl.PackMLIn;
+M_UpdateServiceStateSummary(ServiceStatuses := ServiceStatuses);
 SUPER^();
 
 IF __ISVALIDREF(RuntimeConfig) THEN
@@ -260,7 +328,7 @@ _ServiceContext.UtcDateTime := SystemContext.UtcDateTime;
 
 // Update service state machine
 H_UpdateServiceParam();
-H_SelectServiceControlSource();
+M_SelectServiceControlSource(ServiceControls := ServiceControls);
 H_UpdateService();
 
 // Update base unit state machine
@@ -275,10 +343,57 @@ IF _CmdRequestOneShot.Q OR _ModeRequestOneShot.Q THEN
 END_IF
 ModuleStatus.PackMLOut := PackMLOut;
 
-M_UpdateAlarmState();
+M_UpdateAlarmState(ServiceStatuses := ServiceStatuses);
 M_PublishAlarmState();
 H_UpdateServiceDataList();
 M_UpdateConfiguredVariableList();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateServiceAlarms" Id="{aac9cb3d-dfbb-4fd3-8423-c48f0de4cb6b}">
+      <Declaration><![CDATA[METHOD PRIVATE M_UpdateServiceAlarms
+VAR_IN_OUT CONSTANT
+	ServiceStatuses : ARRAY[*] OF ST_ServiceStatus;
+END_VAR
+VAR
+	nServiceIndex : DINT;
+	nErrorIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Submit currently observable Service errors. The manager owns lifecycle state
+// and marks identities not observed in this scan inactive during M_EndCycle.
+FOR nServiceIndex := LOWER_BOUND(ServiceStatuses, 1) TO UPPER_BOUND(ServiceStatuses, 1) DO
+	FOR nErrorIndex := 1 TO Param_Config.MaxServiceError DO
+		IF ServiceStatuses[nServiceIndex].ErrorList[nErrorIndex].MainErrorId <> 0 THEN
+			_AlarmManager.M_ObserveServiceAlarm(
+				Alarm := ServiceStatuses[nServiceIndex].ErrorList[nErrorIndex]);
+		END_IF
+	END_FOR
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateServiceStateSummary" Id="{22873c07-68e2-4865-b1ef-dfab07050fcb}">
+      <Declaration><![CDATA[METHOD PRIVATE M_UpdateServiceStateSummary
+VAR_IN_OUT CONSTANT
+	ServiceStatuses : ARRAY[*] OF ST_ServiceStatus;
+END_VAR
+VAR
+	nServiceIndex : DINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_AllServicesAborted := TRUE;
+_AllServicesStopped := TRUE;
+_AllServicesIdle := TRUE;
+
+FOR nServiceIndex := LOWER_BOUND(ServiceStatuses, 1) TO UPPER_BOUND(ServiceStatuses, 1) DO
+	_AllServicesAborted := _AllServicesAborted
+		AND (ServiceStatuses[nServiceIndex].PackMLOut.eStateCurrent = E_PackMLState.Aborted);
+	_AllServicesStopped := _AllServicesStopped
+		AND (ServiceStatuses[nServiceIndex].PackMLOut.eStateCurrent = E_PackMLState.Stopped);
+	_AllServicesIdle := _AllServicesIdle
+		AND (ServiceStatuses[nServiceIndex].PackMLOut.eStateCurrent = E_PackMLState.Idle);
+END_FOR]]></ST>
       </Implementation>
     </Method>
   </POU>

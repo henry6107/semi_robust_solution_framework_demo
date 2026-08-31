@@ -13,7 +13,7 @@ END_VAR
       <ST><![CDATA[SUPER^();]]></ST>
     </Implementation>
     <Method Name="H_IsCommandAllowedByMode" Id="{67f1a57b-017a-4ff8-8cf2-2ab14ec67c33}">
-      <Declaration><![CDATA[METHOD PROTECTED H_IsCommandAllowedByMode : BOOL
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_IsCommandAllowedByMode : BOOL
 VAR_INPUT
 	eRequestedCommand	: E_PackMLCommand;
 	eActiveMode	: T_PackMLMode;
@@ -42,7 +42,7 @@ END_CASE]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_IsModeSupported" Id="{ecf3eeca-f06c-4eb7-9f6f-76634f2a8741}">
-      <Declaration><![CDATA[METHOD PROTECTED H_IsModeSupported : BOOL
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_IsModeSupported : BOOL
 VAR_INPUT
 	eRequestedMode	: T_PackMLMode;
 END_VAR
@@ -59,7 +59,7 @@ END_CASE]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_IsStateSupportedByMode" Id="{6fdfc098-4a00-44f7-8160-73a889368957}">
-      <Declaration><![CDATA[METHOD PROTECTED H_IsStateSupportedByMode : BOOL
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_IsStateSupportedByMode : BOOL
 VAR_INPUT
 	eRequestedMode	: T_PackMLMode;
 	eCurrentState	: E_PackMLState;

@@ -2,9 +2,15 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_TestableModuleBase" Id="{26ed25ca-5582-476d-84bf-1fed652a381d}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_TestableModuleBase EXTENDS FB_ModuleBase
+VAR
+	_ServiceControls : ARRAY[1..1] OF ST_ServiceCtrl;
+	_ServiceStatuses : ARRAY[1..1] OF ST_ServiceStatus;
+END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateModule();]]></ST>
+      <ST><![CDATA[M_UpdateModule(
+	ServiceControls := _ServiceControls,
+	ServiceStatuses := _ServiceStatuses);]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>
