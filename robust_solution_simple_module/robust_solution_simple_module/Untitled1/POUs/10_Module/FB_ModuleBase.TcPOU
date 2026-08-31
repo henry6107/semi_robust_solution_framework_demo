@@ -44,15 +44,6 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_UpdateServiceAlarms" Id="{1fa94b87-c1b3-4d82-ad65-41d1be8293f7}" FolderPath="HookMethod\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceAlarms
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="H_UpdateBaseUnit" Id="{cce9c8f5-b668-43c6-ab47-4d2999638c8f}" FolderPath="HookMethod\">
       <Declaration><![CDATA[METHOD PROTECTED H_UpdateBaseUnit
 VAR_INPUT
@@ -64,6 +55,15 @@ END_VAR
     </Method>
     <Method Name="H_UpdateService" Id="{d906a778-6b57-49b8-9e25-ec7461c4759a}" FolderPath="HookMethod\">
       <Declaration><![CDATA[METHOD PROTECTED H_UpdateService
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateServiceAlarms" Id="{1fa94b87-c1b3-4d82-ad65-41d1be8293f7}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceAlarms
 VAR_INPUT
 END_VAR
 ]]></Declaration>
@@ -89,16 +89,6 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_ObserveServiceAlarm" Id="{c8fa70cf-350e-4481-b23f-7b026067b9af}">
-      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ObserveServiceAlarm : BOOL
-VAR_IN_OUT CONSTANT
-	Alarm : ST_ExtAlarm;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[M_ObserveServiceAlarm := _AlarmManager.M_ObserveServiceAlarm(Alarm := Alarm);]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_CheckHeartbeat" Id="{95356be4-c779-4a0a-84d9-ca5fd7d93bc1}">
       <Declaration><![CDATA[METHOD PRIVATE M_CheckHeartbeat
 VAR_INPUT
@@ -111,7 +101,7 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[HeartbeatTimeout := SystemContext.ModuleHeartbeatTimeout;
 IF HeartbeatTimeout <= T#0S THEN
-	HeartbeatTimeout := Param_Config.ModuleHeartbeat_Timout; // Preserve the production default for unset contexts.
+	HeartbeatTimeout := Param_Config.ModuleHeartbeat_Timeout;
 END_IF
 
 // Heartbeats check
@@ -127,6 +117,29 @@ _LastHeartbeatIndex := HeartbeatIndex;
 
 // Update Is ControlSource Alive status
 _IsControlSourceAlive := NOT _HeartbeatTimer.Q;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ObserveServiceAlarm" Id="{c8fa70cf-350e-4481-b23f-7b026067b9af}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ObserveServiceAlarm : BOOL
+VAR_IN_OUT CONSTANT
+	Alarm : ST_ExtAlarm;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ObserveServiceAlarm := _AlarmManager.M_ObserveServiceAlarm(Alarm := Alarm);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_PublishAlarmState" Id="{055c5419-f6a5-46d2-bb31-19f68a24d121}">
+      <Declaration><![CDATA[METHOD PRIVATE M_PublishAlarmState
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_AlarmManager.M_Publish(AlarmList := ModuleAlarmList);
+ModuleStatus.Alarm.AckResponseId := _AlarmManager.AckResponseId;
+ModuleStatus.Alarm.AckAccepted := _AlarmManager.AckAccepted;
+ModuleStatus.Alarm.AckError := _AlarmManager.AckError;
+ModuleStatus.Alarm.ConfiguredLatchedCount := _AlarmManager.ConfiguredLatchedCount;
+ModuleStatus.Alarm.Overflow := _AlarmManager.Overflow;
+ModuleStatus.Alarm.ServiceLatchedCount := _AlarmManager.ServiceLatchedCount;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_UpdateAlarmState" Id="{6b9b6538-c160-4a7b-93a1-a430b340815a}">
@@ -188,19 +201,6 @@ END_IF
 
 H_UpdateServiceAlarms();
 _AlarmManager.M_EndCycle();]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_PublishAlarmState" Id="{055c5419-f6a5-46d2-bb31-19f68a24d121}">
-      <Declaration><![CDATA[METHOD PRIVATE M_PublishAlarmState
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[_AlarmManager.M_Publish(AlarmList := ModuleAlarmList);
-ModuleStatus.Alarm.AckResponseId := _AlarmManager.AckResponseId;
-ModuleStatus.Alarm.AckAccepted := _AlarmManager.AckAccepted;
-ModuleStatus.Alarm.AckError := _AlarmManager.AckError;
-ModuleStatus.Alarm.ConfiguredLatchedCount := _AlarmManager.ConfiguredLatchedCount;
-ModuleStatus.Alarm.Overflow := _AlarmManager.Overflow;
-ModuleStatus.Alarm.ServiceLatchedCount := _AlarmManager.ServiceLatchedCount;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_UpdateConfiguredVariableList" Id="{6e5b225f-a33a-409e-827d-1330e9e22088}">

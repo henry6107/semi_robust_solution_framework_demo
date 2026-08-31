@@ -10,7 +10,7 @@ VAR_GLOBAL CONSTANT
 	MaxModuleAlarm : UINT := MaxPublishedModuleAlarms;	// Compatibility alias for existing consumers.
 	MaxServiceError : UINT := 10;		// Num of Service Error per round
 	MaxModuleData : UINT := 50;			// Num of DVID
-	ModuleHeartbeat_Timout : TIME := T#10S;
+	ModuleHeartbeat_Timeout : TIME := T#10S;
 
 	// Runtime configuration limits. They also bound PLC memory and local snapshot work.
 	MaxModuleTypes : UINT := 8;

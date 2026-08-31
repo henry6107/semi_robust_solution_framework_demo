@@ -28,7 +28,7 @@ _ModuleConfigurationManager(
 	ModuleTypeRegistry := _ModuleTypeRegistry);
 
 _UtcClock(UtcDateTime => _SystemContext.UtcDateTime);
-_SystemContext.ModuleHeartbeatTimeout := Param_Config.ModuleHeartbeat_Timout;
+_SystemContext.ModuleHeartbeatTimeout := Param_Config.ModuleHeartbeat_Timeout;
 
 IF _ModuleConfigurationManager.Ready THEN
 	// Update hardward input signal 
