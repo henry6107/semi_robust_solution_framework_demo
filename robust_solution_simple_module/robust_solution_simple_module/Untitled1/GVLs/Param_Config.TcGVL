@@ -9,6 +9,7 @@ VAR_GLOBAL CONSTANT
 	MaxPublishedModuleAlarms : UINT := MaxConfiguredAlarmsPerModule + MaxServiceAlarmsPerModule;
 	MaxModuleAlarm : UINT := MaxPublishedModuleAlarms;	// Compatibility alias for existing consumers.
 	MaxServiceError : UINT := 10;		// Num of Service Error per round
+	MaxServiceData : UINT := 30;		// Num of persistent Data descriptors per Service
 	MaxModuleData : UINT := 50;			// Num of DVID
 	ModuleHeartbeat_Timeout : TIME := T#10S;
 

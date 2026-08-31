@@ -166,6 +166,9 @@
     <Compile Include="DUTs\ST_ModuleAlarmStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\ST_ModuleDataStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\ST_ModuleStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -179,6 +182,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\E_ServiceCompletionBehavior.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ServiceDataStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ServiceStatus.TcDUT">
@@ -235,6 +241,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Signal_Out.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCDataId.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCErrorCode.TcDUT">

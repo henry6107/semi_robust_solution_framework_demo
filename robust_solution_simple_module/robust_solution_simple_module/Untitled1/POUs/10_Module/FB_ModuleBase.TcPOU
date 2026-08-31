@@ -120,15 +120,6 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_UpdateServiceDataList" Id="{09acfa8b-205a-4e4b-9f04-1c13883b2574}" FolderPath="HookMethod\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceDataList
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="H_UpdateServiceParam" Id="{f8022e96-fc7c-4f3a-b06b-d55e075ed120}" FolderPath="HookMethod\">
       <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceParam
 VAR_INPUT
@@ -345,7 +336,7 @@ ModuleStatus.PackMLOut := PackMLOut;
 
 M_UpdateAlarmState(ServiceStatuses := ServiceStatuses);
 M_PublishAlarmState();
-H_UpdateServiceDataList();
+M_UpdateServiceDataList(ServiceStatuses := ServiceStatuses);
 M_UpdateConfiguredVariableList();]]></ST>
       </Implementation>
     </Method>
@@ -368,6 +359,61 @@ FOR nServiceIndex := LOWER_BOUND(ServiceStatuses, 1) TO UPPER_BOUND(ServiceStatu
 			_AlarmManager.M_ObserveServiceAlarm(
 				Alarm := ServiceStatuses[nServiceIndex].ErrorList[nErrorIndex]);
 		END_IF
+	END_FOR
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateServiceDataList" Id="{09acfa8b-205a-4e4b-9f04-1c13883b2574}">
+      <Declaration><![CDATA[METHOD PRIVATE M_UpdateServiceDataList
+VAR_IN_OUT CONSTANT
+	ServiceStatuses : ARRAY[*] OF ST_ServiceStatus;
+END_VAR
+VAR
+	nServiceIndex : DINT;
+	nDataIndex : UINT;
+	nPublishedIndex : UINT;
+	bDuplicate : BOOL;
+	DataId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(ModuleDataList), 0, SIZEOF(ModuleDataList));
+MEMSET(ADR(ModuleStatus.Data), 0, SIZEOF(ModuleStatus.Data));
+
+FOR nServiceIndex := LOWER_BOUND(ServiceStatuses, 1) TO UPPER_BOUND(ServiceStatuses, 1) DO
+	IF ServiceStatuses[nServiceIndex].Data.Overflow THEN
+		ModuleStatus.Data.Overflow := TRUE;
+	END_IF
+
+	FOR nDataIndex := 1 TO Param_Config.MaxServiceData DO
+		DataId := ServiceStatuses[nServiceIndex].Data.DataList[nDataIndex].Id;
+		IF DataId = 0 THEN
+			CONTINUE;
+		END_IF
+
+		bDuplicate := FALSE;
+		FOR nPublishedIndex := 1 TO ModuleStatus.Data.PublishedCount DO
+			IF ModuleDataList[nPublishedIndex].Id = DataId THEN
+				bDuplicate := TRUE;
+				EXIT;
+			END_IF
+		END_FOR
+
+		IF bDuplicate THEN
+			IF ModuleStatus.Data.DuplicateId = 0 THEN
+				ModuleStatus.Data.DuplicateId := DataId;
+			END_IF
+			CONTINUE;
+		END_IF
+
+		IF ModuleStatus.Data.PublishedCount >= Param_Config.MaxModuleData THEN
+			ModuleStatus.Data.Overflow := TRUE;
+			CONTINUE;
+		END_IF
+
+		ModuleStatus.Data.PublishedCount := ModuleStatus.Data.PublishedCount + 1;
+		ModuleDataList[ModuleStatus.Data.PublishedCount] :=
+			ServiceStatuses[nServiceIndex].Data.DataList[nDataIndex];
 	END_FOR
 END_FOR]]></ST>
       </Implementation>

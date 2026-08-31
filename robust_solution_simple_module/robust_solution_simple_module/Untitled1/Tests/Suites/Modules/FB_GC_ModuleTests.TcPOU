@@ -923,7 +923,6 @@ CASE nPhase OF
 		ServiceCtrl.SingleProcess.PackMLIn.eCommand := E_PackMLCommand.Reset;
 		ServiceCtrl.SingleProcess.PackMLIn.bCommandChangeRequest := TRUE;
 		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		AssertTrue(Condition := AlarmModule.ServiceStatus.SingleProcess.ServiceErrorId = E_GCErrorCode.None, Message := 'SingleProcess Resetting must clear ServiceErrorId.');
 		AssertTrue(Condition := AlarmModule.ServiceStatus.SingleProcess.ErrorList[1].MainErrorId = 0, Message := 'SingleProcess Resetting must clear its Service ErrorList.');
 		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].MainErrorId = 0, Message := 'Inactive and acknowledged Service alarm must be removed in the reset scan.');
 		AssertTrue(Condition := AlarmModule.ModuleStatus.Alarm.ServiceLatchedCount = 0, Message := 'Service latched count must follow same-scan removal.');

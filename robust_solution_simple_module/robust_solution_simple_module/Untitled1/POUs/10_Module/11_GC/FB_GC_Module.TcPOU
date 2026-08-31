@@ -30,7 +30,6 @@ VAR
 	_LiftPinAxisMoveVelCCWService : FB_GCLiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_GCLiftPinAxisMoveAbsServices;
 	_SingleProcessService : FB_GCSingleProcessService;
-	_SingleProcessStatus : ST_GCSingleProcessStatus;
 
 END_VAR
 ]]></Declaration>
@@ -115,42 +114,8 @@ _SingleProcessService(
 	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
 	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
 	ServiceId := E_GCServiceId.SingleProcess,
-	Status => _ServiceStatusView.ByName.SingleProcess,
-	ProcessStatus => _SingleProcessStatus);
+	Status => _ServiceStatusView.ByName.SingleProcess);
 ]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_UpdateServiceDataList" Id="{0ea950db-71b5-4fd2-a9e8-c12c78c02390}" FolderPath="ModuleUpdate\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceDataList
-VAR_INPUT
-END_VAR
-VAR
-	TimingView : U_GCSingleProcessStageTimingView;
-	nIndex : UINT;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[IF _SingleProcessStatus.LastCycle.Result <> E_GCSingleProcessResult.Completed THEN
-	RETURN;
-END_IF
-
-TimingView.ByName := _SingleProcessStatus.LastCycle.StageTiming;
-FOR nIndex := 1 TO 8 DO
-	IF NOT TimingView.ByIndex[nIndex].Completed THEN
-		RETURN;
-	END_IF
-END_FOR
-
-// Replace the published snapshot only after a complete successful cycle.
-MEMSET(ADR(ModuleDataList), 0, SIZEOF(ModuleDataList));
-M_WriteStageServiceData(1, 'Prepare', TimingView.ByName.Prepare);
-M_WriteStageServiceData(2, 'LiftReady', TimingView.ByName.LiftReady);
-M_WriteStageServiceData(3, 'SpinAlign', TimingView.ByName.SpinAlign);
-M_WriteStageServiceData(4, 'ConcurrentProcessEntry', TimingView.ByName.ConcurrentProcessEntry);
-M_WriteStageServiceData(5, 'SpinRampUp', TimingView.ByName.SpinRampUp);
-M_WriteStageServiceData(6, 'ProcessHold', TimingView.ByName.ProcessHold);
-M_WriteStageServiceData(7, 'ConcurrentProcessExit', TimingView.ByName.ConcurrentProcessExit);
-M_WriteStageServiceData(8, 'SpinStandby', TimingView.ByName.SpinStandby);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_UpdateServiceParam" Id="{1a4b35b3-f132-467f-941f-899cd13c7e6b}" FolderPath="ModuleUpdate\">
@@ -166,43 +131,6 @@ _LiftPinAxisMoveVelCWService.Param := ServiceParam.LiftPinAxisMoveVelCW;
 _LiftPinAxisMoveVelCCWService.Param := ServiceParam.LiftPinAxisMoveVelCCW;
 _LiftPinAxisMoveAbsService.Param := ServiceParam.LiftPinAxisMoveAbs;
 _SingleProcessService.Param := ServiceParam.SingleProcess;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_WriteStageServiceData" Id="{6f0188dd-ab9d-4b96-9248-74a942e61fd2}">
-      <Declaration><![CDATA[METHOD PRIVATE M_WriteStageServiceData
-VAR_INPUT
-	StageIndex : UINT;
-	StageName : STRING(22);
-	StageTiming : ST_GCSingleProcessStageTiming;
-END_VAR
-VAR
-	nStartIndex : UINT;
-	nEndIndex : UINT;
-	nActualIndex : UINT;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[nStartIndex := ((StageIndex - 1) * 3) + 1;
-nEndIndex := nStartIndex + 1;
-nActualIndex := nStartIndex + 2;
-
-ModuleDataList[nStartIndex].Id := 700 + nStartIndex;
-ModuleDataList[nStartIndex].Name := CONCAT(StageName, 'StartUtc');
-ModuleDataList[nStartIndex].DataType := E_DescriptorType.DateTime;
-ModuleDataList[nStartIndex].Unit := 'UTC';
-ModuleDataList[nStartIndex].Value := StageTiming.StartUtc;
-
-ModuleDataList[nEndIndex].Id := 700 + nEndIndex;
-ModuleDataList[nEndIndex].Name := CONCAT(StageName, 'EndUtc');
-ModuleDataList[nEndIndex].DataType := E_DescriptorType.DateTime;
-ModuleDataList[nEndIndex].Unit := 'UTC';
-ModuleDataList[nEndIndex].Value := StageTiming.EndUtc;
-
-ModuleDataList[nActualIndex].Id := 700 + nActualIndex;
-ModuleDataList[nActualIndex].Name := CONCAT(StageName, 'ActualMs');
-ModuleDataList[nActualIndex].DataType := E_DescriptorType.Integer_32bit;
-ModuleDataList[nActualIndex].Unit := 'ms';
-ModuleDataList[nActualIndex].Value := DINT_TO_STRING(TIME_TO_DINT(StageTiming.ActualTime));]]></ST>
       </Implementation>
     </Method>
   </POU>
