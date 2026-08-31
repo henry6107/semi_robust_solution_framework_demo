@@ -106,14 +106,20 @@ END_VAR
 
 VAR
 	bLooseHeartbeat : BOOL;
+	HeartbeatTimeout : TIME;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Heartbeats check
+        <ST><![CDATA[HeartbeatTimeout := SystemContext.ModuleHeartbeatTimeout;
+IF HeartbeatTimeout <= T#0S THEN
+	HeartbeatTimeout := Param_Config.ModuleHeartbeat_Timout; // Preserve the production default for unset contexts.
+END_IF
+
+// Heartbeats check
 bLooseHeartbeat := _LastHeartbeatIndex = HeartbeatIndex;
 IF bLooseHeartbeat THEN
-	_HeartbeatTimer( IN:= TRUE, PT:= Param_Config.ModuleHeartbeat_Timout);
+	_HeartbeatTimer(IN := TRUE, PT := HeartbeatTimeout);
 ELSE
-	_HeartbeatTimer( IN:= FALSE, PT:= Param_Config.ModuleHeartbeat_Timout);
+	_HeartbeatTimer(IN := FALSE, PT := HeartbeatTimeout);
 END_IF
 
 // Update Last Heartbeat Index
@@ -229,6 +235,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[M_CheckHeartbeat();
+ModuleStatus.IsControlSourceAlive := _IsControlSourceAlive;
 
 // Update module state machine
 PackMLIn := ModuleCtrl.PackMLIn;

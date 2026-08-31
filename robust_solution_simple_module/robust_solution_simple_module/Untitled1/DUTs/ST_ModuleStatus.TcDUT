@@ -5,6 +5,7 @@
 STRUCT
 	ModuleId : UDINT;
 	Enabled : BOOL;
+	IsControlSourceAlive : BOOL;
 	Configuration : ST_ModuleConfigurationStatus;
 	ResponseId : UDINT;
 	PackMLOut : ST_PML_Base_Out;

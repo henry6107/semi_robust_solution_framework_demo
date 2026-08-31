@@ -409,6 +409,9 @@
     <Compile Include="Tests\Fakes\FB_TestableServiceBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Fakes\FB_TestableModuleBase.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\DUTs\E_FakeAxisOperation.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -425,6 +428,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Modules\FB_ModuleAlarmManagerTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\Modules\FB_ModuleBaseTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Services\FB_GCSpinAxisMoveAbsServiceTests.TcPOU">
