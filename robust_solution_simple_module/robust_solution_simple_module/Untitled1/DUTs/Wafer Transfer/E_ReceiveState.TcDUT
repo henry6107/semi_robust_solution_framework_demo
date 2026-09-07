@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_ReceiveState" Id="{77fd8fb4-a709-4f1d-ba0d-b79bf329f6ef}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE E_ReceiveState :
+(
+	None := 0,
+	Candidate,
+	Bound,
+	Commited
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_TransferHandshakeSignal" Id="{b01d4a3d-ec03-4bfb-ba0a-fd772e348611}">
+    <Declaration><![CDATA[TYPE ST_TransferHandshakeSignal :
+STRUCT
+	//Passive
+	SendReady : BOOL;
+	ReceiveReady : BOOL;
+	PrepareReady : BOOL;
+	Accept : BOOL;
+	Ready : BOOL;
+	//Abort : BOOL;
+	//Error : BOOL;
+	
+	// Active
+	ReceiveRequest : BOOL;
+	SendRequest : BOOL;
+	SendComplete : BOOL;
+	ReceiveComplete : BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

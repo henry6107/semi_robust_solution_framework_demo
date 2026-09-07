@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_MaterialInfo" Id="{061e7313-e8ac-4761-95ce-55212318f09b}">
+    <Declaration><![CDATA[TYPE ST_MaterialInfo :
+STRUCT
+	MaterialPresence : BOOL;
+	OwnerShip : BOOL;
+	OperationState : E_OperationState;
+	ReceiveContext : E_ReceiveState;
+	MaterialContext : ST_MaterialContext;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

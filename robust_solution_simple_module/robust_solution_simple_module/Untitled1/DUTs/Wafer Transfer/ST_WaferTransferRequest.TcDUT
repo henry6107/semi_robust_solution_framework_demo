@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_WaferTransferRequest" Id="{c286521e-06fc-4b3c-8036-193bb81c9317}">
+    <Declaration><![CDATA[TYPE ST_WaferTransferRequest :
+STRUCT
+	RequestId : UDINT;
+	Command : E_WaferTransferCmd;
+	Signal : ST_TransferHandshakeSignal;
+	bChangeRequest : BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

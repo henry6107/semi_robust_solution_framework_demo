@@ -118,6 +118,21 @@
     <Compile Include="Configuration\POUs\FB_ModuleConfigurationManager.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\Alarm\E_AlarmAckCommand.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Alarm\E_AlarmAckError.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Alarm\ST_AlarmAckRequest.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Alarm\ST_AlarmLifecycleState.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Alarm\ST_ModuleAlarmStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\E_DescriptorType.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -127,31 +142,19 @@
     <Compile Include="DUTs\E_Severity.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_AlarmAckCommand.TcDUT">
+    <Compile Include="DUTs\Hardware Module\ST_EL2809Ex.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_AlarmAckError.TcDUT">
+    <Compile Include="DUTs\Hardware Module\ST_EL1889Ex.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\HwModule\ST_EL2809Ex.TcDUT">
+    <Compile Include="DUTs\Hardware Module\ST_EL3602Ex.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\HwModule\ST_EL1889Ex.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="DUTs\HwModule\ST_EL3602Ex.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="DUTs\HwModule\ST_ReserveForGetSymbolNameByAddrress.TcDUT">
+    <Compile Include="DUTs\Hardware Module\ST_ReserveForGetSymbolNameByAddrress.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ExtAlarm.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="DUTs\ST_AlarmAckRequest.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="DUTs\ST_AlarmLifecycleState.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ExtDescriptor.TcDUT">
@@ -161,9 +164,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ModuleConfigurationStatus.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="DUTs\ST_ModuleAlarmStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ModuleDataStatus.TcDUT">
@@ -191,6 +191,39 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_SystemContext.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\E_OperationState.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\E_ReceiveState.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\E_TransferCapability.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\E_TransferState.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\E_WaferHandlingType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\E_WaferTransferCmd.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\ST_TransferHandshakeSignal.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\ST_MaterialContext.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\ST_MaterialInfo.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\ST_WaferTransferResponse.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\ST_WaferTransferRequest.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="GVLs\GVL_CSharp.TcGVL">
@@ -458,7 +491,9 @@
     <Folder Include="Configuration\Interfaces" />
     <Folder Include="Configuration\POUs" />
     <Folder Include="DUTs" />
-    <Folder Include="DUTs\HwModule" />
+    <Folder Include="DUTs\Hardware Module" />
+    <Folder Include="DUTs\Alarm" />
+    <Folder Include="DUTs\Wafer Transfer" />
     <Folder Include="GVLs" />
     <Folder Include="POUs" />
     <Folder Include="POUs\00_BaseUnit" />
