@@ -12,6 +12,7 @@ VAR_GLOBAL CONSTANT
 	MaxServiceData : UINT := 30;		// Num of persistent Data descriptors per Service
 	MaxModuleData : UINT := 50;			// Num of DVID
 	MaxTransferEndpoint : UINT := 2;	// Num of wafer transfer port
+	MaxProcessStation : UINT := 4;		// Num of wafer process station
 	ModuleHeartbeat_Timeout : TIME := T#10S;
 
 	// Runtime configuration limits. They also bound PLC memory and local snapshot work.

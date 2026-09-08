@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_WaferTransferStatus" Id="{5445009c-02f9-4817-8fcd-e0f304207b54}">
+    <Declaration><![CDATA[TYPE ST_WaferTransferStatus :
+STRUCT
+	// Process Station identity; zero means no Station is selected for this direction.
+	StationId : UDINT;
+	Status : ST_ServiceStatus;
+	Signal : ST_TransferHandshakeSignal;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

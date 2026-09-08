@@ -205,9 +205,6 @@
     <Compile Include="DUTs\Wafer Transfer\E_WaferHandlingType.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Wafer Transfer\E_WaferTransferCmd.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="DUTs\Wafer Transfer\ST_TransferHandshakeSignal.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -215,6 +212,15 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\Wafer Transfer\ST_MaterialInfo.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\ST_ProcessStationStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\ST_WaferTransferCtrl.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Wafer Transfer\ST_WaferTransferStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\Wafer Transfer\ST_WaferTransferResponse.TcDUT">

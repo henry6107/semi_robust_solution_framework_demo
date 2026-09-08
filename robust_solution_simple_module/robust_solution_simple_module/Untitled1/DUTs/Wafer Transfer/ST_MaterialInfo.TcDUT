@@ -5,8 +5,8 @@
 STRUCT
 	MaterialPresence : BOOL;
 	OwnerShip : BOOL;
-	OperationState : E_OperationState;
 	ReceiveContext : E_ReceiveState;
+	OperationState : E_OperationState;
 	MaterialContext : ST_MaterialContext;
 END_STRUCT
 END_TYPE

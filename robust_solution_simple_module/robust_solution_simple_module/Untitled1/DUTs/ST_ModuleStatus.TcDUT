@@ -11,8 +11,10 @@ STRUCT
 	PackMLOut : ST_PML_Base_Out;
 	Alarm : ST_ModuleAlarmStatus;
 	Data : ST_ModuleDataStatus;
-	WaferHandlingType : E_WaferHandlingType;
+	// Array index is storage only; EndpointId is the external identity.
 	WaferTransferResponseList : ARRAY [1..Param_Config.MaxTransferEndpoint] OF ST_WaferTransferResponse;
+	// Array index is storage only; StationId is the external identity.
+	ProcessStationStatusList : ARRAY[1..Param_Config.MaxProcessStation] OF ST_ProcessStationStatus;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

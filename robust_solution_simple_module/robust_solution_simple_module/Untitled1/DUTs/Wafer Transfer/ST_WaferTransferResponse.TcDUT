@@ -3,12 +3,19 @@
   <DUT Name="ST_WaferTransferResponse" Id="{14f9d5f9-39d1-4854-bedd-e4f7b43e695c}">
     <Declaration><![CDATA[TYPE ST_WaferTransferResponse :
 STRUCT
-	ResponseId : UDINT;
+	// Non-zero and unique within one Module; array index is storage only.
 	EndpointId : UDINT;
+	WaferHandlingType : E_WaferHandlingType;
 	Capability : E_TransferCapability;
-	Signal : ST_TransferHandshakeSignal;
-	TransferState : E_TransferState;
-	MaterialInfo : ST_MaterialInfo;
+
+	Send : ST_WaferTransferStatus;
+	Receive : ST_WaferTransferStatus;
+
+	// Passive only
+	SendReady : BOOL;
+	ReceiveReady : BOOL;
+
+	//TransferState : E_TransferState;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

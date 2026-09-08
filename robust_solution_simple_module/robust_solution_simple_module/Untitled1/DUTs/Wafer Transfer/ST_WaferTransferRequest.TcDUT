@@ -3,10 +3,8 @@
   <DUT Name="ST_WaferTransferRequest" Id="{c286521e-06fc-4b3c-8036-193bb81c9317}">
     <Declaration><![CDATA[TYPE ST_WaferTransferRequest :
 STRUCT
-	RequestId : UDINT;
-	Command : E_WaferTransferCmd;
-	Signal : ST_TransferHandshakeSignal;
-	bChangeRequest : BOOL;
+	Send : ST_WaferTransferCtrl;
+	Receive : ST_WaferTransferCtrl;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

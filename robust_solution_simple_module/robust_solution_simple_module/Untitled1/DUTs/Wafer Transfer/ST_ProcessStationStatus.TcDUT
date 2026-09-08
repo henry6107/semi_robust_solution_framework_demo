@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_ProcessStationStatus" Id="{ee928a23-1623-495f-bc44-62ea0b4b6ecd}">
+    <Declaration><![CDATA[TYPE ST_ProcessStationStatus :
+STRUCT
+	// Non-zero and unique within one Module; zero marks an unused entry.
+	StationId : UDINT;
+	MaterialInfo : ST_MaterialInfo;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

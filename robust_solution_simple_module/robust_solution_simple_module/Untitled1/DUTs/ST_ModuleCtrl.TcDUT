@@ -6,6 +6,7 @@ STRUCT
 	RequestId : UDINT;
 	PackMLIn : ST_PML_Base_In;
 	AlarmAckRequest : ST_AlarmAckRequest;
+	// Request and response entries at the same array index refer to the same fixed Endpoint.
 	WaferTransferRequestList : ARRAY[1..Param_Config.MaxTransferEndpoint] OF ST_WaferTransferRequest;
 END_STRUCT
 END_TYPE
