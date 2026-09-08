@@ -307,11 +307,7 @@ IF __ISVALIDREF(RuntimeConfig) THEN
 		VariableNodeReader := VariableNodeReader);
 	ModuleStatus.ModuleId := _ModuleId;
 	ModuleStatus.Enabled := RuntimeConfig.Enabled;
-	ModuleStatus.Configuration.Ready := _ConfiguredSnapshot.Ready;
-	ModuleStatus.Configuration.Error := _ConfiguredSnapshot.Error;
-	ModuleStatus.Configuration.ErrorCode := _ConfiguredSnapshot.ErrorCode;
-	ModuleStatus.Configuration.ErrorMessage := _ConfiguredSnapshot.ErrorMessage;
-	ModuleStatus.Configuration.ErrorSource := _ConfiguredSnapshot.ErrorSource;
+	ModuleStatus.ModuleType := RuntimeConfig.ModuleType;
 END_IF
 
 _ServiceContext.ModuleId := _ModuleId;

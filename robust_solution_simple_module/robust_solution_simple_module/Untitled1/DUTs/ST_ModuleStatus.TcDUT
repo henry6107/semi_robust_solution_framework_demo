@@ -6,7 +6,7 @@ STRUCT
 	ModuleId : UDINT;
 	Enabled : BOOL;
 	IsControlSourceAlive : BOOL;
-	Configuration : ST_ModuleConfigurationStatus; // 無須揭露給上位SDK，可以移除
+	ModuleType : STRING(16);
 	ResponseId : UDINT;
 	PackMLOut : ST_PML_Base_Out;
 	Alarm : ST_ModuleAlarmStatus;

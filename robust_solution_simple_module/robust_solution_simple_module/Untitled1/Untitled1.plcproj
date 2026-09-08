@@ -163,9 +163,6 @@
     <Compile Include="DUTs\ST_ModuleCtrl.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ModuleConfigurationStatus.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="DUTs\ST_ModuleDataStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
