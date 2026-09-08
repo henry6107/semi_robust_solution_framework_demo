@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_FakeModuleReferenceBindings" Id="{540a95cf-b9c6-4c97-a203-47ed6424c49a}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_FakeModuleReferenceBindings IMPLEMENTS I_ModuleReferenceBindings
+VAR
+	_RequiredResult : I_BaseUnit;
+END_VAR
+]]></Declaration>
+    <Implementation><ST><![CDATA[]]></ST></Implementation>
+    <Method Name="M_SetRequiredResult" Id="{8c6254a9-fceb-4a0c-9066-0bfce0c377f7}">
+      <Declaration><![CDATA[METHOD PUBLIC M_SetRequiredResult
+VAR_INPUT
+	BaseUnit : I_BaseUnit;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[_RequiredResult := BaseUnit;]]></ST></Implementation>
+    </Method>
+    <Method Name="M_TakeOptional" Id="{885e7d7a-80d7-49fc-a25c-8351e71cf7f3}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TakeOptional : I_BaseUnit
+VAR_INPUT
+	Name : STRING(80);
+END_VAR
+VAR_OUTPUT
+	Present : BOOL;
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_TakeOptional := 0;
+Present := FALSE;
+ErrorMessage := '';]]></ST></Implementation>
+    </Method>
+    <Method Name="M_TakeRequired" Id="{ff07c556-8601-4428-ac01-0a4dbec26986}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TakeRequired : I_BaseUnit
+VAR_INPUT
+	Name : STRING(80);
+END_VAR
+VAR_OUTPUT
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[ErrorMessage := '';
+M_TakeRequired := _RequiredResult;]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

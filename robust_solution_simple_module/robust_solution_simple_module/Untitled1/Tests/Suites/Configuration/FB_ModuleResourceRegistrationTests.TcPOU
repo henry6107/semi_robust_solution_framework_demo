@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ModuleResourceRegistrationTests" Id="{05cb9561-0cf5-485a-b1fb-cf7fec031db8}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleResourceRegistrationTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	// Keep the fixed-capacity registries at suite scope to avoid Method stack growth.
+	_LinkVariableManager : FB_LinkVariableManager;
+	_ReferenceManager : FB_ReferenceManager;
+	_ReferenceBindingContext : FB_ModuleReferenceBindingContext;
+	_FakeReferenceBindings : FB_FakeModuleReferenceBindings;
+	_ModuleTypeRegistry : FB_ModuleTypeRegistry;
+	_GCAdapter : FB_GCModuleConfigurationAdapter;
+	_FakeAdapter : FB_FakeModuleConfigurationAdapter;
+	_IncompatibleBaseUnit : FB_FakeBaseUnit;
+	_ModuleConfig : ST_ModuleFileConfig;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[GCDeclarationsUseResolvedFullSymbols();
+ModuleSlotsResolveDistinctFullSymbols();
+MissingModuleDeclarationFailsEndSession();
+RegistrationSessionEnforcesOrdering();
+RegistrationSessionUsesFirstErrorWins();
+ReferenceBindingsEnforceFrameworkContract();
+NewModuleTypeUsesGenericFrameworkSeam();]]></ST>
+    </Implementation>
+    <Method Name="GCDeclarationsUseResolvedFullSymbols" Id="{6eed6450-f0f0-4b23-9a5b-21bd0e767cc9}">
+      <Declaration><![CDATA[METHOD GCDeclarationsUseResolvedFullSymbols
+VAR
+	bOk : BOOL;
+	nNodeHandle : UINT;
+	sModuleSymbol : STRING(255);
+	sErrorMessage : STRING(255);
+	ReferenceBindings : I_ModuleReferenceBindings;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('GCDeclarationsUseResolvedFullSymbols');
+
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
+bOk := _ReferenceManager.M_RegisterReference(BaseUnit := GVL_IO.NC_Axis1);
+AssertTrue(Condition := bOk, Message := 'The first Axis BaseUnit must be available to the binding context.');
+bOk := _ReferenceManager.M_RegisterReference(BaseUnit := GVL_IO.NC_Axis2);
+AssertTrue(Condition := bOk, Message := 'The second Axis BaseUnit must be available to the binding context.');
+
+_ModuleConfig.ModuleType := 'GC';
+_ModuleConfig.Slot := 1;
+_ModuleConfig.InputMappingCount := 2;
+_ModuleConfig.InputMappings[1].Target := 'HwInput.bDoorClosed';
+_ModuleConfig.InputMappings[2].Target := 'HwInput.bDIs[3]';
+	_ModuleConfig.OutputMappingCount := 2;
+	_ModuleConfig.OutputMappings[1].Source := 'HwOutput.rAOs[4]';
+	_ModuleConfig.OutputMappings[2].Source := 'HwOutput.bVaccumOn';
+// The same path may be referenced by more than one configuration feature.
+_ModuleConfig.VariableCount := 1;
+_ModuleConfig.VariableList[1].Source := 'HwInput.bDoorClosed';
+
+_ModuleConfig.ReferenceCount := 2;
+_ModuleConfig.References[1].Name := 'LiftPinAxis_BaseUnit';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis2';
+_ModuleConfig.References[2].Name := 'SpinAxis_BaseUnit';
+_ModuleConfig.References[2].Source := 'GVL_IO.NC_Axis1';
+
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The semantic reference map must initialize before adapter preparation.');
+ReferenceBindings := _ReferenceBindingContext;
+
+bOk := _GCAdapter.M_PrepareInstance(
+	Slot := 1,
+	ReferenceBindings := ReferenceBindings,
+	ModuleConfig := _ModuleConfig,
+	LinkVariableManager := _LinkVariableManager,
+	ModuleSymbol => sModuleSymbol,
+	ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'The GC adapter must declare its resources through the generic registration session.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'The GC adapter must consume every configured semantic reference.');
+AssertTrue(Condition := sModuleSymbol <> '', Message := 'A successful registration must return the Module root symbol.');
+
+bOk := _LinkVariableManager.M_ResolveReadableNode(
+	Name := CONCAT(sModuleSymbol, '.HwInput.bDoorClosed'),
+	ExpectedDataType := E_ConfigDataType.Boolean,
+	NodeHandle => nNodeHandle);
+AssertTrue(Condition := bOk, Message := 'A referenced GC scalar must be materialized with its semantic path.');
+
+bOk := _LinkVariableManager.M_ResolveReadableNode(
+	Name := CONCAT(sModuleSymbol, '.HwInput.bDIs[3]'),
+	ExpectedDataType := E_ConfigDataType.Boolean,
+	NodeHandle => nNodeHandle);
+AssertTrue(Condition := bOk, Message := 'A referenced GC array element must keep its semantic index path.');
+
+bOk := _LinkVariableManager.M_ResolveReadableNode(
+	Name := CONCAT(sModuleSymbol, '.HwOutput.rAOs[4]'),
+	ExpectedDataType := E_ConfigDataType.Float32,
+	NodeHandle => nNodeHandle);
+AssertTrue(Condition := bOk, Message := 'A referenced GC output array element must be materialized.');
+
+bOk := _LinkVariableManager.M_AddLink(
+	SourceName := CONCAT(sModuleSymbol, '.HwInput.bDoorClosed'),
+	TargetName := CONCAT(sModuleSymbol, '.HwOutput.bVaccumOn'),
+	SourceDataType := E_ConfigDataType.Boolean,
+	TargetDataType := E_ConfigDataType.Boolean,
+	Phase := E_LinkPhase.InputToModule,
+	HasTransform := FALSE,
+	Scale := 1.0,
+	Offset := 0.0);
+AssertFalse(Condition := bOk, Message := 'A read-only Module output node must not be accepted as a link target.');
+
+bOk := _LinkVariableManager.M_ResolveReadableNode(
+	Name := CONCAT(sModuleSymbol, '.HwInput.bDoorClosed'),
+	ExpectedDataType := E_ConfigDataType.Float32,
+	NodeHandle => nNodeHandle);
+AssertFalse(Condition := bOk, Message := 'Resolving a Module node with the wrong primitive type must fail.');
+
+bOk := _LinkVariableManager.M_ResolveReadableNode(
+	Name := CONCAT(sModuleSymbol, '.HwInput.bDIs[2]'),
+	ExpectedDataType := E_ConfigDataType.Boolean,
+	NodeHandle => nNodeHandle);
+AssertTrue(Condition := bOk, Message := 'An unused Module declaration must still be materialized from its resolved full symbol.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ModuleSlotsResolveDistinctFullSymbols" Id="{e7b8f947-54f4-4b0e-a924-71c2c52d72b1}">
+      <Declaration><![CDATA[METHOD ModuleSlotsResolveDistinctFullSymbols
+VAR
+	bOk : BOOL;
+	nNodeHandle : UINT;
+	sSlotOneSymbol : STRING(255);
+	sSlotTwoSymbol : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ModuleSlotsResolveDistinctFullSymbols');
+
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
+
+bOk := _LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.GC[1]),
+	Size := SIZEOF(GVL_Module.GC[1]),
+	ModuleConfig := _ModuleConfig);
+AssertTrue(Condition := bOk, Message := 'Slot 1 registration must start.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+AssertTrue(Condition := bOk, Message := 'Slot 1 node must resolve from its address.');
+bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sSlotOneSymbol);
+AssertTrue(Condition := bOk, Message := 'Slot 1 registration must complete.');
+
+bOk := _LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.GC[2]),
+	Size := SIZEOF(GVL_Module.GC[2]),
+	ModuleConfig := _ModuleConfig);
+AssertTrue(Condition := bOk, Message := 'Slot 2 registration must start.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.GC[2].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+AssertTrue(Condition := bOk, Message := 'Slot 2 node must resolve from its address.');
+bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sSlotTwoSymbol);
+AssertTrue(Condition := bOk, Message := 'Slot 2 registration must complete.');
+
+AssertTrue(Condition := (sSlotOneSymbol <> '') AND (sSlotTwoSymbol <> '')
+	AND (sSlotOneSymbol <> sSlotTwoSymbol), Message := 'Each Module slot must resolve a distinct root symbol.');
+bOk := _LinkVariableManager.M_ResolveReadableNode(
+	Name := CONCAT(sSlotOneSymbol, '.HwInput.bDoorClosed'),
+	ExpectedDataType := E_ConfigDataType.Boolean,
+	NodeHandle => nNodeHandle);
+AssertTrue(Condition := bOk, Message := 'Slot 1 full node symbol must remain independently resolvable.');
+bOk := _LinkVariableManager.M_ResolveReadableNode(
+	Name := CONCAT(sSlotTwoSymbol, '.HwInput.bDoorClosed'),
+	ExpectedDataType := E_ConfigDataType.Boolean,
+	NodeHandle => nNodeHandle);
+AssertTrue(Condition := bOk, Message := 'Slot 2 full node symbol must remain independently resolvable.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MissingModuleDeclarationFailsEndSession" Id="{ca7efb75-1e34-40cc-88fc-9474d2b2dc13}">
+      <Declaration><![CDATA[METHOD MissingModuleDeclarationFailsEndSession
+VAR
+	bOk : BOOL;
+	sModuleSymbol : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('MissingModuleDeclarationFailsEndSession');
+
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
+_ModuleConfig.VariableCount := 1;
+_ModuleConfig.VariableList[1].Source := 'HwInput.notDeclared';
+
+bOk := _LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.GC[1]),
+	Size := SIZEOF(GVL_Module.GC[1]),
+	ModuleConfig := _ModuleConfig);
+AssertTrue(Condition := bOk, Message := 'The registration session must start for a valid Module instance.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+AssertTrue(Condition := bOk, Message := 'A Module variable must register from its resolved full symbol.');
+bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sModuleSymbol);
+AssertFalse(Condition := bOk, Message := 'End registration must reject a configured path not declared by the adapter.');
+AssertTrue(Condition := _LinkVariableManager.Error, Message := 'A missing declaration must leave the manager in its error state.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RegistrationSessionEnforcesOrdering" Id="{4d54b737-1d9c-4c77-95ec-3c229b98bf7e}">
+      <Declaration><![CDATA[METHOD RegistrationSessionEnforcesOrdering
+VAR
+	bOk : BOOL;
+	sModuleSymbol : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('RegistrationSessionEnforcesOrdering');
+_LinkVariableManager.M_ClearModuleNodes();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
+bOk := _LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.GC[1]),
+	Size := SIZEOF(GVL_Module.GC[1]),
+	ModuleConfig := _ModuleConfig);
+AssertTrue(Condition := bOk, Message := 'A valid Begin must open a session.');
+bOk := _LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.GC[2]),
+	Size := SIZEOF(GVL_Module.GC[2]),
+	ModuleConfig := _ModuleConfig);
+AssertFalse(Condition := bOk, Message := 'A second Begin during an active session must fail.');
+bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sModuleSymbol);
+AssertFalse(Condition := bOk, Message := 'An ordering error must prevent End from succeeding.');
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RegistrationSessionUsesFirstErrorWins" Id="{c8a8bc98-efd9-4276-823c-c327b660b527}">
+      <Declaration><![CDATA[METHOD RegistrationSessionUsesFirstErrorWins
+VAR
+	bOk : BOOL;
+	sFirstError : STRING(255);
+	sModuleSymbol : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('RegistrationSessionUsesFirstErrorWins');
+
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
+_ModuleConfig.InputMappingCount := 1;
+_ModuleConfig.InputMappings[1].Target := 'HwInput.bDoorClosed';
+
+bOk := _LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.GC[1]),
+	Size := SIZEOF(GVL_Module.GC[1]),
+	ModuleConfig := _ModuleConfig);
+AssertTrue(Condition := bOk, Message := 'The registration session must start for first-error testing.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_IO.Term4_EL1889.Chl[1],
+	Access := E_VariableAccess.ReadWrite);
+AssertFalse(Condition := bOk, Message := 'A variable outside the active Module instance must be rejected.');
+sFirstError := _LinkVariableManager.ErrorMessage;
+
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+AssertFalse(Condition := bOk, Message := 'Calls after the first registration error must be ignored.');
+bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sModuleSymbol);
+AssertFalse(Condition := bOk, Message := 'A session with a prior error must not complete.');
+AssertTrue(Condition := _LinkVariableManager.ErrorMessage = sFirstError, Message := 'Later calls must not overwrite the first error.');
+
+_LinkVariableManager.M_ClearModuleNodes();
+bOk := _LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.GC[1]),
+	Size := SIZEOF(GVL_Module.GC[1]),
+	ModuleConfig := _ModuleConfig);
+AssertTrue(Condition := bOk, Message := 'A new registration session must start after Module nodes are cleared.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+AssertTrue(Condition := bOk, Message := 'The first declaration of a Module variable must succeed.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+AssertFalse(Condition := bOk, Message := 'Declaring the same full Module symbol twice must fail.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReferenceBindingsEnforceFrameworkContract" Id="{47f47f36-f40d-4f9f-941d-68565d7feaae}">
+      <Declaration><![CDATA[METHOD ReferenceBindingsEnforceFrameworkContract
+VAR
+	bOk : BOOL;
+	bPresent : BOOL;
+	BaseUnit : I_BaseUnit;
+	sErrorMessage : STRING(255);
+	sFirstError : STRING(255);
+	ReferenceBindings : I_ModuleReferenceBindings;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ReferenceBindingsEnforceFrameworkContract');
+
+bOk := _ReferenceManager.M_RegisterReference(BaseUnit := GVL_IO.NC_Axis1);
+AssertTrue(Condition := bOk, Message := 'The Axis BaseUnit source must register for binding tests.');
+
+// An omitted optional semantic reference is successful and explicitly absent.
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeOptional(
+	Name := 'OptionalAxis',
+	Present => bPresent,
+	ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND NOT bPresent AND (sErrorMessage = ''), Message := 'An omitted optional reference must be reported as not present without error.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'An omitted optional reference must not leave an unknown JSON key.');
+
+// The same source may be consumed by two different semantic names.
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 2;
+_ModuleConfig.References[1].Name := 'AxisOne';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
+_ModuleConfig.References[2].Name := 'AxisTwo';
+_ModuleConfig.References[2].Source := 'GVL_IO.NC_Axis1';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'AxisOne', ErrorMessage => sErrorMessage);
+AssertTrue(Condition := BaseUnit <> 0, Message := 'The first semantic name must resolve its source.');
+BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'AxisTwo', ErrorMessage => sErrorMessage);
+AssertTrue(Condition := BaseUnit <> 0, Message := 'A second semantic name may use the same source.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'Every configured semantic reference was consumed exactly once.');
+
+// Taking one configured name twice is rejected with first-error-wins behavior.
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 1;
+_ModuleConfig.References[1].Name := 'AxisOne';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'AxisOne', ErrorMessage => sErrorMessage);
+BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'AxisOne', ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'Taking the same semantic reference twice must fail.');
+sFirstError := _ReferenceBindingContext.ErrorMessage;
+BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'MissingLater', ErrorMessage => sErrorMessage);
+AssertTrue(Condition := _ReferenceBindingContext.ErrorMessage = sFirstError, Message := 'Calls after a binding error must preserve the first error.');
+
+// A configured key that the adapter never takes is an unknown port.
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 1;
+_ModuleConfig.References[1].Name := 'UnknownAxis';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+bOk := _ReferenceBindingContext.M_End();
+AssertFalse(Condition := bOk, Message := 'An unconsumed JSON key must be rejected as an unknown Module reference.');
+
+// Required references and registered sources are enforced by the context.
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'RequiredAxis', ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'A missing required semantic reference must fail.');
+
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 1;
+_ModuleConfig.References[1].Name := 'RequiredAxis';
+_ModuleConfig.References[1].Source := 'GVL_IO.NotRegistered';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'RequiredAxis', ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk AND (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'Taking a semantic reference whose source is not registered must fail.');
+
+// Duplicate semantic names and capacity overflow are rejected before binding starts.
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 2;
+_ModuleConfig.References[1].Name := 'DuplicateAxis';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
+_ModuleConfig.References[2].Name := 'DuplicateAxis';
+_ModuleConfig.References[2].Source := 'GVL_IO.NC_Axis1';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+AssertFalse(Condition := bOk, Message := 'Duplicate semantic reference names must fail.');
+
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := Param_Config.MaxModuleReferences + 1;
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+AssertFalse(Condition := bOk, Message := 'A Module reference map beyond fixed capacity must fail.');
+
+// The adapter still owns typed-interface validation, without tokens or a port registry.
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
+BaseUnit := _IncompatibleBaseUnit;
+_FakeReferenceBindings.M_SetRequiredResult(BaseUnit := BaseUnit);
+ReferenceBindings := _FakeReferenceBindings;
+bOk := _GCAdapter.M_PrepareInstance(
+	Slot := 1,
+	ReferenceBindings := ReferenceBindings,
+	ModuleConfig := _ModuleConfig,
+	LinkVariableManager := _LinkVariableManager,
+	ErrorMessage => sErrorMessage);
+AssertFalse(Condition := bOk, Message := 'The GC adapter must reject a BaseUnit that does not implement I_Axis_BaseUnit.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="NewModuleTypeUsesGenericFrameworkSeam" Id="{a96e7693-3912-42cb-a3bd-2cdf6b7ad695}">
+      <Declaration><![CDATA[METHOD NewModuleTypeUsesGenericFrameworkSeam
+VAR
+	bOk : BOOL;
+	Adapter : I_ModuleConfigurationAdapter;
+	ReferenceBindings : I_ModuleReferenceBindings;
+	sModuleSymbol : STRING(255);
+	sErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('NewModuleTypeUsesGenericFrameworkSeam');
+
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
+_ModuleConfig.ModuleType := 'FAKE';
+_ModuleConfig.InputMappingCount := 1;
+_ModuleConfig.InputMappings[1].Target := 'bDoorClosed';
+
+bOk := _ModuleTypeRegistry.M_Register(
+	ModuleTypeName := 'FAKE',
+	Adapter := _FakeAdapter);
+AssertTrue(Condition := bOk, Message := 'A new Module Type name must register without extending a framework enum.');
+Adapter := _ModuleTypeRegistry.M_Resolve(ModuleTypeName := 'FAKE');
+AssertTrue(Condition := Adapter <> 0, Message := 'The string-keyed registry must resolve the fake adapter.');
+
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'A Module with no references still receives the generic empty binding context.');
+ReferenceBindings := _ReferenceBindingContext;
+bOk := Adapter.M_PrepareInstance(
+	Slot := 1,
+	ReferenceBindings := ReferenceBindings,
+	ModuleConfig := _ModuleConfig,
+	LinkVariableManager := _LinkVariableManager,
+	ModuleSymbol => sModuleSymbol,
+	ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'A fake Module adapter must use the same generic resource-declaration seam without manager changes.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'The framework must accept an empty semantic reference map for the fake Module.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -29,7 +29,7 @@ VAR_GLOBAL CONSTANT
 	MaxConfigVariableNodes : UINT := 512;
 
 	// Reference binding
-	MaxModuleReferenceBindings : UINT := 50;
+	MaxModuleReferences : UINT := 50;
 	MaxConfigReferenceNodes : UINT := 100;
 
 	// Registered-node snapshots used by configured VariableList and AlarmList.
@@ -37,7 +37,7 @@ VAR_GLOBAL CONSTANT
 	MaxConfigValueSize : UINT := 81; // STRING(80), including the terminating zero.
 
 	// System config
-	ConfigSchemaVersion : UDINT := 3;
+	ConfigSchemaVersion : UDINT := 4;
 	ModuleConfigFilePath : STRING(255) := 'C:\ProgramData\RobustSolution\module-config.json';
 END_VAR]]></Declaration>
   </GVL>

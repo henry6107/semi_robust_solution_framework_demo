@@ -8,10 +8,10 @@ PLC 啟動時會從 `Param_Config.ModuleConfigFilePath` 載入 UTF-8 JSON；預�
 
 ## 必要欄位
 
-- Root：`schemaVersion`、`modules`。schema v3 不再支援 `adsPort`。
-- Module：`enabled`、`moduleType`、`slot`。`moduleType` 必須與 `E_ModuleType` enum member 完全同名且大小寫一致；`slot` 是該 Module type 自己的 array index，同一 type 內不可重複，但不同 type 可使用相同 slot。啟用時另須非零且跨 type 全域唯一的 `id`。Module ADS symbol 會由 PLC 自動解析，不需在設定檔提供。
+- Root：`schemaVersion`、`modules`。schema v4 不再支援 `adsPort`。
+- Module：`enabled`、`moduleType`、`slot`。`moduleType` 必須與註冊至 `FB_ModuleTypeRegistry` 的名稱完全同名且大小寫一致；`slot` 是該 Module type 自己的 array index，同一 type 內不可重複，但不同 type 可使用相同 slot。啟用時另須非零且跨 type 全域唯一的 `id`。Module ADS symbol 會由 PLC 自動解析，不需在設定檔提供。
 - Mapping：`source`、`target`、`sourceDataType`、`targetDataType`。只有數值型別可使用 `transform`。
-- Reference binding：`source`、`targetPort`。`source` 必須是已註冊的 `I_BaseUnit`；`targetPort` 必須與 Module 專屬 reference-port enum member 完全同名且大小寫一致。GC 目前要求 `E_GCReferencePort` 公開的兩個 port 都存在。
+- Reference：`references` 是 port name 到 BaseUnit source name 的 JSON object。key 必須與 adapter 使用的語意名稱完全同名且大小寫一致；value 必須是已註冊至 `FB_ReferenceManager` 的 `I_BaseUnit` source。GC 目前要求 `SpinAxis_BaseUnit` 與 `LiftPinAxis_BaseUnit`。
 - Variable：`source`、非零 `id`、`name`、`unit`、`dataType`。
 - Alarm：`source`、`dataType`、非零 `mainErrorId`、`message`、`severity`，以及結構化 `condition`。
 
@@ -19,9 +19,11 @@ PLC 啟動時會從 `Param_Config.ModuleConfigFilePath` 載入 UTF-8 JSON；預�
 
 ## 可連結節點
 
-設定檔只能使用 PLC initial 階段已註冊到 `FB_LinkVariableManager`／`FB_ReferenceManager` 的節點。實體 I/O 與 BaseUnit reference 由 `MAIN` 註冊；兩個 manager 都會從實際變數位址自動取得 ADS symbol，呼叫端不需手寫名稱。Module I/O 則由對應 adapter 依 `enabled` 狀態註冊。使用者仍只需修改 JSON 來選擇已公開的節點。
+設定檔只能使用 PLC initial 階段已註冊到 `FB_LinkVariableManager`／`FB_ReferenceManager` 的節點。Beckhoff 實體 I/O 與 BaseUnit reference 由 `MAIN` 註冊；兩個 manager 都會從實際變數位址自動取得 ADS symbol，呼叫端不需手寫名稱。Module I/O 則由對應 adapter 透過通用 registration interface 宣告；`FB_LinkVariableManager` 不包含 GC 或其他應用 Module Type 的 concrete registration method。使用者仍只需修改 JSON 來選擇已公開的節點。
 
-目前 schemaVersion 為 `3`。schema v2 與 `adsPort` 不再接受；舊版 `axisReferences`／`target` 也必須改為 `referenceBindings`／`targetPort`。Config 不填 interface type，也不接觸 `GVL_Module` 內部 reference 儲存位置；各 Module adapter 會依專屬 enum 契約解析 port，並以 `__QUERYINTERFACE` 驗證實際 BaseUnit 型別。
+Module adapter 以 `M_RegisterModuleNode(Variable, Access)` 宣告完整 I/O surface；manager 會從變數位址與大小取得完整 ADS symbol，所有 declarations 都會寫入 registry。未被 configuration 使用的 nodes 仍占用 node-table 容量，但不會建立 link，也不增加 cyclic copy 或 configured-value read。初始化每個 Module instance 時，adapter 依語意名稱呼叫 `M_TakeRequired`／`M_TakeOptional` 取得 reference；framework 統一處理 JSON lookup、source resolve、重複取用與未取用的 unknown key，adapter 只負責以 `__QUERYINTERFACE` 驗證並轉成 Module 所需的 typed interface。
+
+目前 schemaVersion 為 `4`。schema v3 與更早版本不再接受；舊版 `axisReferences`／`referenceBindings` 必須改為 `references` object。Config 不填 interface type，也不接觸 `GVL_Module` 內部 reference 儲存位置；required／optional 是各 Module adapter 的固定契約，JSON key 順序不影響綁定結果。
 
 Module 設定只在 PLC 啟動時套用；變更 `enabled` 狀態後必須重新啟動 PLC。
 
@@ -50,8 +52,8 @@ Module type 自己的 FB、Runtime、Control 與 reference arrays，以及 adapt
 | `MaxModuleData` | 50 | 每個 Module 可發布的 DVID／ModuleDataList 數量。 |
 | `MaxServiceError` | 10 | 每個 Service 每輪可提供的 Error entry 數量。 |
 | `MaxModuleMappings` | 256 | 每個 Module 的 `inputMappings` 與 `outputMappings` 各自可配置的最大數量。 |
-| `MaxConfigVariableNodes` | 512 | `FB_LinkVariableManager` 可註冊的實體 I/O 與 Module I/O 節點總數。 |
-| `MaxModuleReferenceBindings` | 50 | 每個 Module 的 `referenceBindings` 最大數量。 |
+| `MaxConfigVariableNodes` | 512 | eager registration 的 Beckhoff 實體 I/O，加上 enabled Module adapters 宣告的全部 Module nodes。現有 6 個 GC instances 與 Beckhoff hardware 最多使用 436 個。 |
+| `MaxModuleReferences` | 50 | 每個 Module 的 `references` member 最大數量。 |
 | `MaxConfigReferenceNodes` | 100 | `FB_ReferenceManager` 可註冊的 BaseUnit reference source 總數。 |
 
 `MaxConfiguredValueSources` 為 `MaxModuleVariable + MaxConfiguredAlarmsPerModule`，限制每個 Module 一次本機 snapshot 可包含的 Variable／Alarm sources 總數。`MaxConfigValueSize` 則限制單一節點的原始資料大小，目前可容納 `STRING(80)` 與結尾字元。

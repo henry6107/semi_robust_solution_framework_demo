@@ -26,6 +26,7 @@ VAR
 	_nState : USINT;
 	_nRevision : UDINT;
 	_RuntimeConfigScratch : ST_ModuleRuntimeConfig;
+	_ReferenceBindingContext : FB_ModuleReferenceBindingContext;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -103,8 +104,8 @@ VAR
 	nSlot : UINT;
 	sModuleSymbol : STRING(255);
 	sFullName : STRING(255);
-	BaseUnit : I_BaseUnit;
 	Adapter : I_ModuleConfigurationAdapter;
+	ReferenceBindings : I_ModuleReferenceBindings;
 	sAdapterError : STRING(255);
 END_VAR
 ]]></Declaration>
@@ -113,6 +114,8 @@ END_VAR
 
 // Resolve every configured type and reject ambiguous addressing before mutating runtime state.
 FOR nModule := 1 TO _Config.ModuleCount DO
+
+	// Check module slot is in range
 	IF (_Config.Modules[nModule].Slot < 1)
 		OR (_Config.Modules[nModule].Slot > Param_Config.MaxModulePerType) THEN
 		ErrorMessage := CONCAT(
@@ -120,21 +123,29 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 			'.');
 		RETURN;
 	END_IF
+
+	// Get adapter according to module type
 	Adapter := ModuleTypeRegistry.M_Resolve(ModuleTypeName := _Config.Modules[nModule].ModuleType);
 	IF Adapter = 0 THEN
 		ErrorMessage := ModuleTypeRegistry.ErrorMessage;
 		RETURN;
 	END_IF
+
+	// Check module slot is supported by specific module (現在各module的slot數量參數共用，其實沒必要檢查)
 	IF NOT Adapter.M_IsSlotSupported(Slot := _Config.Modules[nModule].Slot) THEN
 		ErrorMessage := 'Module adapter does not support the configured slot.';
 		RETURN;
 	END_IF
+
+	// Check module id is valid
 	IF _Config.Modules[nModule].Enabled THEN
 		IF _Config.Modules[nModule].Id = 0 THEN
 			ErrorMessage := 'Every enabled module requires a non-zero id.';
 			RETURN;
 		END_IF
 	END_IF
+
+	// Check if module slot/id is duplicate
 	FOR nOther := nModule + 1 TO _Config.ModuleCount DO
 		IF (_Config.Modules[nModule].ModuleType = _Config.Modules[nOther].ModuleType)
 			AND (_Config.Modules[nModule].Slot = _Config.Modules[nOther].Slot) THEN
@@ -149,29 +160,36 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 	END_FOR
 END_FOR
 
+// 清除 module node & link 資料 (未來要支援 Online Change時這邊才有用)
 M_ClearAppliedConfiguration(
 	LinkVariableManager := LinkVariableManager,
 	ModuleTypeRegistry := ModuleTypeRegistry);
 
+// 記錄重新 Apply 幾次 Configuration (未來要支援 Online Change時這邊才有用)
 _nRevision := _nRevision + 1;
 IF _nRevision = 0 THEN
 	_nRevision := 1;
 END_IF
 
+
 FOR nModule := 1 TO _Config.ModuleCount DO
 	nSlot := _Config.Modules[nModule].Slot;
+
+	// Get adapter according to module type
 	Adapter := ModuleTypeRegistry.M_Resolve(ModuleTypeName := _Config.Modules[nModule].ModuleType);
 	IF Adapter = 0 THEN
 		ErrorMessage := ModuleTypeRegistry.ErrorMessage;
 		RETURN;
 	END_IF
 
+	// Setup runtime config of each module
 	MEMSET(ADR(_RuntimeConfigScratch), 0, SIZEOF(_RuntimeConfigScratch));
 	_RuntimeConfigScratch.Enabled := _Config.Modules[nModule].Enabled;
 	_RuntimeConfigScratch.ModuleId := _Config.Modules[nModule].Id;
 	_RuntimeConfigScratch.ModuleType := _Config.Modules[nModule].ModuleType;
 	_RuntimeConfigScratch.Revision := _nRevision;
 
+	// Assign runtime config to disable module
 	IF NOT _Config.Modules[nModule].Enabled THEN
 		_RuntimeConfigScratch.Valid := TRUE;
 		IF NOT Adapter.M_ApplyRuntimeConfig(
@@ -184,15 +202,33 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 		CONTINUE;
 	END_IF
 
-	IF NOT Adapter.M_RegisterIo(
+	// Initialize the semantic reference map before the adapter pulls its typed bindings.
+	// Dictionary of source base unit (from ReferenceManager) & target base unit name (from config file)
+	IF NOT _ReferenceBindingContext.M_Begin(
+		ModuleConfig := _Config.Modules[nModule],
+		ReferenceManager := ReferenceManager) THEN
+		ErrorMessage := _ReferenceBindingContext.ErrorMessage;
+		RETURN;
+	END_IF
+	ReferenceBindings := _ReferenceBindingContext;
+
+	// Setup module link variable node & reference binding
+	IF NOT Adapter.M_PrepareInstance(
 		Slot := nSlot,
+		ReferenceBindings := ReferenceBindings,
+		ModuleConfig := _Config.Modules[nModule],
 		LinkVariableManager := LinkVariableManager,
 		ModuleSymbol => sModuleSymbol,
 		ErrorMessage => sAdapterError) THEN
 		ErrorMessage := sAdapterError;
 		RETURN;
 	END_IF
+	IF NOT _ReferenceBindingContext.M_End() THEN
+		ErrorMessage := _ReferenceBindingContext.ErrorMessage;
+		RETURN;
+	END_IF
 
+	// Build module hardware input link
 	FOR nItem := 1 TO _Config.Modules[nModule].InputMappingCount DO
 		sFullName := CONCAT(CONCAT(sModuleSymbol, '.'), _Config.Modules[nModule].InputMappings[nItem].Target);
 		IF NOT LinkVariableManager.M_AddLink(
@@ -209,6 +245,7 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 		END_IF
 	END_FOR
 
+	// Build module hardware output link
 	FOR nItem := 1 TO _Config.Modules[nModule].OutputMappingCount DO
 		sFullName := CONCAT(CONCAT(sModuleSymbol, '.'), _Config.Modules[nModule].OutputMappings[nItem].Source);
 		IF NOT LinkVariableManager.M_AddLink(
@@ -225,35 +262,17 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 		END_IF
 	END_FOR
 
-	FOR nItem := 1 TO _Config.Modules[nModule].ReferenceBindingCount DO
-		BaseUnit := ReferenceManager.M_Resolve(Name := _Config.Modules[nModule].ReferenceBindings[nItem].Source);
-		IF BaseUnit = 0 THEN
-			ErrorMessage := ReferenceManager.ErrorMessage;
-			RETURN;
-		END_IF
-		IF NOT Adapter.M_BindReference(
-			Slot := nSlot,
-			TargetPort := _Config.Modules[nModule].ReferenceBindings[nItem].TargetPort,
-			BaseUnit := BaseUnit,
-			ErrorMessage => sAdapterError) THEN
-			ErrorMessage := sAdapterError;
-			RETURN;
-		END_IF
-	END_FOR
-
-	IF NOT Adapter.M_ValidateReferences(
-		Slot := nSlot,
-		ErrorMessage => sAdapterError) THEN
-		ErrorMessage := sAdapterError;
-		RETURN;
-	END_IF
-
+	// Build module variable list
 	_RuntimeConfigScratch.VariableCount := _Config.Modules[nModule].VariableCount;
 	FOR nItem := 1 TO _Config.Modules[nModule].VariableCount DO
+
+		// Setup runtime config
 		_RuntimeConfigScratch.VariableBindings[nItem].Definition := _Config.Modules[nModule].VariableList[nItem];
 		_RuntimeConfigScratch.VariableBindings[nItem].Definition.Source := CONCAT(
 			CONCAT(sModuleSymbol, '.'),
 			_Config.Modules[nModule].VariableList[nItem].Source);
+
+		// Try resolve node handle by source name and expected data type
 		IF NOT LinkVariableManager.M_ResolveReadableNode(
 			Name := _RuntimeConfigScratch.VariableBindings[nItem].Definition.Source,
 			ExpectedDataType := _RuntimeConfigScratch.VariableBindings[nItem].Definition.DataType,
@@ -263,12 +282,17 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 		END_IF
 	END_FOR
 
+	// Build module alarm list
 	_RuntimeConfigScratch.AlarmCount := _Config.Modules[nModule].AlarmCount;
 	FOR nItem := 1 TO _Config.Modules[nModule].AlarmCount DO
+
+		// Setup runtime config
 		_RuntimeConfigScratch.AlarmBindings[nItem].Definition := _Config.Modules[nModule].AlarmList[nItem];
 		_RuntimeConfigScratch.AlarmBindings[nItem].Definition.Source := CONCAT(
 			CONCAT(sModuleSymbol, '.'),
 			_Config.Modules[nModule].AlarmList[nItem].Source);
+
+		// Try resolve node handle by source name and expected data type
 		IF NOT LinkVariableManager.M_ResolveReadableNode(
 			Name := _RuntimeConfigScratch.AlarmBindings[nItem].Definition.Source,
 			ExpectedDataType := _RuntimeConfigScratch.AlarmBindings[nItem].Definition.DataType,
@@ -278,6 +302,7 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 		END_IF
 	END_FOR
 
+	// Assign runtime config to enable module
 	_RuntimeConfigScratch.Valid := TRUE;
 	IF NOT Adapter.M_ApplyRuntimeConfig(
 		Slot := nSlot,
@@ -300,6 +325,8 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[LinkVariableManager.M_ClearLinks();
+LinkVariableManager.M_ClearModuleNodes();
+_ReferenceBindingContext.M_Clear();
 ModuleTypeRegistry.M_ClearAll();]]></ST>
       </Implementation>
     </Method>
@@ -338,8 +365,12 @@ VAR
 	ItemNode : SJsonValue;
 	TransformNode : SJsonValue;
 	ConditionNode : SJsonValue;
+	ReferencesNode : SJsonValue;
+	ReferenceIterator : SJsonIterator;
+	ReferenceIteratorEnd : SJsonIterator;
 	nModule : UINT;
 	nItem : UINT;
+	nOther : UINT;
 	nCount : UDINT;
 	sValue : STRING(255);
 END_VAR
@@ -366,7 +397,7 @@ END_IF
 
 Node := _Json.FindMember(Root, 'adsPort');
 IF Node <> 0 THEN
-	ErrorMessage := 'adsPort is not supported by schemaVersion 3; configured values use registered local nodes.';
+	ErrorMessage := 'adsPort is not supported by schemaVersion 4; configured values use registered local nodes.';
 	RETURN;
 END_IF
 
@@ -475,34 +506,65 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 		END_FOR
 	END_IF
 
-	// Schema v2 intentionally rejects the former axis-specific shape.
+	// Schema v4 uses a semantic name-to-source map for Module references.
 	Node := _Json.FindMember(ModuleNode, 'axisReferences');
 	IF Node <> 0 THEN
-		ErrorMessage := 'axisReferences is not supported by schemaVersion 2; use referenceBindings.';
+		ErrorMessage := 'axisReferences is not supported by schemaVersion 4; use references.';
+		RETURN;
+	END_IF
+	Node := _Json.FindMember(ModuleNode, 'referenceBindings');
+	IF Node <> 0 THEN
+		ErrorMessage := 'referenceBindings is not supported by schemaVersion 4; use references.';
 		RETURN;
 	END_IF
 
-	// Generic BaseUnit reference bindings. targetPort is interpreted by the module adapter.
-	ArrayNode := _Json.FindMember(ModuleNode, 'referenceBindings');
-	IF ArrayNode <> 0 THEN
-		nCount := _Json.GetArraySize(ArrayNode);
-		IF nCount > Param_Config.MaxModuleReferenceBindings THEN
-			ErrorMessage := 'Too many referenceBindings.';
+	ReferencesNode := _Json.FindMember(ModuleNode, 'references');
+	IF ReferencesNode <> 0 THEN
+		IF NOT _Json.IsObject(ReferencesNode) THEN
+			ErrorMessage := 'references must be a JSON object.';
 			RETURN;
 		END_IF
-		_Config.Modules[nModule].ReferenceBindingCount := UDINT_TO_UINT(nCount);
-		FOR nItem := 1 TO _Config.Modules[nModule].ReferenceBindingCount DO
-			ItemNode := _Json.GetArrayValueByIdx(ArrayNode, UINT_TO_UDINT(nItem - 1));
-			Node := _Json.FindMember(ItemNode, 'target');
-			IF Node <> 0 THEN
-				ErrorMessage := 'target is not supported in referenceBindings; use targetPort.';
+
+		nCount := 0;
+		ReferenceIterator := _Json.MemberBegin(ReferencesNode);
+		ReferenceIteratorEnd := _Json.MemberEnd(ReferencesNode);
+		WHILE ReferenceIterator <> ReferenceIteratorEnd DO
+			nCount := nCount + 1;
+			IF nCount > Param_Config.MaxModuleReferences THEN
+				ErrorMessage := 'Too many Module references.';
 				RETURN;
 			END_IF
-			Node := _Json.FindMember(ItemNode, 'source');
-			IF Node <> 0 THEN _Config.Modules[nModule].ReferenceBindings[nItem].Source := _Json.GetString(Node); END_IF
-			Node := _Json.FindMember(ItemNode, 'targetPort');
-			IF Node <> 0 THEN _Config.Modules[nModule].ReferenceBindings[nItem].TargetPort := _Json.GetString(Node); END_IF
-		END_FOR
+			nItem := UDINT_TO_UINT(nCount);
+
+			sValue := _Json.GetMemberName(ReferenceIterator);
+			IF (sValue = '') OR (LEN(sValue) > 80) THEN
+				ErrorMessage := 'Every Module reference requires a non-empty name of at most 80 characters.';
+				RETURN;
+			END_IF
+			IF nItem > 1 THEN
+				FOR nOther := 1 TO nItem - 1 DO
+					IF _Config.Modules[nModule].References[nOther].Name = sValue THEN
+						ErrorMessage := CONCAT('Duplicate Module reference name: ', sValue);
+						RETURN;
+					END_IF
+				END_FOR
+			END_IF
+
+			ItemNode := _Json.GetMemberValue(ReferenceIterator);
+			IF (ItemNode = 0) OR NOT _Json.IsString(ItemNode) THEN
+				ErrorMessage := CONCAT('Module reference source must be a string: ', sValue);
+				RETURN;
+			END_IF
+			_Config.Modules[nModule].References[nItem].Name := sValue;
+			_Config.Modules[nModule].References[nItem].Source := _Json.GetString(ItemNode);
+			IF _Config.Modules[nModule].References[nItem].Source = '' THEN
+				ErrorMessage := CONCAT('Module reference source must not be empty: ', sValue);
+				RETURN;
+			END_IF
+
+			ReferenceIterator := _Json.NextMember(ReferenceIterator);
+		END_WHILE
+		_Config.Modules[nModule].ReferenceCount := UDINT_TO_UINT(nCount);
 	END_IF
 
 	// Variable list
@@ -638,10 +700,10 @@ FOR nModule := 1 TO _Config.ModuleCount DO
 			RETURN;
 		END_IF
 	END_FOR
-	FOR nItem := 1 TO _Config.Modules[nModule].ReferenceBindingCount DO
-		IF (_Config.Modules[nModule].ReferenceBindings[nItem].Source = '')
-			OR (_Config.Modules[nModule].ReferenceBindings[nItem].TargetPort = '') THEN
-			ErrorMessage := 'Invalid reference binding: source and targetPort are required.';
+	FOR nItem := 1 TO _Config.Modules[nModule].ReferenceCount DO
+		IF (_Config.Modules[nModule].References[nItem].Name = '')
+			OR (_Config.Modules[nModule].References[nItem].Source = '') THEN
+			ErrorMessage := 'Invalid Module reference: name and source are required.';
 			RETURN;
 		END_IF
 	END_FOR

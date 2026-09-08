@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_FakeModuleConfigurationAdapter" Id="{f9933f49-e15e-407e-b8a1-b7a4a5184993}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_FakeModuleConfigurationAdapter IMPLEMENTS I_ModuleConfigurationAdapter
+VAR
+	_Resource : ST_GC_Signal_In;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="M_ApplyRuntimeConfig" Id="{ef4f5888-bff3-455c-91f3-579193163551}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ApplyRuntimeConfig : BOOL
+VAR_INPUT
+	Slot : UINT;
+END_VAR
+VAR_IN_OUT CONSTANT
+	RuntimeConfig : ST_ModuleRuntimeConfig;
+END_VAR
+VAR_OUTPUT
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ErrorMessage := '';
+M_ApplyRuntimeConfig := M_IsSlotSupported(Slot := Slot);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearAllSlots" Id="{c53c0359-2c80-4304-aede-0d63bfac4233}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ClearAllSlots : BOOL
+VAR_OUTPUT
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(_Resource), 0, SIZEOF(_Resource));
+ErrorMessage := '';
+M_ClearAllSlots := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsSlotSupported" Id="{46769305-4739-4ff9-be37-9f55bd5ea497}">
+      <Declaration><![CDATA[METHOD PUBLIC M_IsSlotSupported : BOOL
+VAR_INPUT
+	Slot : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_IsSlotSupported := Slot = 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_PrepareInstance" Id="{1cdb22b3-3cc6-4a02-89d1-d2b06bdee455}">
+      <Declaration><![CDATA[METHOD PUBLIC M_PrepareInstance : BOOL
+VAR_INPUT
+	Slot : UINT;
+	ReferenceBindings : I_ModuleReferenceBindings;
+END_VAR
+VAR_IN_OUT
+	ModuleConfig : ST_ModuleFileConfig;
+	LinkVariableManager : FB_LinkVariableManager;
+END_VAR
+VAR_OUTPUT
+	ModuleSymbol : STRING(255);
+	ErrorMessage : STRING(255);
+END_VAR
+VAR
+	bDeclared : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_PrepareInstance := FALSE;
+ModuleSymbol := '';
+ErrorMessage := '';
+IF NOT M_IsSlotSupported(Slot := Slot) THEN
+	ErrorMessage := 'The fake Module only supports slot 1.';
+	RETURN;
+END_IF
+
+bDeclared := LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(_Resource),
+	Size := SIZEOF(_Resource),
+	ModuleConfig := ModuleConfig);
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := _Resource.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+IF NOT LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => ModuleSymbol) THEN
+	ErrorMessage := LinkVariableManager.ErrorMessage;
+	RETURN;
+END_IF
+M_PrepareInstance := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

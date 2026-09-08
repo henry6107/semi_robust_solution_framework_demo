@@ -9,6 +9,7 @@ VAR
 	ModuleBaseTests : FB_ModuleBaseTests;
 	ModuleAlarmManagerTests : FB_ModuleAlarmManagerTests;
 	GCModuleTests : FB_GC_ModuleTests;
+	ModuleResourceRegistrationTests : FB_ModuleResourceRegistrationTests;
 END_VAR
 ]]></Declaration>
     <Implementation>

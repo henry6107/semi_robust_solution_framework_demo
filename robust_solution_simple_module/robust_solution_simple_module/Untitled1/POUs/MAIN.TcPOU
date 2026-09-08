@@ -79,7 +79,13 @@ IF _bRegistrationOk THEN
 		Terminal := GVL_IO.Term3_EL2809);
 END_IF
 
-// Register BaseUnit references before loading configuration.
+// Preserve these Beckhoff hardware nodes across Module configuration retries.
+// 未來如果想要支援 Online Change 程式碼後也能重建 Module Node，才需要用到
+IF _bRegistrationOk THEN
+	_bRegistrationOk := _LinkVariableManager.M_SealInfrastructureRegistration();
+END_IF
+
+// Register BaseUnit references before loading configuration. (Dictionary of source name & source instance)
 IF _bRegistrationOk THEN
 	_bRegistrationOk := _ReferenceManager.M_RegisterReference(
 		BaseUnit := GVL_IO.NC_Axis1);
@@ -92,7 +98,7 @@ END_IF
 // Register Module adapters before loading configuration.
 IF _bRegistrationOk THEN
 	_bRegistrationOk := _ModuleTypeRegistry.M_Register(
-		ModuleType := E_ModuleType.GC,
+		ModuleTypeName := 'GC',
 		Adapter := _GCModuleConfigurationAdapter);
 END_IF
 _bInfrastructureRegistered := _bRegistrationOk;]]></ST>

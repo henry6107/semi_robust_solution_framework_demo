@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <Itf Name="I_ModuleReferenceBindings" Id="{2a2da34d-54a3-41a2-9f99-b86c646485d1}">
+    <Declaration><![CDATA[INTERFACE I_ModuleReferenceBindings EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Method Name="M_TakeOptional" Id="{d50f3ec8-2aec-453d-8698-8fe04702dde9}">
+      <Declaration><![CDATA[METHOD M_TakeOptional : I_BaseUnit
+VAR_INPUT
+	Name : STRING(80);
+END_VAR
+VAR_OUTPUT
+	Present : BOOL;
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="M_TakeRequired" Id="{ff96cb85-1798-400c-9fcb-310cb018eeb0}">
+      <Declaration><![CDATA[METHOD M_TakeRequired : I_BaseUnit
+VAR_INPUT
+	Name : STRING(80);
+END_VAR
+VAR_OUTPUT
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

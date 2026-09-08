@@ -9,6 +9,11 @@ END_VAR
 VAR
 	_Nodes : ARRAY[1..Param_Config.MaxConfigVariableNodes] OF ST_LinkVariableNode;
 	_NodeCount : UINT;
+	_InfrastructureNodeCount : UINT;
+	_InfrastructureSealed : BOOL;
+	_ModuleRegistrationActive : BOOL;
+	_ModuleRootName : STRING(255);
+	_ModuleConfig : REFERENCE TO ST_ModuleFileConfig;
 	_Links : ARRAY[1..Param_Config.MaxModuleMappings * Param_Config.MaxTotalConfiguredModules * 2] OF ST_VariableLink;
 	_LinkCount : UINT;
 	_JsonDataType : FB_JsonReadWriteDataType;
@@ -17,6 +22,9 @@ END_VAR
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
+    <Folder Name="Beckhoff Registry" Id="{92a2770c-659d-4164-a8f2-33d4bdfba0b7}" />
+    <Folder Name="Common Registry" Id="{4919fca1-b34f-43b2-b5a2-723c18ce552b}" />
+    <Folder Name="Module Node Registry" Id="{1c0d45e5-c6c3-47ab-a45c-84628a85d555}" />
     <Folder Name="Private" Id="{e208b29b-f674-48c8-ba09-da80fd6c3e46}" />
     <Method Name="M_AddLink" Id="{11c3d68c-d253-4d56-ad40-679c1999e4e0}">
       <Declaration><![CDATA[METHOD PUBLIC M_AddLink : BOOL
@@ -108,6 +116,59 @@ _LinkCount := nNext;
 M_AddLink := TRUE;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_BeginModuleRegistration" Id="{627f2ae4-4655-4612-9934-2f22c8c094c3}" FolderPath="Module Node Registry\">
+      <Declaration><![CDATA[METHOD PUBLIC M_BeginModuleRegistration : BOOL
+VAR_INPUT
+	Address : PVOID;
+	Size : UDINT;
+END_VAR
+VAR_IN_OUT
+	ModuleConfig : ST_ModuleFileConfig;
+END_VAR
+VAR
+	hrErrorCode : HRESULT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_BeginModuleRegistration := FALSE;
+IF _ModuleRegistrationActive THEN
+	IF NOT Error THEN
+		Error := TRUE;
+		ErrorMessage := 'A Module registration session is already active.';
+	END_IF
+	RETURN;
+END_IF
+Error := FALSE;
+ErrorMessage := '';
+_ModuleRegistrationActive := FALSE;
+_ModuleRootName := '';
+
+IF NOT _InfrastructureSealed THEN
+	Error := TRUE;
+	ErrorMessage := 'Infrastructure node registration must be sealed before Module registration.';
+	RETURN;
+END_IF
+IF (Address = 0) OR (Size = 0) THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot register a Module without a valid address and size.';
+	RETURN;
+END_IF
+
+_ModuleRootName := _JsonDataType.GetSymbolNameByAddress(
+	nData := Size,
+	pData := Address,
+	hrErrorCode => hrErrorCode);
+IF (hrErrorCode <> 0) OR (_ModuleRootName = '') THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot resolve the Module ADS symbol name.';
+	RETURN;
+END_IF
+
+_ModuleConfig REF=ModuleConfig;
+_ModuleRegistrationActive := TRUE;
+M_BeginModuleRegistration := TRUE;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_BuildNodeName" Id="{43999312-2fea-44b3-94f7-73927a60dac8}" FolderPath="Private\">
       <Declaration><![CDATA[METHOD PRIVATE M_BuildNodeName : BOOL
 VAR_INPUT
@@ -143,6 +204,25 @@ M_BuildNodeName := TRUE;]]></ST>
       <Implementation>
         <ST><![CDATA[MEMSET(ADR(_Links), 0, SIZEOF(_Links));
 _LinkCount := 0;
+Error := FALSE;
+ErrorMessage := '';]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearModuleNodes" Id="{fd83d8dd-71aa-4a83-a2ea-c57e40eedbfa}" FolderPath="Module Node Registry\">
+      <Declaration><![CDATA[METHOD PUBLIC M_ClearModuleNodes
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _InfrastructureSealed THEN
+	FOR nIndex := _InfrastructureNodeCount + 1 TO _NodeCount DO
+		MEMSET(ADR(_Nodes[nIndex]), 0, SIZEOF(_Nodes[nIndex]));
+	END_FOR
+	_NodeCount := _InfrastructureNodeCount;
+END_IF
+_ModuleRegistrationActive := FALSE;
+_ModuleRootName := '';
 Error := FALSE;
 ErrorMessage := '';]]></ST>
       </Implementation>
@@ -198,6 +278,58 @@ END_FOR]]></ST>
         <ST><![CDATA[M_CopyPhase(Phase := E_LinkPhase.ModuleToOutput);]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_EndModuleRegistration" Id="{76056015-c292-496c-a9e4-be7a3fa2ba92}" FolderPath="Module Node Registry\">
+      <Declaration><![CDATA[METHOD PUBLIC M_EndModuleRegistration : BOOL
+VAR_OUTPUT
+	ModuleSymbol : STRING(255);
+END_VAR
+VAR
+	nItem : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_EndModuleRegistration := FALSE;
+ModuleSymbol := '';
+IF Error THEN
+	_ModuleRegistrationActive := FALSE;
+	RETURN;
+END_IF
+IF NOT _ModuleRegistrationActive OR NOT __ISVALIDREF(_ModuleConfig) THEN
+	Error := TRUE;
+	ErrorMessage := 'No Module registration session is active.';
+	RETURN;
+END_IF
+
+FOR nItem := 1 TO _ModuleConfig.InputMappingCount DO
+	IF NOT M_RequireRelativeNode(RelativeName := _ModuleConfig.InputMappings[nItem].Target) THEN
+		_ModuleRegistrationActive := FALSE;
+		RETURN;
+	END_IF
+END_FOR
+FOR nItem := 1 TO _ModuleConfig.OutputMappingCount DO
+	IF NOT M_RequireRelativeNode(RelativeName := _ModuleConfig.OutputMappings[nItem].Source) THEN
+		_ModuleRegistrationActive := FALSE;
+		RETURN;
+	END_IF
+END_FOR
+FOR nItem := 1 TO _ModuleConfig.VariableCount DO
+	IF NOT M_RequireRelativeNode(RelativeName := _ModuleConfig.VariableList[nItem].Source) THEN
+		_ModuleRegistrationActive := FALSE;
+		RETURN;
+	END_IF
+END_FOR
+FOR nItem := 1 TO _ModuleConfig.AlarmCount DO
+	IF NOT M_RequireRelativeNode(RelativeName := _ModuleConfig.AlarmList[nItem].Source) THEN
+		_ModuleRegistrationActive := FALSE;
+		RETURN;
+	END_IF
+END_FOR
+
+ModuleSymbol := _ModuleRootName;
+_ModuleRegistrationActive := FALSE;
+M_EndModuleRegistration := TRUE;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_FindNode" Id="{830b2dfb-01e4-4487-9fc3-df59b35f3009}" FolderPath="Private\">
       <Declaration><![CDATA[METHOD PRIVATE M_FindNode : UINT
 VAR_INPUT
@@ -228,6 +360,54 @@ END_VAR
 	OR (DataType = E_ConfigDataType.UnsignedInteger32)
 	OR (DataType = E_ConfigDataType.Float32)
 	OR (DataType = E_ConfigDataType.Float64);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ReadNode" Id="{d9822a9e-23b0-4cd9-ae89-22cb4d6d843b}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ReadNode : BOOL
+VAR_INPUT
+	NodeHandle : UINT;
+	ExpectedDataType : E_ConfigDataType;
+END_VAR
+VAR_IN_OUT
+	Value : ST_ConfigRawValue;
+END_VAR
+VAR_OUTPUT
+	ErrorCode : E_ConfigValueError;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ReadNode := FALSE;
+ErrorCode := E_ConfigValueError.None;
+MEMSET(ADR(Value), 0, SIZEOF(Value));
+
+IF (NodeHandle < 1) OR (NodeHandle > _NodeCount) THEN
+	ErrorCode := E_ConfigValueError.InvalidNodeHandle;
+	RETURN;
+END_IF
+IF _Nodes[NodeHandle].Access = E_VariableAccess.WriteOnly THEN
+	ErrorCode := E_ConfigValueError.NodeReadNotAllowed;
+	RETURN;
+END_IF
+IF _Nodes[NodeHandle].Address = 0 THEN
+	ErrorCode := E_ConfigValueError.InvalidNodeAddress;
+	RETURN;
+END_IF
+IF (ExpectedDataType = E_ConfigDataType.Unknown)
+	OR (_Nodes[NodeHandle].DataType <> ExpectedDataType) THEN
+	ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
+	RETURN;
+END_IF
+IF (_Nodes[NodeHandle].Size = 0)
+	OR (_Nodes[NodeHandle].Size > SIZEOF(Value.Data)) THEN
+	ErrorCode := E_ConfigValueError.InvalidNodeSize;
+	RETURN;
+END_IF
+
+MEMCPY(
+	destAddr := ADR(Value.Data),
+	srcAddr := _Nodes[NodeHandle].Address,
+	n := _Nodes[NodeHandle].Size);
+M_ReadNode := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_ReadNumeric" Id="{4e8b3b87-972f-4f8b-af53-cd974ffb4264}" FolderPath="Private\">
@@ -267,7 +447,7 @@ ELSE
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_RegisterEL1889" Id="{890efd5c-833e-4076-899e-a5543ce108dd}">
+    <Method Name="M_RegisterEL1889" Id="{890efd5c-833e-4076-899e-a5543ce108dd}" FolderPath="Beckhoff Registry\">
       <Declaration><![CDATA[METHOD PUBLIC M_RegisterEL1889 : BOOL
 VAR_IN_OUT CONSTANT
 	Terminal : ST_EL1889Ex;
@@ -309,7 +489,7 @@ END_FOR
 M_RegisterEL1889 := TRUE;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_RegisterEL2809" Id="{7376f834-583c-4f3c-9f1d-cde75d97c5f8}">
+    <Method Name="M_RegisterEL2809" Id="{7376f834-583c-4f3c-9f1d-cde75d97c5f8}" FolderPath="Beckhoff Registry\">
       <Declaration><![CDATA[METHOD PUBLIC M_RegisterEL2809 : BOOL
 VAR_IN_OUT CONSTANT
 	Terminal : ST_EL2809Ex;
@@ -351,7 +531,7 @@ END_FOR
 M_RegisterEL2809 := TRUE;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_RegisterEL3602" Id="{db0707dd-5cd4-4b57-8eb1-f568cf32caa8}">
+    <Method Name="M_RegisterEL3602" Id="{db0707dd-5cd4-4b57-8eb1-f568cf32caa8}" FolderPath="Beckhoff Registry\">
       <Declaration><![CDATA[METHOD PUBLIC M_RegisterEL3602 : BOOL
 VAR_IN_OUT CONSTANT
 	Terminal : ST_EL3602Ex;
@@ -393,113 +573,6 @@ END_FOR
 M_RegisterEL3602 := TRUE;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_RegisterGCModule" Id="{76056015-c292-496c-a9e4-be7a3fa2ba92}">
-      <Declaration><![CDATA[METHOD PUBLIC M_RegisterGCModule : BOOL
-VAR_IN_OUT CONSTANT
-	Module : FB_GC_Module;
-END_VAR
-VAR_OUTPUT
-	ModuleSymbol : STRING(255);
-END_VAR
-VAR
-	sRootName : STRING(255);
-	sRelativeName : STRING(255);
-	sNodeName : STRING(255);
-	nChannel : UINT;
-	hrErrorCode : HRESULT;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[M_RegisterGCModule := FALSE;
-ModuleSymbol := '';
-Error := FALSE;
-ErrorMessage := '';
-
-sRootName := _JsonDataType.GetSymbolNameByAddress(
-	nData := SIZEOF(Module),
-	pData := ADR(Module),
-	hrErrorCode => hrErrorCode);
-IF (hrErrorCode <> 0) OR (sRootName = '') THEN
-	Error := TRUE;
-	ErrorMessage := 'Cannot resolve the GC Module ADS symbol name.';
-	RETURN;
-END_IF
-
-IF NOT M_BuildNodeName(
-	RootName := sRootName,
-	RelativeName := 'HwInput.bDoorClosed',
-	FullName => sNodeName) THEN RETURN; END_IF
-IF NOT M_RegisterNode(
-	Name := sNodeName,
-	Variable := Module.HwInput.bDoorClosed,
-	Access := E_VariableAccess.ReadWrite) THEN RETURN; END_IF
-
-IF NOT M_BuildNodeName(
-	RootName := sRootName,
-	RelativeName := 'HwInput.rTemperature',
-	FullName => sNodeName) THEN RETURN; END_IF
-IF NOT M_RegisterNode(
-	Name := sNodeName,
-	Variable := Module.HwInput.rTemperature,
-	Access := E_VariableAccess.ReadWrite) THEN RETURN; END_IF
-
-FOR nChannel := 1 TO 16 DO
-	sRelativeName := CONCAT(CONCAT('HwInput.bDIs[', UINT_TO_STRING(nChannel)), ']');
-	IF NOT M_BuildNodeName(
-		RootName := sRootName,
-		RelativeName := sRelativeName,
-		FullName => sNodeName) THEN RETURN; END_IF
-	IF NOT M_RegisterNode(
-		Name := sNodeName,
-		Variable := Module.HwInput.bDIs[nChannel],
-		Access := E_VariableAccess.ReadWrite) THEN RETURN; END_IF
-
-	sRelativeName := CONCAT(CONCAT('HwInput.rAIs[', UINT_TO_STRING(nChannel)), ']');
-	IF NOT M_BuildNodeName(
-		RootName := sRootName,
-		RelativeName := sRelativeName,
-		FullName => sNodeName) THEN RETURN; END_IF
-	IF NOT M_RegisterNode(
-		Name := sNodeName,
-		Variable := Module.HwInput.rAIs[nChannel],
-		Access := E_VariableAccess.ReadWrite) THEN RETURN; END_IF
-END_FOR
-
-IF NOT M_BuildNodeName(
-	RootName := sRootName,
-	RelativeName := 'HwOutput.bVaccumOn',
-	FullName => sNodeName) THEN RETURN; END_IF
-IF NOT M_RegisterNode(
-	Name := sNodeName,
-	Variable := Module.HwOutput.bVaccumOn,
-	Access := E_VariableAccess.ReadOnly) THEN RETURN; END_IF
-
-FOR nChannel := 1 TO 16 DO
-	sRelativeName := CONCAT(CONCAT('HwOutput.bDOs[', UINT_TO_STRING(nChannel)), ']');
-	IF NOT M_BuildNodeName(
-		RootName := sRootName,
-		RelativeName := sRelativeName,
-		FullName => sNodeName) THEN RETURN; END_IF
-	IF NOT M_RegisterNode(
-		Name := sNodeName,
-		Variable := Module.HwOutput.bDOs[nChannel],
-		Access := E_VariableAccess.ReadOnly) THEN RETURN; END_IF
-
-	sRelativeName := CONCAT(CONCAT('HwOutput.rAOs[', UINT_TO_STRING(nChannel)), ']');
-	IF NOT M_BuildNodeName(
-		RootName := sRootName,
-		RelativeName := sRelativeName,
-		FullName => sNodeName) THEN RETURN; END_IF
-	IF NOT M_RegisterNode(
-		Name := sNodeName,
-		Variable := Module.HwOutput.rAOs[nChannel],
-		Access := E_VariableAccess.ReadOnly) THEN RETURN; END_IF
-END_FOR
-
-ModuleSymbol := sRootName;
-M_RegisterGCModule := TRUE;]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_RegisterNode" Id="{563ad443-6d1d-4e7a-a2a4-7d74ea3654e8}" FolderPath="Private\">
       <Declaration><![CDATA[METHOD PRIVATE M_RegisterNode : BOOL
 VAR_INPUT
@@ -514,8 +587,21 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[M_RegisterNode := FALSE;
-Error := FALSE;
-ErrorMessage := '';
+IF Error THEN
+	RETURN;
+END_IF
+IF (Name = '') OR (Variable.pValue = 0) OR (Variable.diSize <= 0) THEN
+	Error := TRUE;
+	ErrorMessage := 'Registered node requires a name, address and positive size.';
+	RETURN;
+END_IF
+IF (Access <> E_VariableAccess.ReadOnly)
+	AND (Access <> E_VariableAccess.WriteOnly)
+	AND (Access <> E_VariableAccess.ReadWrite) THEN
+	Error := TRUE;
+	ErrorMessage := 'Registered node access is invalid.';
+	RETURN;
+END_IF
 
 CASE Variable.TypeClass OF
 	__SYSTEM.TYPE_CLASS.TYPE_BOOL:
@@ -567,52 +653,82 @@ _Nodes[nIndex].Access := Access;
 M_RegisterNode := TRUE;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_ReadNode" Id="{d9822a9e-23b0-4cd9-ae89-22cb4d6d843b}">
-      <Declaration><![CDATA[METHOD PUBLIC M_ReadNode : BOOL
+    <Method Name="M_RegisterModuleNode" Id="{b8271799-8316-4f9d-8134-51fd896c032b}" FolderPath="Common Registry\">
+      <Declaration><![CDATA[METHOD PUBLIC M_RegisterModuleNode : BOOL
 VAR_INPUT
-	NodeHandle : UINT;
-	ExpectedDataType : E_ConfigDataType;
+	Variable : ANY;
+	Access : E_VariableAccess;
 END_VAR
-VAR_IN_OUT
-	Value : ST_ConfigRawValue;
-END_VAR
-VAR_OUTPUT
-	ErrorCode : E_ConfigValueError;
+VAR
+	sNodeName : STRING(255);
+	sModulePrefix : STRING(255);
+	hrErrorCode : HRESULT;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_ReadNode := FALSE;
-ErrorCode := E_ConfigValueError.None;
-MEMSET(ADR(Value), 0, SIZEOF(Value));
-
-IF (NodeHandle < 1) OR (NodeHandle > _NodeCount) THEN
-	ErrorCode := E_ConfigValueError.InvalidNodeHandle;
+        <ST><![CDATA[M_RegisterModuleNode := FALSE;
+IF Error THEN
 	RETURN;
 END_IF
-IF _Nodes[NodeHandle].Access = E_VariableAccess.WriteOnly THEN
-	ErrorCode := E_ConfigValueError.NodeReadNotAllowed;
+IF NOT _ModuleRegistrationActive THEN
+	Error := TRUE;
+	ErrorMessage := 'No Module registration session is active.';
 	RETURN;
 END_IF
-IF _Nodes[NodeHandle].Address = 0 THEN
-	ErrorCode := E_ConfigValueError.InvalidNodeAddress;
-	RETURN;
-END_IF
-IF (ExpectedDataType = E_ConfigDataType.Unknown)
-	OR (_Nodes[NodeHandle].DataType <> ExpectedDataType) THEN
-	ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
-	RETURN;
-END_IF
-IF (_Nodes[NodeHandle].Size = 0)
-	OR (_Nodes[NodeHandle].Size > SIZEOF(Value.Data)) THEN
-	ErrorCode := E_ConfigValueError.InvalidNodeSize;
+IF (Variable.pValue = 0) OR (Variable.diSize <= 0) THEN
+	Error := TRUE;
+	ErrorMessage := 'A Module node requires a valid address and positive size.';
 	RETURN;
 END_IF
 
-MEMCPY(
-	destAddr := ADR(Value.Data),
-	srcAddr := _Nodes[NodeHandle].Address,
-	n := _Nodes[NodeHandle].Size);
-M_ReadNode := TRUE;]]></ST>
+sNodeName := _JsonDataType.GetSymbolNameByAddress(
+	nData := DINT_TO_UDINT(Variable.diSize),
+	pData := Variable.pValue,
+	hrErrorCode => hrErrorCode);
+IF (hrErrorCode <> 0) OR (sNodeName = '') THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot resolve the Module node ADS symbol name.';
+	RETURN;
+END_IF
+
+sModulePrefix := CONCAT(_ModuleRootName, '.');
+IF LEFT(sNodeName, LEN(sModulePrefix)) <> sModulePrefix THEN
+	Error := TRUE;
+	ErrorMessage := 'The registered node does not belong to the active Module instance.';
+	RETURN;
+END_IF
+
+IF M_FindNode(Name := sNodeName) <> 0 THEN
+	Error := TRUE;
+	ErrorMessage := CONCAT('Duplicate Module node declaration: ', sNodeName);
+	RETURN;
+END_IF
+M_RegisterModuleNode := M_RegisterNode(Name := sNodeName, Variable := Variable, Access := Access);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RequireRelativeNode" Id="{1ea7c554-369c-4a6c-bfea-e6bc501947f2}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_RequireRelativeNode : BOOL
+VAR_INPUT
+	RelativeName : STRING(255);
+END_VAR
+VAR
+	sNodeName : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RequireRelativeNode := FALSE;
+IF NOT M_BuildNodeName(
+	RootName := _ModuleRootName,
+	RelativeName := RelativeName,
+	FullName => sNodeName) THEN
+	RETURN;
+END_IF
+IF M_FindNode(Name := sNodeName) = 0 THEN
+	Error := TRUE;
+	ErrorMessage := CONCAT('Module node was not declared by its adapter: ', RelativeName);
+	RETURN;
+END_IF
+M_RequireRelativeNode := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_ResolveReadableNode" Id="{b4435bc2-2990-4a3f-8adf-e2a6a6a146e2}">
@@ -665,6 +781,24 @@ END_IF
 
 NodeHandle := nNode;
 M_ResolveReadableNode := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SealInfrastructureRegistration" Id="{66c63671-fec9-42dd-b958-46a82e15ebf9}" FolderPath="Module Node Registry\">
+      <Declaration><![CDATA[METHOD PUBLIC M_SealInfrastructureRegistration : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_SealInfrastructureRegistration := FALSE;
+IF Error THEN
+	RETURN;
+END_IF
+IF _ModuleRegistrationActive THEN
+	Error := TRUE;
+	ErrorMessage := 'Cannot seal infrastructure nodes during Module registration.';
+	RETURN;
+END_IF
+_InfrastructureNodeCount := _NodeCount;
+_InfrastructureSealed := TRUE;
+M_SealInfrastructureRegistration := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_WriteNumeric" Id="{638cfbb7-f3ea-46fb-abab-042288179c45}" FolderPath="Private\">

@@ -2,10 +2,6 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_GCModuleConfigurationAdapter" Id="{d1ed4bb2-81ea-4b79-900f-c662788b8aa5}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_GCModuleConfigurationAdapter IMPLEMENTS I_ModuleConfigurationAdapter
-VAR
-	_SpinAxisBound : ARRAY[1..Param_Config.MaxModulePerType] OF BOOL;
-	_LiftPinAxisBound : ARRAY[1..Param_Config.MaxModulePerType] OF BOOL;
-END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
@@ -29,75 +25,12 @@ IF NOT M_IsSlotSupported(Slot := Slot) THEN
 	ErrorMessage := 'GC slot is outside the supported range.';
 	RETURN;
 END_IF
-IF RuntimeConfig.ModuleType <> TO_STRING(E_ModuleType.GC) THEN
+IF RuntimeConfig.ModuleType <> 'GC' THEN
 	ErrorMessage := 'Runtime configuration type is incompatible with the GC adapter.';
 	RETURN;
 END_IF
 GVL_Module.GC_Runtime[Slot] := RuntimeConfig;
 M_ApplyRuntimeConfig := TRUE;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_BindReference" Id="{415cb1e9-35c4-4435-8776-527c38751fd5}">
-      <Declaration><![CDATA[METHOD PUBLIC M_BindReference : BOOL
-VAR_INPUT
-	Slot : UINT;
-	TargetPort : STRING(80);
-	BaseUnit : I_BaseUnit;
-END_VAR
-VAR_OUTPUT
-	ErrorMessage : STRING(255);
-END_VAR
-VAR
-	Port : E_GCReferencePort;
-	Axis : I_Axis_BaseUnit;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[M_BindReference := FALSE;
-ErrorMessage := '';
-IF NOT M_IsSlotSupported(Slot := Slot) THEN
-	ErrorMessage := 'GC slot is outside the supported range.';
-	RETURN;
-END_IF
-IF BaseUnit = 0 THEN
-	ErrorMessage := 'Cannot bind an unbound BaseUnit reference.';
-	RETURN;
-END_IF
-
-Port := E_GCReferencePort.Unknown;
-IF TargetPort = TO_STRING(E_GCReferencePort.SpinAxis_BaseUnit) THEN
-	Port := E_GCReferencePort.SpinAxis_BaseUnit;
-ELSIF TargetPort = TO_STRING(E_GCReferencePort.LiftPinAxis_BaseUnit) THEN
-	Port := E_GCReferencePort.LiftPinAxis_BaseUnit;
-ELSE
-	ErrorMessage := 'Unknown GC reference port.';
-	RETURN;
-END_IF
-
-Axis := 0;
-IF NOT __QUERYINTERFACE(BaseUnit, Axis) THEN
-	ErrorMessage := CONCAT('Reference type is incompatible with GC port ', TO_STRING(Port));
-	RETURN;
-END_IF
-
-CASE Port OF
-	E_GCReferencePort.SpinAxis_BaseUnit:
-		IF _SpinAxisBound[Slot] THEN
-			ErrorMessage := CONCAT('Duplicate GC reference binding for ', TO_STRING(Port));
-			RETURN;
-		END_IF
-		GVL_Module.GC_SpinAxis[Slot] := Axis;
-		_SpinAxisBound[Slot] := TRUE;
-
-	E_GCReferencePort.LiftPinAxis_BaseUnit:
-		IF _LiftPinAxisBound[Slot] THEN
-			ErrorMessage := CONCAT('Duplicate GC reference binding for ', TO_STRING(Port));
-			RETURN;
-		END_IF
-		GVL_Module.GC_LiftPinAxis[Slot] := Axis;
-		_LiftPinAxisBound[Slot] := TRUE;
-END_CASE
-M_BindReference := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_ClearAllSlots" Id="{3eff8948-41a3-47d4-b197-f93e2ec9fbf1}">
@@ -116,8 +49,6 @@ FOR nSlot := 1 TO Param_Config.MaxModulePerType DO
 	GVL_Module.GC_SpinAxis[nSlot] := 0;
 	GVL_Module.GC_LiftPinAxis[nSlot] := 0;
 	MEMSET(ADR(GVL_Module.GC_Runtime[nSlot]), 0, SIZEOF(GVL_Module.GC_Runtime[nSlot]));
-	_SpinAxisBound[nSlot] := FALSE;
-	_LiftPinAxisBound[nSlot] := FALSE;
 END_FOR
 M_ClearAllSlots := TRUE;]]></ST>
       </Implementation>
@@ -132,61 +63,121 @@ END_VAR
         <ST><![CDATA[M_IsSlotSupported := (Slot >= 1) AND (Slot <= Param_Config.MaxModulePerType);]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_RegisterIo" Id="{afcdad32-5005-4810-bb84-67a02f90ef60}">
-      <Declaration><![CDATA[METHOD PUBLIC M_RegisterIo : BOOL
+    <Method Name="M_PrepareInstance" Id="{afcdad32-5005-4810-bb84-67a02f90ef60}">
+      <Declaration><![CDATA[METHOD PUBLIC M_PrepareInstance : BOOL
 VAR_INPUT
 	Slot : UINT;
+	ReferenceBindings : I_ModuleReferenceBindings;
 END_VAR
 VAR_IN_OUT
+	ModuleConfig : ST_ModuleFileConfig;
 	LinkVariableManager : FB_LinkVariableManager;
 END_VAR
 VAR_OUTPUT
 	ModuleSymbol : STRING(255);
 	ErrorMessage : STRING(255);
 END_VAR
+VAR
+	bDeclared : BOOL;
+	BaseUnit : I_BaseUnit;
+	SpinAxis : I_Axis_BaseUnit;
+	LiftPinAxis : I_Axis_BaseUnit;
+	sReferenceError : STRING(255);
+	nIndex : DINT;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_RegisterIo := FALSE;
+        <ST><![CDATA[M_PrepareInstance := FALSE;
 ModuleSymbol := '';
 ErrorMessage := '';
 IF NOT M_IsSlotSupported(Slot := Slot) THEN
 	ErrorMessage := 'GC slot is outside the supported range.';
 	RETURN;
 END_IF
-IF NOT LinkVariableManager.M_RegisterGCModule(
-	Module := GVL_Module.GC[Slot],
-	ModuleSymbol => ModuleSymbol) THEN
+
+// Register module hardware I/O as link node
+bDeclared := LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.GC[Slot]),
+	Size := SIZEOF(GVL_Module.GC[Slot]),
+	ModuleConfig := ModuleConfig);
+
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.GC[Slot].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.GC[Slot].HwInput.rTemperature,
+	Access := E_VariableAccess.ReadWrite);
+
+FOR nIndex := LOWER_BOUND(GVL_Module.GC[Slot].HwInput.bDIs, 1)
+	TO UPPER_BOUND(GVL_Module.GC[Slot].HwInput.bDIs, 1) DO
+	bDeclared := LinkVariableManager.M_RegisterModuleNode(
+		Variable := GVL_Module.GC[Slot].HwInput.bDIs[nIndex],
+		Access := E_VariableAccess.ReadWrite);
+END_FOR
+FOR nIndex := LOWER_BOUND(GVL_Module.GC[Slot].HwInput.rAIs, 1)
+	TO UPPER_BOUND(GVL_Module.GC[Slot].HwInput.rAIs, 1) DO
+	bDeclared := LinkVariableManager.M_RegisterModuleNode(
+		Variable := GVL_Module.GC[Slot].HwInput.rAIs[nIndex],
+		Access := E_VariableAccess.ReadWrite);
+END_FOR
+
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.GC[Slot].HwOutput.bVaccumOn,
+	Access := E_VariableAccess.ReadOnly);
+FOR nIndex := LOWER_BOUND(GVL_Module.GC[Slot].HwOutput.bDOs, 1)
+	TO UPPER_BOUND(GVL_Module.GC[Slot].HwOutput.bDOs, 1) DO
+	bDeclared := LinkVariableManager.M_RegisterModuleNode(
+		Variable := GVL_Module.GC[Slot].HwOutput.bDOs[nIndex],
+		Access := E_VariableAccess.ReadOnly);
+END_FOR
+FOR nIndex := LOWER_BOUND(GVL_Module.GC[Slot].HwOutput.rAOs, 1)
+	TO UPPER_BOUND(GVL_Module.GC[Slot].HwOutput.rAOs, 1) DO
+	bDeclared := LinkVariableManager.M_RegisterModuleNode(
+		Variable := GVL_Module.GC[Slot].HwOutput.rAOs[nIndex],
+		Access := E_VariableAccess.ReadOnly);
+END_FOR
+
+IF NOT LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => ModuleSymbol) THEN
 	ErrorMessage := LinkVariableManager.ErrorMessage;
 	RETURN;
 END_IF
-M_RegisterIo := TRUE;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_ValidateReferences" Id="{3598c4ac-0cd5-4fc2-b868-fb2f7dc5dac3}">
-      <Declaration><![CDATA[METHOD PUBLIC M_ValidateReferences : BOOL
-VAR_INPUT
-	Slot : UINT;
-END_VAR
-VAR_OUTPUT
-	ErrorMessage : STRING(255);
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[M_ValidateReferences := FALSE;
-ErrorMessage := '';
-IF NOT M_IsSlotSupported(Slot := Slot) THEN
-	ErrorMessage := 'GC slot is outside the supported range.';
+
+// Bind base-unit instance to module-base-unit interface
+IF ReferenceBindings = 0 THEN
+	ErrorMessage := 'GC requires a Module reference binding context.';
 	RETURN;
 END_IF
-IF NOT _SpinAxisBound[Slot] THEN
-	ErrorMessage := CONCAT('Missing required GC reference port ', TO_STRING(E_GCReferencePort.SpinAxis_BaseUnit));
+
+BaseUnit := ReferenceBindings.M_TakeRequired(
+	Name := 'SpinAxis_BaseUnit',
+	ErrorMessage => sReferenceError);
+IF BaseUnit = 0 THEN
+	ErrorMessage := sReferenceError;
 	RETURN;
 END_IF
-IF NOT _LiftPinAxisBound[Slot] THEN
-	ErrorMessage := CONCAT('Missing required GC reference port ', TO_STRING(E_GCReferencePort.LiftPinAxis_BaseUnit));
+SpinAxis := 0;
+IF NOT __QUERYINTERFACE(BaseUnit, SpinAxis) THEN
+	ErrorMessage := 'SpinAxis_BaseUnit requires I_Axis_BaseUnit.';
 	RETURN;
 END_IF
-M_ValidateReferences := TRUE;]]></ST>
+
+BaseUnit := ReferenceBindings.M_TakeRequired(
+	Name := 'LiftPinAxis_BaseUnit',
+	ErrorMessage => sReferenceError);
+IF BaseUnit = 0 THEN
+	ErrorMessage := sReferenceError;
+	RETURN;
+END_IF
+LiftPinAxis := 0;
+IF NOT __QUERYINTERFACE(BaseUnit, LiftPinAxis) THEN
+	ErrorMessage := 'LiftPinAxis_BaseUnit requires I_Axis_BaseUnit.';
+	RETURN;
+END_IF
+
+// Commit typed references only after the complete GC reference contract is valid.
+GVL_Module.GC_SpinAxis[Slot] := SpinAxis;
+GVL_Module.GC_LiftPinAxis[Slot] := LiftPinAxis;
+M_PrepareInstance := TRUE;]]></ST>
       </Implementation>
     </Method>
   </POU>

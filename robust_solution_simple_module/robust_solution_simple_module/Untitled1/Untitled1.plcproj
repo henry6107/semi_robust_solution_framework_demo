@@ -40,6 +40,9 @@
     <Compile Include="Configuration\DUTs\E_ModuleType.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Configuration\DUTs\T_ModuleTypeName.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Configuration\DUTs\E_VariableAccess.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -94,6 +97,9 @@
     <Compile Include="Configuration\Interfaces\I_AdsSymbolProvider.TcIO">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Configuration\Interfaces\I_ModuleReferenceBindings.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Configuration\Interfaces\I_ModuleConfigurationAdapter.TcIO">
       <SubType>Code</SubType>
     </Compile>
@@ -110,6 +116,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\POUs\FB_ReferenceManager.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Configuration\POUs\FB_ModuleReferenceBindingContext.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\POUs\FB_LinkVariableManager.TcPOU">
@@ -282,9 +291,6 @@
     <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCReferencePort.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService\ST_GCLiftPinAxisMoveAbsParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -448,6 +454,15 @@
     <Compile Include="Tests\Fakes\FB_FakeAxis_BaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Fakes\FB_FakeBaseUnit.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Fakes\FB_FakeModuleConfigurationAdapter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Fakes\FB_FakeModuleReferenceBindings.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Fakes\FB_TestableServiceBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -464,6 +479,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\BaseUnit\FB_FakeAxis_BaseUnitTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\Configuration\FB_ModuleResourceRegistrationTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Modules\FB_GC_ModuleTests.TcPOU">
@@ -516,6 +534,7 @@
     <Folder Include="POUs\PackML_Base\Utilities" />
     <Folder Include="Tests\Suites\Modules" />
     <Folder Include="Tests\Suites\BaseUnit" />
+    <Folder Include="Tests\Suites\Configuration" />
     <Folder Include="Tests\Suites\Services" />
     <Folder Include="VISUs" />
     <Folder Include="Tests" />

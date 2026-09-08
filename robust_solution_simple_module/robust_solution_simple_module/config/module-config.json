@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "modules": [
     {
       "enabled": true,
@@ -32,16 +32,10 @@
           "targetDataType": "BOOL"
         }
       ],
-      "referenceBindings": [
-        {
-          "source": "GVL_IO.NC_Axis1",
-          "targetPort": "SpinAxis_BaseUnit"
-        },
-        {
-          "source": "GVL_IO.NC_Axis2",
-          "targetPort": "LiftPinAxis_BaseUnit"
-        }
-      ],
+      "references": {
+        "SpinAxis_BaseUnit": "GVL_IO.NC_Axis1",
+        "LiftPinAxis_BaseUnit": "GVL_IO.NC_Axis2"
+      },
       "variableList": [
         {
           "source": "HwInput.rTemperature",

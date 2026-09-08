@@ -2,7 +2,7 @@
 
 ## 1. 文件目的
 
-本文件以目前 `schemaVersion = 3` 的實作為準，說明：
+本文件以目前 `schemaVersion = 4` 的實作為準，說明：
 
 1. PLC 啟動時，Configuration 如何從 JSON 轉換成可執行的 I/O mapping、BaseUnit reference、configured value bindings 與 Module runtime config。
 2. VariableList／AlarmList 如何透過已註冊節點建立本機 snapshot，不再使用 ADS Sum Command。
@@ -17,12 +17,13 @@
 |---|---|---|
 | Composition root | [`MAIN`](../robust_solution_simple_module/Untitled1/POUs/MAIN.TcPOU) | 建立 manager 與 adapter、註冊共享實體 I/O、BaseUnit reference、Module type，並安排 cyclic execution 順序。 |
 | Configuration orchestrator | [`FB_ModuleConfigurationManager`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ModuleConfigurationManager.TcPOU) | 載入與解析 JSON、執行共用驗證、解析 Module adapter，並建立 mapping、reference 與 runtime bindings。它不知道各 Module type 專屬的 GVL array 與 reference 型別。 |
-| Module type registry | [`FB_ModuleTypeRegistry`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ModuleTypeRegistry.TcPOU) | 保存 `E_ModuleType -> I_ModuleConfigurationAdapter` 對應，並依 config 的 `moduleType` 解析 adapter。 |
-| Module configuration seam | [`I_ModuleConfigurationAdapter`](../robust_solution_simple_module/Untitled1/Configuration/Interfaces/I_ModuleConfigurationAdapter.TcIO) | 定義不同 Module type 必須提供的 slot、I/O、reference、runtime config 與清除行為。 |
-| GC adapter | [`FB_GCModuleConfigurationAdapter`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_GCModuleConfigurationAdapter.TcPOU) | 將通用設定轉接到 `GVL_Module.GC_*`，並處理 GC 專屬 reference port 與型別驗證。 |
+| Module type registry | [`FB_ModuleTypeRegistry`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ModuleTypeRegistry.TcPOU) | 保存 `T_ModuleTypeName -> I_ModuleConfigurationAdapter` 對應，並依 config 的 `moduleType` 解析 adapter。 |
+| Module configuration seam | [`I_ModuleConfigurationAdapter`](../robust_solution_simple_module/Untitled1/Configuration/Interfaces/I_ModuleConfigurationAdapter.TcIO) | 定義不同 Module type 必須提供的 slot、instance preparation、runtime config 與清除行為。 |
+| GC adapter | [`FB_GCModuleConfigurationAdapter`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_GCModuleConfigurationAdapter.TcPOU) | 將通用設定轉接到 `GVL_Module.GC_*`，宣告 GC nodes，並拉取、驗證 GC 所需的 typed references。 |
 | Variable node registry／link manager | [`FB_LinkVariableManager`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_LinkVariableManager.TcPOU) | 註冊具 Symbol Name、位址、型別、大小與 access metadata 的節點；建立 mapping；初始化時解析 readable node handle；cyclic 時執行 link copy 與 node read。 |
 | Variable node reader seam | [`I_VariableNodeReader`](../robust_solution_simple_module/Untitled1/Configuration/Interfaces/I_VariableNodeReader.TcIO) | 只公開 `NodeHandle -> raw value` 的讀取能力，讓 Module 不接觸 node registry、Symbol Name lookup 或裸 `PVOID`。 |
 | Reference manager | [`FB_ReferenceManager`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ReferenceManager.TcPOU) | 以完整 ADS symbol name 註冊並解析通用 `I_BaseUnit` reference；不知道 Module target port 與實際 specialized interface。 |
+| Reference binding context | [`FB_ModuleReferenceBindingContext`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ModuleReferenceBindingContext.TcPOU) | 將 schema v4 的語意 reference map 包裝成 `M_TakeRequired`／`M_TakeOptional`，統一處理 lookup、resolve、duplicate take 與 unknown key。 |
 | ADS symbol provider | [`I_AdsSymbolProvider`](../robust_solution_simple_module/Untitled1/Configuration/Interfaces/I_AdsSymbolProvider.TcIO)、[`FB_BaseUnit`](../robust_solution_simple_module/Untitled1/POUs/00_BaseUnit/FB_BaseUnit.TcPOU) | 提供 BaseUnit 實體位址與大小，讓 Reference Manager 自動取得全域 ADS symbol name。ADS symbol 在此用於初始化識別，不代表 configured values 仍透過 ADS 讀取。 |
 | Configured value snapshot | [`FB_ConfigValueSnapshotReader`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ConfigValueSnapshotReader.TcPOU) | 依 Runtime Binding 的 NodeHandle 建立本機 raw-value snapshot，並轉換為數值或字串。 |
 | Module runtime base | [`FB_ModuleBase`](../robust_solution_simple_module/Untitled1/POUs/10_Module/FB_ModuleBase.TcPOU) | 注入 `I_VariableNodeReader`，更新共用 VariableList、configured AlarmList 與 configuration status。 |
@@ -71,11 +72,11 @@ flowchart LR
 
 ```iecst
 _ModuleTypeRegistry.M_Register(
-    ModuleType := E_ModuleType.GC,
+    ModuleTypeName := 'GC',
     Adapter := _GCModuleConfigurationAdapter);
 ```
 
-`E_ModuleType` 具有 `{attribute 'to_string'}`；Registry 使用 `TO_STRING(enum member)` 與 JSON `moduleType` 做大小寫完全一致的比較，不維護另一份手寫 Module type 字串。
+`T_ModuleTypeName` 是固定長度的字串 key。新增 Module type 只需在 composition root 註冊新名稱，不必修改 framework enum；JSON `moduleType` 與註冊名稱採大小寫完全一致的比較。
 
 若任一步驟失敗，Configuration Manager 不會開始載入設定。
 
@@ -84,12 +85,19 @@ _ModuleTypeRegistry.M_Register(
 `FB_ModuleConfigurationManager` 在 `Execute = TRUE` 時進入一次性狀態機：
 
 1. 從 `Param_Config.ModuleConfigFilePath` 載入 UTF-8 JSON。
-2. 要求 `schemaVersion = Param_Config.ConfigSchemaVersion = 3`。
-3. 明確拒絕 schema v3 中的 `adsPort`；configured values 只允許使用已註冊本機節點。
+2. 要求 `schemaVersion = Param_Config.ConfigSchemaVersion = 4`。
+3. 明確拒絕 `adsPort`；configured values 只允許使用已註冊本機節點。
 4. 將 JSON 解析到 `ST_SystemFileConfig` 與 `ST_ModuleFileConfig`。
-5. 驗證 enabled Module 的 mapping、reference binding、VariableList 與 AlarmList 必要欄位。
+5. 驗證 enabled Module 的 mapping、reference map、VariableList 與 AlarmList 必要欄位。
 
-schema v3 同樣拒絕舊的 `axisReferences` 與 reference binding `target`，必須改用 `referenceBindings`／`targetPort`。
+schema v4 拒絕舊的 `axisReferences` 與 `referenceBindings`，必須改用語意 `references` object：
+
+```json
+"references": {
+  "SpinAxis_BaseUnit": "GVL_IO.NC_Axis1",
+  "LiftPinAxis_BaseUnit": "GVL_IO.NC_Axis2"
+}
+```
 
 完整欄位規則請參考 [`config/README.md`](../robust_solution_simple_module/config/README.md) 與 [`module-config.json`](../robust_solution_simple_module/config/module-config.json)。
 
@@ -112,9 +120,9 @@ schema v3 同樣拒絕舊的 `axisReferences` 與 reference binding `target`，�
 
 1. `LinkVariableManager.M_ClearLinks()` 清除既有 link table。
 2. `ModuleTypeRegistry.M_ClearAll()` 對每個已註冊 adapter 呼叫一次 `M_ClearAllSlots()`。
-3. Adapter 在內部以自己的 type capacity 清除 Runtime arrays、reference arrays 與 duplicate-binding flags。
+3. Adapter 在內部以自己的 type capacity 清除 Runtime arrays 與 typed reference arrays。
 
-已註冊的 variable node registry 與 BaseUnit reference registry 不會被 unregister。正常啟動只套用一次；disabled Module 不呼叫 `M_RegisterIo()`，因此不建立該 Module 的 I/O nodes。
+`M_ClearModuleNodes()` 會移除先前套用產生的 Module nodes，但保留已 sealed 的 Beckhoff infrastructure nodes；BaseUnit source registry 維持不變。正常啟動只套用一次；disabled Module 不呼叫 `M_PrepareInstance()`，因此不建立該 Module 的 nodes。
 
 ### 3.5 Phase 4：逐一套用 Module 設定
 
@@ -129,8 +137,8 @@ disabled 與 enabled Module 的行為如下：
 
 | 狀態 | 行為 |
 |---|---|
-| `enabled = false` | 不註冊 Module I/O、不建立 mapping、不綁 reference、不解析 NodeHandle；將 `Valid = TRUE`、`Enabled = FALSE` 的 RuntimeConfig 交給 adapter。 |
-| `enabled = true` | 依序執行 I/O 註冊、mapping、reference binding、reference 完整性驗證、configured value binding 與 runtime config 寫入。所有步驟成功後才設 `Valid = TRUE`。 |
+| `enabled = false` | 不準備 Module instance、不建立 mapping、不綁 reference、不解析 NodeHandle；將 `Valid = TRUE`、`Enabled = FALSE` 的 RuntimeConfig 交給 adapter。 |
+| `enabled = true` | 建立 reference binding context，呼叫一次 `M_PrepareInstance()` 宣告 nodes 並取得 typed references，再建立 mapping、configured value binding 與 runtime config。所有步驟成功後才設 `Valid = TRUE`。 |
 
 enabled Module 的順序如下：
 
@@ -140,24 +148,25 @@ sequenceDiagram
     participant REG as Module Type Registry
     participant AD as Module Adapter
     participant LVM as Link Variable Manager
-    participant RM as Reference Manager
+    participant RBC as Reference Binding Context
     participant GVL as Module-specific GVL
 
     CM->>REG: M_Resolve(moduleType)
     REG-->>CM: I_ModuleConfigurationAdapter
-    CM->>AD: M_RegisterIo(slot)
-    AD->>LVM: Register typed Module I/O
+    CM->>RBC: M_Begin(ModuleConfig, ReferenceManager)
+    CM->>AD: M_PrepareInstance(slot, bindings, config, LVM)
+    AD->>LVM: M_BeginModuleRegistration(instance)
+    loop every scalar / array element
+        AD->>LVM: M_RegisterModuleNode(variable, access)
+    end
+    AD->>RBC: M_TakeRequired / M_TakeOptional
+    AD->>AD: __QUERYINTERFACE + stage typed references
+    AD->>LVM: M_EndModuleRegistration()
     LVM-->>CM: Module root symbol
+    CM->>RBC: M_End()
     loop inputMappings / outputMappings
         CM->>LVM: M_AddLink(...)
     end
-    loop referenceBindings
-        CM->>RM: M_Resolve(source)
-        RM-->>CM: I_BaseUnit
-        CM->>AD: M_BindReference(slot, targetPort, BaseUnit)
-        AD->>GVL: Store specialized interface
-    end
-    CM->>AD: M_ValidateReferences(slot)
     loop VariableList / AlarmList
         CM->>LVM: M_ResolveReadableNode(full source, expected type)
         LVM-->>CM: NodeHandle
@@ -170,9 +179,9 @@ sequenceDiagram
 各步驟的重點：
 
 1. **Adapter 解析**：Configuration Manager 只取得 `I_ModuleConfigurationAdapter`，不知道 GC 或其他 Module type。
-2. **Module I/O 註冊**：adapter 選擇 `GVL_Module.<Type>[slot]`，再呼叫 Link Variable Manager 的型別安全註冊 method；manager 自動取得實際 Module root symbol。
+2. **Module instance preparation**：adapter 選擇 `GVL_Module.<Type>[slot]`，在 Begin／End session 之間，以 `M_RegisterModuleNode(variable, access)` 宣告每個 scalar 或 array element。Manager 從變數本身取得完整 ADS symbol，並驗證它屬於目前 Module root。
 3. **Mapping**：無 transform 時要求型別與大小相同並使用 `MEMCPY`；有 transform 時要求支援的數值型別，執行 `target = source * scale + offset`。
-4. **Reference binding**：Reference Manager 解析 `source`；adapter 解析 `targetPort`、以 `__QUERYINTERFACE` 驗證 specialized interface，並保存到 type-specific reference array。
+4. **Reference binding**：adapter 依自身固定契約，以語意名稱 pull required／optional reference；binding context 查找 JSON、透過 Reference Manager resolve `I_BaseUnit`，adapter 只需以 `__QUERYINTERFACE` 驗證 specialized interface。所有項目成功後才提交到 type-specific reference array；未取用的 JSON key 由 context 的 `M_End()` 視為 unknown port 拒絕。
 5. **Configured value binding**：VariableList／AlarmList 的相對 `source` 會加上 Module root symbol，再解析為 opaque `NodeHandle`。
 6. **Runtime config**：adapter 是唯一知道 `<ModuleType>_Runtime[slot]` 實際儲存位置的 implementation。
 
@@ -279,38 +288,57 @@ XYZ_ProcessUnit : ARRAY[1..Param_Config.MaxModulePerType] OF I_Process_BaseUnit;
 
 不同 Module type 擁有自己的 arrays，因此可使用相同 slot。Adapter 應是唯一知道這些 type-specific array 名稱的 Configuration module。
 
-### 4.2 擴充 Module type 與 Reference Port 契約
+### 4.2 定義 Module type 與 Reference 契約
 
-在 [`E_ModuleType`](../robust_solution_simple_module/Untitled1/Configuration/DUTs/E_ModuleType.TcDUT) 新增 enum member。JSON `moduleType` 必須與 `TO_STRING(E_ModuleType.XYZ)` 完全一致，不建立另一份手寫字串。
+為 adapter 選擇一個不超過 `T_ModuleTypeName` 長度的穩定名稱，例如 `XYZ`。稍後在 MAIN 將此名稱與 adapter instance 註冊；不需修改 framework 的 enum 或 manager。
 
 若 XYZ 有 configurable references：
 
-1. 建立具 `qualified_only`、`strict`、`to_string` attributes 的 `E_XYZReferencePort`。
-2. enum member 使用客戶應寫入 `targetPort` 的穩定名稱，並與 Module FB input pin 保持一致。
+1. 為每個 port 選擇具語意且穩定的 JSON key，例如 `ProcessUnit_BaseUnit`。
+2. required／optional 屬於 adapter 的固定契約，不由 JSON 指定。
 3. 非 Axis reference 建立直接或間接繼承 `I_BaseUnit` 的 specialized interface。
-4. Adapter 使用 `TO_STRING(enum member)` 解析 port，再以 `__QUERYINTERFACE` 驗證 BaseUnit 型別。
+4. Adapter 呼叫 `ReferenceBindings.M_TakeRequired()`／`M_TakeOptional()`，再以 `__QUERYINTERFACE` 驗證 BaseUnit 型別。
+5. 先將所有 typed interfaces 暫存在 local variables；nodes、references 與 End 驗證全部成功後，再寫入 `GVL_Module` storage。
 
 不可使用 `ANY`、pointer 或 `MEMCPY` 儲存 interface reference。
 
-### 4.3 新增型別安全的 Module I/O 註冊
+### 4.3 在 Adapter 宣告 Module nodes
 
-在 `FB_LinkVariableManager` 新增：
+不要在 `FB_LinkVariableManager` 新增 XYZ 專屬方法。Adapter 在自己的 `M_PrepareInstance()` 中開啟 registration session，並直接傳入實際變數：
 
 ```iecst
-M_RegisterXYZModule(
-    Module : FB_XYZ_Module,
-    ModuleSymbol => ...)
+bDeclared := LinkVariableManager.M_BeginModuleRegistration(
+    Address := ADR(GVL_Module.XYZ[Slot]),
+    Size := SIZEOF(GVL_Module.XYZ[Slot]),
+    ModuleConfig := ModuleConfig);
+
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+    Variable := GVL_Module.XYZ[Slot].HwInput.bReady,
+    Access := E_VariableAccess.ReadWrite);
+
+FOR nIndex := LOWER_BOUND(GVL_Module.XYZ[Slot].HwInput.Values, 1)
+    TO UPPER_BOUND(GVL_Module.XYZ[Slot].HwInput.Values, 1) DO
+    bDeclared := LinkVariableManager.M_RegisterModuleNode(
+        Variable := GVL_Module.XYZ[Slot].HwInput.Values[nIndex],
+        Access := E_VariableAccess.ReadWrite);
+END_FOR
+
+IF NOT LinkVariableManager.M_EndModuleRegistration(
+    ModuleSymbol => ModuleSymbol) THEN
+    ErrorMessage := LinkVariableManager.ErrorMessage;
+    RETURN;
+END_IF
 ```
 
-此 method 必須：
+通用 manager 會：
 
-1. 從 Module 位址取得實際 root symbol。
-2. 由 manager 組合所有允許公開給 config 的 member paths。
-3. 註冊實際位址、大小、`E_ConfigDataType` 與 access。
-4. 任一節點失敗時停止並保存第一個錯誤。
-5. 成功時回傳 Module root symbol。
+1. Begin 從 Module instance 位址取得 root symbol。
+2. 每次 declaration 從該變數位址與大小取得完整 symbol，不接受硬編碼 node path。
+3. 驗證完整 symbol 位於目前 root 之下，並註冊位址、型別、大小與 access。
+4. 拒絕 duplicate、unsupported primitive type、錯誤 access 與容量超限，並保存第一個錯誤。
+5. End 確認 config 引用的 relative paths 都已有 declaration，回傳 Module root symbol並關閉 session。
 
-可供 input/output mapping、VariableList 或 AlarmList 使用的 member 都必須在此註冊。未註冊 source 會在 Configuration 初始化時被 `M_ResolveReadableNode()` 拒絕。
+Adapter 應宣告完整 I/O surface。未被 config 引用的 declarations 仍占 `_Nodes` 容量，但不建立 link、NodeHandle read 或 cyclic 工作；config 引用不存在的 relative path 會在 End 被拒絕。
 
 建議 access 規則：
 
@@ -330,18 +358,16 @@ M_RegisterXYZModule(
 | Method | XYZ adapter 的責任 |
 |---|---|
 | `M_IsSlotSupported` | 驗證 XYZ slot。 |
-| `M_RegisterIo` | 選擇 `GVL_Module.XYZ[slot]`，呼叫 `M_RegisterXYZModule()` 並回傳 root symbol。 |
-| `M_BindReference` | 解析 port enum、拒絕 unknown/duplicate、驗證 specialized interface 並保存 reference。 |
-| `M_ValidateReferences` | 驗證所有必要 port。 |
+| `M_PrepareInstance` | 選擇 `GVL_Module.XYZ[slot]`；以通用 Begin／Register／End 宣告 nodes；pull required／optional references、驗證 typed interfaces，最後提交 references 並回傳 root symbol。 |
 | `M_ApplyRuntimeConfig` | 驗證 Module type 後寫入 `XYZ_Runtime[slot]`。 |
-| `M_ClearAllSlots` | 以 XYZ 自己的 capacity 清除所有 Runtime、reference 與 binding flags；必須可重複呼叫。 |
+| `M_ClearAllSlots` | 以 XYZ 自己的 capacity 清除所有 Runtime 與 typed references；必須可重複呼叫。 |
 
 不要在 `FB_ModuleConfigurationManager` 新增 `IF ModuleType = 'XYZ'` 分支。
 
 ### 4.5 在 MAIN 註冊並執行 XYZ
 
 1. 宣告 adapter instance。
-2. 以 `E_ModuleType.XYZ` 註冊 adapter。
+2. 以 `ModuleTypeName := 'XYZ'` 註冊 adapter。
 3. 註冊 XYZ 使用且可由 config 引用的共享實體 I/O／BaseUnit sources。
 4. 在 `M_CyclicInput()` 與 `M_CyclicOutput()` 之間新增 XYZ loop。
 5. 呼叫 `FB_XYZ_Module` 時傳入 `VariableNodeReader := _LinkVariableManager`。
@@ -355,25 +381,25 @@ Configuration 已透過 adapter 泛化，但 runtime execution 仍由 MAIN 明�
 仍需確認：
 
 - `MaxModuleTypes` 足以註冊新增 adapter。
-- `MaxConfigVariableNodes` 足以容納 enabled Module 公開的所有 nodes。
-- `MaxConfigReferenceNodes` 與 `MaxModuleReferenceBindings` 足夠。
-- JSON 範例中的 `moduleType`、`targetPort` 與 relative member paths 正確。
+- `MaxConfigVariableNodes` 足以容納 Beckhoff infrastructure nodes 與 enabled adapters 宣告的所有 nodes。
+- `MaxConfigReferenceNodes` 與 `MaxModuleReferences` 足夠。
+- JSON 範例中的 `moduleType`、`references` 語意 keys 與 relative member paths 正確。
 
 新增 Module type 本身不需要提升 schemaVersion；只有 JSON 結構或欄位語意改變才需升版與 migration。
 
 ## 5. 正常情況下不需修改的部分
 
-新 Module 若使用 schema v3 的共用模型，以下 implementation 不應修改：
+新 Module 若使用 schema v4 的共用模型，以下 implementation 不應修改：
 
 - `FB_ModuleConfigurationManager.M_ApplyConfiguration()`
 - `FB_ModuleTypeRegistry`
 - `FB_ReferenceManager`
 - `I_VariableNodeReader`
 - `FB_ConfigValueSnapshotReader`
-- `ST_ReferenceBindingFileConfig`
-- `referenceBindings`、`variableList`、`alarmList` 的 JSON 結構
+- `I_ModuleReferenceBindings`／`FB_ModuleReferenceBindingContext`
+- `references`、`variableList`、`alarmList` 的 JSON 結構
 
-需要新增的是 enum member、type-specific storage、I/O registration、adapter、composition-root registration 與 cyclic execution。
+需要新增的是 type-specific storage、adapter 內的 node/reference preparation、composition-root registration 與 cyclic execution。
 
 ## 6. 目前容量與限制
 
@@ -383,8 +409,8 @@ Configuration 已透過 adapter 泛化，但 runtime execution 仍由 MAIN 明�
 | `MaxModulePerType` | 6 | 每種 Module type 的 slot 與 array 容量。 |
 | `MaxTotalConfiguredModules` | 48 | JSON `modules[]` 總 entry 容量，包含 enabled 與 disabled。 |
 | `MaxModuleMappings` | 256 | 每個 Module input/output mapping 容量。 |
-| `MaxConfigVariableNodes` | 512 | 實體 I/O 與 enabled Module I/O 的總 node registry 容量。 |
-| `MaxModuleReferenceBindings` | 50 | 每個 Module reference bindings 容量。 |
+| `MaxConfigVariableNodes` | 512 | Beckhoff infrastructure nodes 與 enabled Module adapters 宣告 nodes 的總容量；現有最大配置為 436。 |
+| `MaxModuleReferences` | 50 | 每個 Module 的 `references` members 容量。 |
 | `MaxConfigReferenceNodes` | 100 | BaseUnit source registry 容量。 |
 | `MaxModuleVariable` | 100 | 每個 Module configured VariableList 容量。 |
 | `MaxConfiguredAlarmsPerModule` | 30 | 每個 Module configured AlarmList 容量。 |
@@ -395,12 +421,13 @@ Configuration 已透過 adapter 泛化，但 runtime execution 仍由 MAIN 明�
 
 ### 初始化
 
-- schema v3 可載入；schema v2 與 `adsPort` 被拒絕。
+- schema v4 可載入；schema v3、更早版本與 `adsPort` 被拒絕。
 - 沒有某 type 的 config 時，不註冊該 type Module I/O。
 - disabled Module 只寫入 disabled RuntimeConfig，不解析 NodeHandle。
 - 相同 type 的 duplicate slot 被拒絕；不同 type 可使用相同 slot。
 - enabled Module ID 跨 type 全域唯一。
-- unknown／duplicate／missing／type-incompatible reference port 使設定失敗。
+- unknown／duplicate／missing required／type-incompatible reference 使設定失敗；省略 optional reference 則成功。
+- Module node 的完整 symbol 由變數位址解析；非目前 root、duplicate、unsupported type、錯誤 access 或 config path 拼字錯誤會使設定失敗。
 - VariableList／AlarmList source 未註冊、`WriteOnly` 或 dataType 不相容時，整份 configuration 套用失敗。
 
 ### Runtime
@@ -415,22 +442,19 @@ Configuration 已透過 adapter 泛化，但 runtime execution 仍由 MAIN 明�
 ### 靜態與編譯
 
 - 新增的 DUT、FB、interface、adapter 已加入 PLC project。
-- 客戶可使用的 Module type／reference port 不以手寫 literal 比較。
-- TwinCAT XML、`git diff --check`、`CheckAllObjects` 與完整 PLC Build 通過。
-- 目前既有 Unit Test 需重寫，在完成重寫前不修改且不執行。
+- Module type 由 string-keyed registry 解析；reference keys 是 adapter 的穩定語意契約。
+- TwinCAT XML、`git diff --check`、`CheckAllObjects`、完整 PLC Build 與 TcUnit 通過。
 
 ## 8. 擴充工作摘要
 
 新增一種 Module type 的最小修改面：
 
 1. 新增 Module FB 與專屬 DUT。
-2. 在 `E_ModuleType` 新增 enum member。
-3. 在 `GVL_Module` 新增 type-specific FB、Runtime、Control、reference arrays。
-4. 視需要新增 specialized BaseUnit interface 與 reference-port enum。
-5. 在 `FB_LinkVariableManager` 新增型別安全的 Module I/O 註冊 method。
-6. 實作新的 `I_ModuleConfigurationAdapter`。
-7. 在 MAIN 註冊 adapter 與 BaseUnit sources。
-8. 在 MAIN 新增 cyclic loop，並注入 `I_VariableNodeReader`。
-9. 更新 config 範例、容量檢查與客戶文件。
+2. 在 `GVL_Module` 新增 type-specific FB、Runtime、Control、reference arrays。
+3. 視需要新增 specialized BaseUnit interface，並決定 required／optional reference 語意名稱。
+4. 實作新的 `I_ModuleConfigurationAdapter`；在 `M_PrepareInstance()` 宣告 nodes 並取得 typed references。
+5. 在 MAIN 以新的字串 key 註冊 adapter 與 BaseUnit sources。
+6. 在 MAIN 新增 cyclic loop，並注入 `I_VariableNodeReader`。
+7. 更新 config 範例、容量檢查與客戶文件。
 
-只要需求仍落在 schema v3 的共用設定模型內，Configuration Manager、Reference Manager、Module Type Registry、Variable Node Reader 與 Config Value Snapshot 的核心 implementation 都不需要知道新 Module 的存在。
+只要需求仍落在 schema v4 的共用設定模型內，Link／Configuration／Reference Manager、Module Type Registry、Variable Node Reader 與 Config Value Snapshot 的核心 implementation 都不需要知道新 Module 的存在。
