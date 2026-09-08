@@ -11,11 +11,9 @@ STRUCT
 	Send : ST_WaferTransferStatus;
 	Receive : ST_WaferTransferStatus;
 
-	// Passive only
+	// Passive only (both can be TRUE in multi-station chamber)
 	SendReady : BOOL;
 	ReceiveReady : BOOL;
-
-	//TransferState : E_TransferState;
 END_STRUCT
 END_TYPE
 ]]></Declaration>
