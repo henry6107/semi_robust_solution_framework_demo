@@ -26,41 +26,6 @@ END_VAR
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
-    <Method Name="M_ClearAllData" Id="{9ce708c8-fcc2-41b9-921d-4cf31cb789df}">
-      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ClearAllData
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[MEMSET(ADR(Status.Data), 0, SIZEOF(Status.Data));]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_ClearData" Id="{bda59455-e3cd-4825-a537-585be96d2e4e}">
-      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ClearData : BOOL
-VAR_INPUT
-	DataId : UDINT;
-END_VAR
-VAR
-	nIndex : UINT;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[M_ClearData := FALSE;
-IF DataId = 0 THEN
-	RETURN;
-END_IF
-
-FOR nIndex := 1 TO Param_Config.MaxServiceData DO
-	IF Status.Data.DataList[nIndex].Id = DataId THEN
-		MEMSET(ADR(Status.Data.DataList[nIndex]), 0, SIZEOF(Status.Data.DataList[nIndex]));
-		IF Status.Data.Count > 0 THEN
-			Status.Data.Count := Status.Data.Count - 1;
-		END_IF
-		Status.Data.Overflow := FALSE;
-		M_ClearData := TRUE;
-		RETURN;
-	END_IF
-END_FOR]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_AddError" Id="{4e62615f-0e50-466e-9f56-aa0713d5e3ab}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_AddError : BOOL
 VAR_INPUT
@@ -108,6 +73,41 @@ Status.ErrorList[nFirstEmpty].Active := TRUE;
 Status.ErrorList[nFirstEmpty].Acknowledged := FALSE;
 Status.ErrorList[nFirstEmpty].OccurrenceCount := 1;
 M_AddError := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearAllData" Id="{9ce708c8-fcc2-41b9-921d-4cf31cb789df}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ClearAllData
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(Status.Data), 0, SIZEOF(Status.Data));]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearData" Id="{bda59455-e3cd-4825-a537-585be96d2e4e}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ClearData : BOOL
+VAR_INPUT
+	DataId : UDINT;
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ClearData := FALSE;
+IF DataId = 0 THEN
+	RETURN;
+END_IF
+
+FOR nIndex := 1 TO Param_Config.MaxServiceData DO
+	IF Status.Data.DataList[nIndex].Id = DataId THEN
+		MEMSET(ADR(Status.Data.DataList[nIndex]), 0, SIZEOF(Status.Data.DataList[nIndex]));
+		IF Status.Data.Count > 0 THEN
+			Status.Data.Count := Status.Data.Count - 1;
+		END_IF
+		Status.Data.Overflow := FALSE;
+		M_ClearData := TRUE;
+		RETURN;
+	END_IF
+END_FOR]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_UpdateData" Id="{52f20474-69d8-45fd-9268-a22bd550dba9}">

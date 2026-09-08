@@ -6,8 +6,8 @@ STRUCT
 	RequestId : UDINT;
 	Command : E_AlarmAckCommand;
 	MainErrorId : UDINT;
-	bChangeRequest : BOOL;
 	ServiceId : UDINT;
+	bChangeRequest : BOOL;
 END_STRUCT
 END_TYPE
 ]]></Declaration>
