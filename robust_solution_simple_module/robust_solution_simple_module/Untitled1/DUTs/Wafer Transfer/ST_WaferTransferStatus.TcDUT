@@ -3,8 +3,6 @@
   <DUT Name="ST_WaferTransferStatus" Id="{5445009c-02f9-4817-8fcd-e0f304207b54}">
     <Declaration><![CDATA[TYPE ST_WaferTransferStatus :
 STRUCT
-	// Process Station identity; zero means no Station is selected for this direction.
-	StationId : UDINT;
 	Status : ST_ServiceStatus;
 	Signal : ST_TransferHandshakeSignal;
 END_STRUCT

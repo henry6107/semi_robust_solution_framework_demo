@@ -3,17 +3,24 @@
   <DUT Name="ST_WaferTransferResponse" Id="{14f9d5f9-39d1-4854-bedd-e4f7b43e695c}">
     <Declaration><![CDATA[TYPE ST_WaferTransferResponse :
 STRUCT
+	// Managed by module
 	// Non-zero and unique within one Module; array index is storage only.
 	EndpointId : UDINT;
+	SendServiceId : UDINT;
+	ReceiveServiceId : UDINT;
 	WaferHandlingType : E_WaferHandlingType;
 	Capability : E_TransferCapability;
 
-	Send : ST_WaferTransferStatus;
-	Receive : ST_WaferTransferStatus;
-
+	// Managed by module
 	// Passive only (both can be TRUE in multi-station chamber)
 	SendReady : BOOL;
 	ReceiveReady : BOOL;
+	
+	// Managed by service
+	Send : ST_WaferTransferStatus;
+	Receive : ST_WaferTransferStatus;
+	
+	MaterialInfo : ST_MaterialInfo;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

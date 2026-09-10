@@ -10,6 +10,8 @@ STRUCT
 	LiftPinAxisMoveVelCCW : ST_GCLiftPinAxisMoveVelParam;
 	LiftPinAxisMoveAbs : ST_GCLiftPinAxisMoveAbsParam;
 	SingleProcess : ST_GCSingleProcessParam;
+	WaferReceive : ST_WaferTransferParam;
+	WaferSend : ST_WaferTransferParam;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

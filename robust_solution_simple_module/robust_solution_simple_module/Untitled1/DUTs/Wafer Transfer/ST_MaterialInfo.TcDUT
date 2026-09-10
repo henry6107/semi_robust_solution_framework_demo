@@ -3,9 +3,9 @@
   <DUT Name="ST_MaterialInfo" Id="{061e7313-e8ac-4761-95ce-55212318f09b}">
     <Declaration><![CDATA[TYPE ST_MaterialInfo :
 STRUCT
-	MaterialPresence : BOOL;
+	MaterialPresence : BOOL;	// Could be sensor signal
 	OwnerShip : BOOL;
-	ReceiveContext : E_ReceiveState;
+	ReceiveState : E_ReceiveState;
 	OperationState : E_OperationState;
 	MaterialContext : ST_MaterialContext;
 END_STRUCT

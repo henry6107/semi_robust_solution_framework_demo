@@ -30,6 +30,8 @@ VAR
 	_LiftPinAxisMoveVelCCWService : FB_GCLiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_GCLiftPinAxisMoveAbsServices;
 	_SingleProcessService : FB_GCSingleProcessService;
+	_WaferSendService : FB_GCWaferSendService;
+	_WaferReceiveService : FB_GCWaferReceiveService;
 
 END_VAR
 ]]></Declaration>
@@ -39,14 +41,28 @@ IF (SpinAxis_BaseUnit = 0) OR (LiftPinAxis_BaseUnit = 0) THEN
 	RETURN;
 END_IF
 
+// Config wafer transfer endpoint
+ModuleStatus.WaferTransferResponseList[1].EndpointId := 1;
+ModuleStatus.WaferTransferResponseList[1].WaferHandlingType := E_WaferHandlingType.Passive;
+ModuleStatus.WaferTransferResponseList[1].Capability := E_TransferCapability.Bidirectional;
+ModuleStatus.WaferTransferResponseList[1].SendServiceId := E_GCServiceId.WaferSend;
+ModuleStatus.WaferTransferResponseList[1].ReceiveServiceId := E_GCServiceId.WaferReceive; 
+
 _ServiceCtrlView.ByName := ServiceCtrl;
 M_UpdateModule(
 	ServiceControls := _ServiceCtrlView.ByIndex,
 	ServiceStatuses := _ServiceStatusView.ByIndex);
 
-// Updata status
+// Update status
 ServiceStatus := _ServiceStatusView.ByName;
-]]></ST>
+
+// Link status to module
+ModuleStatus.WaferTransferResponseList[1].Send.Status := ServiceStatus.WaferSend;
+ModuleStatus.WaferTransferResponseList[1].Send.Signal := _WaferSendService.SignalOut;
+ModuleStatus.WaferTransferResponseList[1].SendReady := _AllServicesIdle;
+ModuleStatus.WaferTransferResponseList[1].Receive.Status := ServiceStatus.WaferReceive;
+ModuleStatus.WaferTransferResponseList[1].Receive.Signal := _WaferReceiveService.SignalOut;
+ModuleStatus.WaferTransferResponseList[1].ReceiveReady := _AllServicesIdle;]]></ST>
     </Implementation>
     <Folder Name="ModuleUpdate" Id="{a9f2fa3e-34f5-43fc-8823-0e0dbffba0ff}" />
     <Method Name="H_UpdateBaseUnit" Id="{23db425b-9082-4959-8f76-43820da7ead4}" FolderPath="ModuleUpdate\">
@@ -115,6 +131,26 @@ _SingleProcessService(
 	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
 	ServiceId := E_GCServiceId.SingleProcess,
 	Status => _ServiceStatusView.ByName.SingleProcess);
+
+// Both directions share Station material and hardware storage.
+// TODO: Coordinate Send/Receive access when implementing the transfer sequences.
+_WaferSendService(
+	Ctrl := _ServiceCtrlView.ByName.WaferSend,
+	Context := _ServiceContext,
+	ServiceId := E_GCServiceId.WaferSend,
+	MaterialInfo := ModuleStatus.WaferTransferResponseList[1].MaterialInfo,
+	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
+	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
+	Status => _ServiceStatusView.ByName.WaferSend);
+
+_WaferReceiveService(
+	Ctrl := _ServiceCtrlView.ByName.WaferReceive,
+	Context := _ServiceContext,
+	ServiceId := E_GCServiceId.WaferReceive,
+	MaterialInfo := ModuleStatus.WaferTransferResponseList[1].MaterialInfo,
+	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
+	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
+	Status => _ServiceStatusView.ByName.WaferReceive);
 ]]></ST>
       </Implementation>
     </Method>
@@ -130,7 +166,9 @@ _SpinAxisMoveVelCWService.Param := ServiceParam.SpinAxisMoveVelCW;
 _LiftPinAxisMoveVelCWService.Param := ServiceParam.LiftPinAxisMoveVelCW;
 _LiftPinAxisMoveVelCCWService.Param := ServiceParam.LiftPinAxisMoveVelCCW;
 _LiftPinAxisMoveAbsService.Param := ServiceParam.LiftPinAxisMoveAbs;
-_SingleProcessService.Param := ServiceParam.SingleProcess;]]></ST>
+_SingleProcessService.Param := ServiceParam.SingleProcess;
+_WaferSendService.Param := ServiceParam.WaferSend;
+_WaferReceiveService.Param := ServiceParam.WaferReceive;]]></ST>
       </Implementation>
     </Method>
   </POU>

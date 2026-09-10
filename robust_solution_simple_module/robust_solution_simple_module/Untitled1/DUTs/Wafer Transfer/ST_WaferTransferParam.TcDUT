@@ -1,10 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <DUT Name="ST_WaferTransferCtrl" Id="{fbebe599-2e1e-42f5-9f7c-1dc0ab4296c0}">
-    <Declaration><![CDATA[TYPE ST_WaferTransferCtrl :
+  <DUT Name="ST_WaferTransferParam" Id="{8b20b1b5-25a3-4c7e-9f7a-c7836bf3a0a6}">
+    <Declaration><![CDATA[TYPE ST_WaferTransferParam :
 STRUCT
-	Ctrl : ST_ServiceCtrl;
-	Param : ST_WaferTransferParam;
+	MaterialContext : ST_MaterialContext;
 	Signal : ST_TransferHandshakeSignal;
 END_STRUCT
 END_TYPE

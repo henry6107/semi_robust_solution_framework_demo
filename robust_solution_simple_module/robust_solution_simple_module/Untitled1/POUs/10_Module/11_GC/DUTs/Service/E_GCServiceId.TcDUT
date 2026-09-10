@@ -13,7 +13,9 @@ TYPE E_GCServiceId :
 	LiftPinAxisMoveVelCW := 4,
 	LiftPinAxisMoveVelCCW := 5,
 	LiftPinAxisMoveAbs := 6,
-	SingleProcess := 7
+	SingleProcess := 7,
+	WaferSend := 8,
+	WaferReceive := 9
 ) UDINT;
 END_TYPE
 ]]></Declaration>
