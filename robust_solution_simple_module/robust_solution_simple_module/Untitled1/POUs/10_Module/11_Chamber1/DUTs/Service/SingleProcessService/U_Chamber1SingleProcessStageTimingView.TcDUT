@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="U_Chamber1SingleProcessStageTimingView" Id="{39863beb-58d4-4cac-a8f9-a0b6d99fb32a}">
+    <Declaration><![CDATA[TYPE U_Chamber1SingleProcessStageTimingView :
+UNION
+	ByName : ST_Chamber1SingleProcessStageTimings;
+	ByIndex : ARRAY[1..8] OF ST_Chamber1SingleProcessStageTiming;
+END_UNION
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

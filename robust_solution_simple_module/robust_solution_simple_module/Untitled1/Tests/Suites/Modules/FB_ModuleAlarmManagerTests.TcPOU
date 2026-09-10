@@ -32,7 +32,7 @@ Alarm.ServiceId := 11;
 Alarm.MainErrorId := 101;
 Alarm.SourceErrorId := 16#1234;
 Alarm.Message := 'First occurrence';
-Alarm.Path := 'GC.Service11';
+Alarm.Path := 'Chamber1.Service11';
 Alarm.Severity := E_Severity.Alarm;
 Alarm.DateTime := '20260828090000000';
 

@@ -3,7 +3,7 @@
   <POU Name="FB_FakeModuleConfigurationAdapter" Id="{f9933f49-e15e-407e-b8a1-b7a4a5184993}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_FakeModuleConfigurationAdapter IMPLEMENTS I_ModuleConfigurationAdapter
 VAR
-	_Resource : ST_GC_Signal_In;
+	_Resource : ST_Chamber1_Signal_In;
 END_VAR
 ]]></Declaration>
     <Implementation>

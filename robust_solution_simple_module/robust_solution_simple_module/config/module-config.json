@@ -3,7 +3,7 @@
   "modules": [
     {
       "enabled": true,
-      "moduleType": "GC",
+      "moduleType": "Chamber1",
       "slot": 1,
       "id": 1,
       "inputMappings": [

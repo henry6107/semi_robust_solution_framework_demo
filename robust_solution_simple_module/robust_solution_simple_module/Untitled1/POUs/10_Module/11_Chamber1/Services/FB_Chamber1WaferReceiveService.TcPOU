@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Chamber1WaferReceiveService" Id="{31c0f8a3-2bb7-4853-987f-7b1795d30426}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1WaferReceiveService EXTENDS FB_ServiceBase
+VAR_INPUT
+	Param : ST_WaferTransferParam;
+	SpinAxis_BaseUnit : I_Axis_BaseUnit;
+	LiftPinAxis_BaseUnit : I_Axis_BaseUnit;
+END_VAR
+
+VAR_IN_OUT
+	// Shared with the opposite direction; arbitration belongs to the future transfer flow.
+	MaterialInfo : ST_MaterialInfo;
+END_VAR
+
+VAR_OUTPUT
+	SignalOut : ST_TransferHandshakeSignal;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.ReceiveWafer);]]></ST>
+    </Implementation>
+    <Folder Name="StateAction" Id="{60d1dd31-2224-4849-ae56-5d896fbf2a68}" />
+    <Method Name="H_OnAborting" Id="{f6237217-291f-47f3-85aa-1d639fca1749}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnAborting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// TODO: Implement abort cleanup and material reconciliation for an interrupted transfer.
+// The skeleton acquires no resources and issues no hardware commands.
+H_OnAborting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnCompleting" Id="{45ff17a5-ca23-45cb-ab02-4b17bc7ba00f}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnCompleting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// TODO: Finish handshake cleanup and release resources after confirmed completion.
+H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnExecute" Id="{03bc22fb-3dc2-4986-a5e4-87270d37378e}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// TODO: Implement receiving into Chamber1, handshake sequencing, and timeout handling.
+// TransferReady advertises Endpoint availability; SignalOut.Ready is a handshake signal.
+// TODO: Update MaterialInfo with the received MaterialContext only after confirmed receive completion.
+// Keep the skeleton active until Stop/Abort; do not report a completed transfer.
+H_OnExecute := E_PackMLHookResult.Busy;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnResetting" Id="{2d387bfa-b920-4024-aa27-c9ea79ce1983}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnResetting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
+// TODO: Reset transfer-local state without unconditionally clearing the Station material.
+H_OnResetting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStarting" Id="{b779e2ff-ae11-4e0a-a9e3-c1b8c4be40d0}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// TODO: Validate Param against StationId, latch transfer data, and reserve resources.
+H_OnStarting := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopping" Id="{434a4009-61a5-420a-a161-ff8cb745394e}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStopping : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// TODO: Withdraw handshake/motion requests and complete owned-resource cleanup.
+// The skeleton acquires no resources and issues no hardware commands.
+H_OnStopping := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

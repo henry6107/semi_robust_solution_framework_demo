@@ -1,0 +1,566 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Chamber1SpinAxisMoveAbsServiceTests" Id="{976b21c2-7581-4c58-b755-8768083df5a7}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1SpinAxisMoveAbsServiceTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[SuccessfulMoveAbsCompletesAndReleasesAxis();
+MoveAbsErrorStopsSafelyAndRecordsError();
+InvalidParamStopsStartingWithoutAcquiringAxis();
+ResourceAcquireFailureStopsStartingWithoutDisturbingOwner();]]></ST>
+    </Implementation>
+    <Method Name="MoveAbsErrorStopsSafelyAndRecordsError" Id="{b9229082-c8d5-4882-95e8-07156341bc38}">
+      <Declaration><![CDATA[METHOD MoveAbsErrorStopsSafelyAndRecordsError
+VAR_INST
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+	Service : FB_Chamber1SpinAxisMoveAbsServices;
+	Ctrl : ST_ServiceCtrl;
+	Param : ST_Chamber1SpinAxisMoveAbsParam;
+	Context : ST_ServiceContext;
+	MoveWithdrawalCall : ST_FakeAxisCall;
+	StopCall : ST_FakeAxisCall;
+	nHistoryBeforeStopping : UINT;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('MoveAbsErrorStopsSafelyAndRecordsError');
+
+CASE nPhase OF
+	0:
+		// Set param
+		FakeAxis.M_ResetScenario();
+		Axis := FakeAxis;
+		Param.Position := 50;
+		Param.Velocity := 10;
+		Param.Acceleration := 20;
+		Param.Deceleration := 30;
+		Context.ModuleId := 1;
+		Context.UtcDateTime := '20260813123456007';
+		
+		// Set script: move abs. failed and then stop success
+		AssertTrue(
+			Condition := FakeAxis.M_QueueResult(
+				Operation := E_FakeAxisOperation.MoveAbs,
+				AfterActiveCycles := 1,
+				Done := FALSE,
+				InVelocity := FALSE,
+				Error := TRUE,
+				ErrorId := 16#1234),
+			Message := 'MoveAbs Error script must be accepted.');
+		AssertTrue(
+			Condition := FakeAxis.M_QueueResult(
+				Operation := E_FakeAxisOperation.Stop,
+				AfterActiveCycles := 2,
+				Done := TRUE,
+				InVelocity := FALSE,
+				Error := FALSE,
+				ErrorId := 0),
+			Message := 'Stop Done script must be accepted.');
+		
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+		nPhase := 1;
+
+	1:
+		// Set PackML cmd: Clear
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+
+		// Reset request flag
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+
+		// Set PackML cmd: Reset
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+		nPhase := 2;
+
+	2:
+		// Reset request flag
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+
+		// Set PackML cmd: Start
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Start must reach Execute.');
+		nPhase := 3;
+
+	3:
+		// Reset request flag & 1st call of move abs. !!!
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'MoveAbs Error is reported after the scripted active scan.');
+		nPhase := 4;
+
+	4:
+		// 2nd call of move abs., error should happened
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'MoveAbs Error must queue Stop for the next scan.');
+		
+		// Check certain alarm emerged
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_Chamber1ErrorCode.Axis_Command_Error_During_Execute, Message := 'MoveAbs Error must be recorded.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].SourceErrorId = 16#1234, Message := 'MoveAbs Error must preserve the Axis source error ID.');
+		AssertTrue(Condition := Service.Status.ErrorList[2].MainErrorId = 0, Message := 'MoveAbs Error must only be recorded once.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 22), Message := 'Queued Stop must retain ownership.');
+		nPhase := 5;
+
+	5:
+		nHistoryBeforeStopping := FakeAxis.HistoryCount;
+		
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Stopping, Message := 'Queued Stop must enter Stopping on the next scan.');
+		
+		// Check withdrawal move abs. cmd
+		AssertTrue(Condition := FakeAxis.M_GetCall(Index := nHistoryBeforeStopping + 1, CallRecord => MoveWithdrawalCall), Message := 'Stopping must record MoveAbs withdrawal.');
+		AssertTrue(Condition := MoveWithdrawalCall.Operation = E_FakeAxisOperation.MoveAbs, Message := 'Stopping must withdraw MoveAbs before Stop.');
+		AssertTrue(Condition := MoveWithdrawalCall.Accepted, Message := 'MoveAbs withdrawal must be accepted.');
+		AssertFalse(Condition := MoveWithdrawalCall.Execute, Message := 'Stopping must set MoveAbs Execute to FALSE.');
+		
+		// Check stop cmd has been called
+		AssertTrue(Condition := FakeAxis.M_GetCall(Index := nHistoryBeforeStopping + 2, CallRecord => StopCall), Message := 'Stopping must record Stop after MoveAbs withdrawal.');
+		AssertTrue(Condition := StopCall.Operation = E_FakeAxisOperation.Stop, Message := 'Stopping must issue Stop after MoveAbs withdrawal.');
+		AssertTrue(Condition := StopCall.Accepted, Message := 'Stop must be accepted by the owned Axis.');
+		AssertTrue(Condition := StopCall.Execute, Message := 'Stop Execute must be TRUE while pending.');
+		AssertTrue(Condition := StopCall.Deceleration = Param.Deceleration, Message := 'Stop must preserve Deceleration.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 22), Message := 'Pending Stop must retain ownership.');
+		nPhase := 6;
+
+	6:
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Stop cmd not finished yet according to script
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Stopping, Message := 'Stop must remain Stopping until Done feedback is observed.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 22), Message := 'Stop pending scan must retain ownership.');
+		nPhase := 7;
+
+	7:
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 22);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Stop Done must reach Stopped.');
+		
+		// Check resource has been released
+		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 22), Message := 'Stop Done must release Axis ownership.');
+		
+		// Check alarm still exist
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_Chamber1ErrorCode.Axis_Command_Error_During_Execute, Message := 'MoveAbs Error must remain recorded after stopping.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].SourceErrorId = 16#1234, Message := 'Recorded MoveAbs source error ID must remain unchanged.');
+		AssertTrue(Condition := Service.Status.ErrorList[2].MainErrorId = 0, Message := 'Repeated scans must not duplicate the MoveAbs Error.');
+		
+		// Check withdrawal stop cmd
+		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => StopCall), Message := 'Stop falling edge must be recorded.');
+		AssertTrue(Condition := StopCall.Operation = E_FakeAxisOperation.Stop, Message := 'Final cleanup call must be Stop.');
+		AssertTrue(Condition := StopCall.Accepted, Message := 'Stop falling edge must occur before ownership is released.');
+		AssertFalse(Condition := StopCall.Execute, Message := 'Stop Done must set Stop Execute to FALSE.');
+		AssertFalse(Condition := FakeAxis.HistoryOverflowed, Message := 'Fake Axis call history must not overflow.');
+		nPhase := 0;
+		
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SuccessfulMoveAbsCompletesAndReleasesAxis" Id="{7f47f8ae-15f2-4e92-b2c7-8cd52301a876}">
+      <Declaration><![CDATA[METHOD SuccessfulMoveAbsCompletesAndReleasesAxis
+VAR_INST
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+	Service : FB_Chamber1SpinAxisMoveAbsServices;
+	Ctrl : ST_ServiceCtrl;
+	Param : ST_Chamber1SpinAxisMoveAbsParam;
+	Context : ST_ServiceContext;
+	CallRecord : ST_FakeAxisCall;
+	nPhase : UINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('SuccessfulMoveAbsCompletesAndReleasesAxis');
+
+CASE nPhase OF
+	0:
+		// Set param
+		FakeAxis.M_ResetScenario();
+		Axis := FakeAxis;
+		Param.Position := 125.25;
+		Param.Velocity := 15;
+		Param.Acceleration := 25;
+		Param.Deceleration := 35;
+		Context.ModuleId := 1;
+		Context.UtcDateTime := '20260813123456007';
+		
+		// Set script
+		AssertTrue(
+			Condition := FakeAxis.M_QueueResult(
+				Operation := E_FakeAxisOperation.MoveAbs,
+				AfterActiveCycles := 2,
+				Done := TRUE,
+				InVelocity := FALSE,
+				Error := FALSE,
+				ErrorId := 0),
+			Message := 'MoveAbs Done script must be accepted.');
+		
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Initial scan must reach Aborted.');
+		nPhase := 1;
+
+	1:
+		// Set PackML cmd: Clear
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Clear must reach Stopped.');
+		
+		// Reset request flag
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+
+		// Set PackML cmd: Reset
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Idle, Message := 'Reset must reach Idle.');
+		nPhase := 2;
+
+	2:
+		// Reset request flag
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Set PackML cmd: Start
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Start must reach Execute.');
+		// Check service get resource
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 21), Message := 'Execute must own the Axis.');
+		nPhase := 3;
+
+	3:
+		// Reset request flag & 1st call of move abs. !!!
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check called cmd is correct
+		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => CallRecord), Message := 'MoveAbs command must be recorded.');
+		AssertTrue(Condition := CallRecord.Operation = E_FakeAxisOperation.MoveAbs, Message := 'Execute must issue MoveAbs.');
+		AssertTrue(Condition := CallRecord.Accepted, Message := 'MoveAbs must be accepted by the owned Axis.');
+		AssertTrue(Condition := CallRecord.Execute, Message := 'MoveAbs Execute must be TRUE.');
+		AssertTrue(Condition := CallRecord.OwnerId = 21, Message := 'MoveAbs must use the Service owner ID.');
+		AssertTrue(Condition := CallRecord.Position = Param.Position, Message := 'MoveAbs must preserve Position.');
+		AssertTrue(Condition := CallRecord.Velocity = Param.Velocity, Message := 'MoveAbs must preserve Velocity.');
+		AssertTrue(Condition := CallRecord.Acceleration = Param.Acceleration, Message := 'MoveAbs must preserve Acceleration.');
+		AssertTrue(Condition := CallRecord.Deceleration = Param.Deceleration, Message := 'MoveAbs must preserve Deceleration.');
+		nPhase := 4;
+
+	4:
+		// 2nd call of move abs.
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Pending MoveAbs must remain in Execute.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 21), Message := 'Pending MoveAbs must retain ownership.');
+		nPhase := 5;
+
+	5:
+		// 3rd call of move abs.
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Completing, Message := 'MoveAbs Done must enter Completing.');
+		
+		// Check still own the resource
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 21), Message := 'Completing entry must retain ownership until MoveAbs is withdrawn.');
+		nPhase := 6;
+
+	6:
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 21);
+		FakeAxis.M_CyclicUpdate();
+		
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Complete, Message := 'Completing must reach Complete.');
+		
+		// Check release the resource
+		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 21), Message := 'Complete must release Axis ownership.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = 0, Message := 'Successful MoveAbs must not create a Service error.');
+		AssertTrue(Condition := FakeAxis.M_GetCall(Index := FakeAxis.HistoryCount, CallRecord => CallRecord), Message := 'MoveAbs withdrawal must be recorded.');
+		AssertTrue(Condition := CallRecord.Operation = E_FakeAxisOperation.MoveAbs, Message := 'Completing must withdraw MoveAbs.');
+		AssertTrue(Condition := CallRecord.Accepted, Message := 'MoveAbs withdrawal must occur before ownership is released.');
+		AssertFalse(Condition := CallRecord.Execute, Message := 'Completing must set MoveAbs Execute to FALSE.');
+		AssertFalse(Condition := FakeAxis.HistoryOverflowed, Message := 'Fake Axis call history must not overflow.');
+		nPhase := 0;
+		
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="InvalidParamStopsStartingWithoutAcquiringAxis" Id="{643ff920-ab11-426a-ae60-49290445b075}">
+      <Declaration><![CDATA[METHOD InvalidParamStopsStartingWithoutAcquiringAxis
+VAR_INST
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+	Service : FB_Chamber1SpinAxisMoveAbsServices;
+	Ctrl : ST_ServiceCtrl;
+	Param : ST_Chamber1SpinAxisMoveAbsParam;
+	Context : ST_ServiceContext;
+	nPhase : UINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('InvalidParamStopsStartingWithoutAcquiringAxis');
+
+CASE nPhase OF
+	0:
+		// Set invalid param
+		FakeAxis.M_ResetScenario();
+		Axis := FakeAxis;
+		Param.Position := 50;
+		Param.Velocity := 0;
+		Param.Acceleration := 20;
+		Param.Deceleration := 30;
+		Context.ModuleId := 1;
+		Context.UtcDateTime := '20260813123456007';
+
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 23);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Initial scan must reach Aborted.');
+		nPhase := 1;
+
+	1:
+		// Set PackML cmd: Clear
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 23);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Clear must reach Stopped.');
+
+		// Reset request flag
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 23);
+		FakeAxis.M_CyclicUpdate();
+
+		// Set PackML cmd: Reset
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 23);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Idle, Message := 'Reset must reach Idle.');
+		nPhase := 2;
+
+	2:
+		// Reset request flag
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 23);
+		FakeAxis.M_CyclicUpdate();
+
+		// Set PackML cmd: Start
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 23);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service remains in Starting until queued Stop is processed
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Starting, Message := 'Invalid Param must remain in Starting until queued Stop is processed.');
+
+		// Check certain alarm emerged
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_Chamber1ErrorCode.Invalid_Param, Message := 'Invalid Velocity must record Invalid_Param.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].SourceErrorId = 0, Message := 'Invalid Param must use SourceErrorId zero.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].Message = 'Velocity must be greater than zero.', Message := 'Invalid Velocity must have a specific message.');
+
+		// Check service did not acquire or call the Axis
+		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 23), Message := 'Invalid Param must not acquire Axis ownership.');
+		AssertTrue(Condition := FakeAxis.HistoryCount = 0, Message := 'Invalid Param must not issue an Axis command.');
+		nPhase := 3;
+
+	3:
+		// Reset request flag & process queued Stop
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 23);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service safely returns to Stopped
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Queued Stop must return invalid Starting to Stopped.');
+
+		// Check no duplicate alarm or Axis side effect emerged
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_Chamber1ErrorCode.Invalid_Param, Message := 'Invalid Param must remain recorded after stopping.');
+		AssertTrue(Condition := Service.Status.ErrorList[2].MainErrorId = 0, Message := 'Invalid Param must only be recorded once.');
+		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 23), Message := 'Stopped Service must not own the Axis.');
+		AssertTrue(Condition := FakeAxis.HistoryCount = 0, Message := 'Stopping without ownership must not issue an Axis command.');
+		nPhase := 0;
+
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResourceAcquireFailureStopsStartingWithoutDisturbingOwner" Id="{a521809d-9e41-4ac3-86fe-42ce33c3d094}">
+      <Declaration><![CDATA[METHOD ResourceAcquireFailureStopsStartingWithoutDisturbingOwner
+VAR_INST
+	FakeAxis : FB_FakeAxis_BaseUnit;
+	Axis : I_Axis_BaseUnit;
+	Service : FB_Chamber1SpinAxisMoveAbsServices;
+	Ctrl : ST_ServiceCtrl;
+	Param : ST_Chamber1SpinAxisMoveAbsParam;
+	Context : ST_ServiceContext;
+	nPhase : UINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ResourceAcquireFailureStopsStartingWithoutDisturbingOwner');
+
+CASE nPhase OF
+	0:
+		// Set valid param
+		FakeAxis.M_ResetScenario();
+		Axis := FakeAxis;
+		Param.Position := 50;
+		Param.Velocity := 10;
+		Param.Acceleration := 20;
+		Param.Deceleration := 30;
+		Context.ModuleId := 1;
+		Context.UtcDateTime := '20260813123456007';
+
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 24);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Initial scan must reach Aborted.');
+		nPhase := 1;
+
+	1:
+		// Set PackML cmd: Clear
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 24);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Clear must reach Stopped.');
+
+		// Reset request flag
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 24);
+		FakeAxis.M_CyclicUpdate();
+
+		// Set PackML cmd: Reset
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 24);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service run into certain state
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Idle, Message := 'Reset must reach Idle.');
+		nPhase := 2;
+
+	2:
+		// Reset request flag
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 24);
+		FakeAxis.M_CyclicUpdate();
+
+		// Reserve the Axis with another owner
+		AssertTrue(Condition := Axis.M_AcquireResource(OwnerId := 99), Message := 'Another owner must reserve the Axis.');
+
+		// Set PackML cmd: Start
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+
+		// Cyclic update
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 24);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service remains in Starting until queued Stop is processed
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Starting, Message := 'Resource acquire failure must remain in Starting until queued Stop is processed.');
+
+		// Check certain alarm emerged
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_Chamber1ErrorCode.Resource_Acquire_Failed_During_Starting, Message := 'Resource contention must be recorded.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].SourceErrorId = 0, Message := 'Resource contention must use SourceErrorId zero.');
+
+		// Check existing ownership was not disturbed
+		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 24), Message := 'Service must not acquire the reserved Axis.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 99), Message := 'Existing Axis owner must remain unchanged.');
+		AssertTrue(Condition := FakeAxis.HistoryCount = 0, Message := 'Acquire failure must not issue an Axis command.');
+		nPhase := 3;
+
+	3:
+		// Reset request flag & process queued Stop
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Service(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 24);
+		FakeAxis.M_CyclicUpdate();
+
+		// Check service safely returns to Stopped
+		AssertTrue(Condition := Service.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Queued Stop must return resource failure to Stopped.');
+
+		// Check existing ownership and alarm remain unchanged
+		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 24), Message := 'Stopped Service must not own the Axis.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 99), Message := 'Stopping must not release another owner resource.');
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = E_Chamber1ErrorCode.Resource_Acquire_Failed_During_Starting, Message := 'Resource contention must remain recorded after stopping.');
+		AssertTrue(Condition := Service.Status.ErrorList[2].MainErrorId = 0, Message := 'Resource contention must only be recorded once.');
+		AssertTrue(Condition := FakeAxis.HistoryCount = 0, Message := 'Stopping without ownership must not issue an Axis command.');
+		nPhase := 0;
+
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

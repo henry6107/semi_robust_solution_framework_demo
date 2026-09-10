@@ -9,7 +9,7 @@ VAR
 	_ReferenceBindingContext : FB_ModuleReferenceBindingContext;
 	_FakeReferenceBindings : FB_FakeModuleReferenceBindings;
 	_ModuleTypeRegistry : FB_ModuleTypeRegistry;
-	_GCAdapter : FB_GCModuleConfigurationAdapter;
+	_Chamber1Adapter : FB_Chamber1ModuleConfigurationAdapter;
 	_FakeAdapter : FB_FakeModuleConfigurationAdapter;
 	_IncompatibleBaseUnit : FB_FakeBaseUnit;
 	_ModuleConfig : ST_ModuleFileConfig;
@@ -25,7 +25,7 @@ END_VAR
 END_IF
 
 IF _InfrastructurePrepared THEN
-	GCDeclarationsUseResolvedFullSymbols();
+	Chamber1DeclarationsUseResolvedFullSymbols();
 ModuleSlotsResolveDistinctFullSymbols();
 MissingModuleDeclarationFailsEndSession();
 RegistrationSessionEnforcesOrdering();
@@ -34,8 +34,8 @@ ReferenceBindingsEnforceFrameworkContract();
 NewModuleTypeUsesGenericFrameworkSeam();
 END_IF]]></ST>
     </Implementation>
-    <Method Name="GCDeclarationsUseResolvedFullSymbols" Id="{6eed6450-f0f0-4b23-9a5b-21bd0e767cc9}">
-      <Declaration><![CDATA[METHOD GCDeclarationsUseResolvedFullSymbols
+    <Method Name="Chamber1DeclarationsUseResolvedFullSymbols" Id="{6eed6450-f0f0-4b23-9a5b-21bd0e767cc9}">
+      <Declaration><![CDATA[METHOD Chamber1DeclarationsUseResolvedFullSymbols
 VAR
 	bOk : BOOL;
 	nNodeHandle : UINT;
@@ -45,7 +45,7 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[TEST('GCDeclarationsUseResolvedFullSymbols');
+        <ST><![CDATA[TEST('Chamber1DeclarationsUseResolvedFullSymbols');
 
 _LinkVariableManager.M_ClearLinks();
 _LinkVariableManager.M_ClearModuleNodes();
@@ -56,7 +56,7 @@ AssertTrue(Condition := bOk, Message := 'The first Axis BaseUnit must be availab
 bOk := _ReferenceManager.M_RegisterReference(BaseUnit := GVL_IO.NC_Axis2);
 AssertTrue(Condition := bOk, Message := 'The second Axis BaseUnit must be available to the binding context.');
 
-_ModuleConfig.ModuleType := 'GC';
+_ModuleConfig.ModuleType := 'Chamber1';
 _ModuleConfig.Slot := 1;
 _ModuleConfig.InputMappingCount := 2;
 _ModuleConfig.InputMappings[1].Target := 'HwInput.bDoorClosed';
@@ -80,35 +80,35 @@ bOk := _ReferenceBindingContext.M_Begin(
 AssertTrue(Condition := bOk, Message := 'The semantic reference map must initialize before adapter preparation.');
 ReferenceBindings := _ReferenceBindingContext;
 
-bOk := _GCAdapter.M_PrepareInstance(
+bOk := _Chamber1Adapter.M_PrepareInstance(
 	Slot := 1,
 	ReferenceBindings := ReferenceBindings,
 	ModuleConfig := _ModuleConfig,
 	LinkVariableManager := _LinkVariableManager,
 	ModuleSymbol => sModuleSymbol,
 	ErrorMessage => sErrorMessage);
-AssertTrue(Condition := bOk, Message := 'The GC adapter must declare its resources through the generic registration session.');
+AssertTrue(Condition := bOk, Message := 'The Chamber1 adapter must declare its resources through the generic registration session.');
 bOk := _ReferenceBindingContext.M_End();
-AssertTrue(Condition := bOk, Message := 'The GC adapter must consume every configured semantic reference.');
+AssertTrue(Condition := bOk, Message := 'The Chamber1 adapter must consume every configured semantic reference.');
 AssertTrue(Condition := sModuleSymbol <> '', Message := 'A successful registration must return the Module root symbol.');
 
 bOk := _LinkVariableManager.M_ResolveReadableNode(
 	Name := CONCAT(sModuleSymbol, '.HwInput.bDoorClosed'),
 	ExpectedDataType := E_ConfigDataType.Boolean,
 	NodeHandle => nNodeHandle);
-AssertTrue(Condition := bOk, Message := 'A referenced GC scalar must be materialized with its semantic path.');
+AssertTrue(Condition := bOk, Message := 'A referenced Chamber1 scalar must be materialized with its semantic path.');
 
 bOk := _LinkVariableManager.M_ResolveReadableNode(
 	Name := CONCAT(sModuleSymbol, '.HwInput.bDIs[3]'),
 	ExpectedDataType := E_ConfigDataType.Boolean,
 	NodeHandle => nNodeHandle);
-AssertTrue(Condition := bOk, Message := 'A referenced GC array element must keep its semantic index path.');
+AssertTrue(Condition := bOk, Message := 'A referenced Chamber1 array element must keep its semantic index path.');
 
 bOk := _LinkVariableManager.M_ResolveReadableNode(
 	Name := CONCAT(sModuleSymbol, '.HwOutput.rAOs[4]'),
 	ExpectedDataType := E_ConfigDataType.Float32,
 	NodeHandle => nNodeHandle);
-AssertTrue(Condition := bOk, Message := 'A referenced GC output array element must be materialized.');
+AssertTrue(Condition := bOk, Message := 'A referenced Chamber1 output array element must be materialized.');
 
 bOk := _LinkVariableManager.M_AddLink(
 	SourceName := CONCAT(sModuleSymbol, '.HwInput.bDoorClosed'),
@@ -153,24 +153,24 @@ _LinkVariableManager.M_ClearModuleNodes();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
 
 bOk := _LinkVariableManager.M_BeginModuleRegistration(
-	Address := ADR(GVL_Module.GC[1]),
-	Size := SIZEOF(GVL_Module.GC[1]),
+	Address := ADR(GVL_Module.Chamber1[1]),
+	Size := SIZEOF(GVL_Module.Chamber1[1]),
 	ModuleConfig := _ModuleConfig);
 AssertTrue(Condition := bOk, Message := 'Slot 1 registration must start.');
 bOk := _LinkVariableManager.M_RegisterModuleNode(
-	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Variable := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
 	Access := E_VariableAccess.ReadWrite);
 AssertTrue(Condition := bOk, Message := 'Slot 1 node must resolve from its address.');
 bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sSlotOneSymbol);
 AssertTrue(Condition := bOk, Message := 'Slot 1 registration must complete.');
 
 bOk := _LinkVariableManager.M_BeginModuleRegistration(
-	Address := ADR(GVL_Module.GC[2]),
-	Size := SIZEOF(GVL_Module.GC[2]),
+	Address := ADR(GVL_Module.Chamber1[2]),
+	Size := SIZEOF(GVL_Module.Chamber1[2]),
 	ModuleConfig := _ModuleConfig);
 AssertTrue(Condition := bOk, Message := 'Slot 2 registration must start.');
 bOk := _LinkVariableManager.M_RegisterModuleNode(
-	Variable := GVL_Module.GC[2].HwInput.bDoorClosed,
+	Variable := GVL_Module.Chamber1[2].HwInput.bDoorClosed,
 	Access := E_VariableAccess.ReadWrite);
 AssertTrue(Condition := bOk, Message := 'Slot 2 node must resolve from its address.');
 bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sSlotTwoSymbol);
@@ -209,12 +209,12 @@ _ModuleConfig.VariableCount := 1;
 _ModuleConfig.VariableList[1].Source := 'HwInput.notDeclared';
 
 bOk := _LinkVariableManager.M_BeginModuleRegistration(
-	Address := ADR(GVL_Module.GC[1]),
-	Size := SIZEOF(GVL_Module.GC[1]),
+	Address := ADR(GVL_Module.Chamber1[1]),
+	Size := SIZEOF(GVL_Module.Chamber1[1]),
 	ModuleConfig := _ModuleConfig);
 AssertTrue(Condition := bOk, Message := 'The registration session must start for a valid Module instance.');
 bOk := _LinkVariableManager.M_RegisterModuleNode(
-	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Variable := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
 	Access := E_VariableAccess.ReadWrite);
 AssertTrue(Condition := bOk, Message := 'A Module variable must register from its resolved full symbol.');
 bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sModuleSymbol);
@@ -236,13 +236,13 @@ END_VAR
 _LinkVariableManager.M_ClearModuleNodes();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
 bOk := _LinkVariableManager.M_BeginModuleRegistration(
-	Address := ADR(GVL_Module.GC[1]),
-	Size := SIZEOF(GVL_Module.GC[1]),
+	Address := ADR(GVL_Module.Chamber1[1]),
+	Size := SIZEOF(GVL_Module.Chamber1[1]),
 	ModuleConfig := _ModuleConfig);
 AssertTrue(Condition := bOk, Message := 'A valid Begin must open a session.');
 bOk := _LinkVariableManager.M_BeginModuleRegistration(
-	Address := ADR(GVL_Module.GC[2]),
-	Size := SIZEOF(GVL_Module.GC[2]),
+	Address := ADR(GVL_Module.Chamber1[2]),
+	Size := SIZEOF(GVL_Module.Chamber1[2]),
 	ModuleConfig := _ModuleConfig);
 AssertFalse(Condition := bOk, Message := 'A second Begin during an active session must fail.');
 bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sModuleSymbol);
@@ -268,8 +268,8 @@ _ModuleConfig.InputMappingCount := 1;
 _ModuleConfig.InputMappings[1].Target := 'HwInput.bDoorClosed';
 
 bOk := _LinkVariableManager.M_BeginModuleRegistration(
-	Address := ADR(GVL_Module.GC[1]),
-	Size := SIZEOF(GVL_Module.GC[1]),
+	Address := ADR(GVL_Module.Chamber1[1]),
+	Size := SIZEOF(GVL_Module.Chamber1[1]),
 	ModuleConfig := _ModuleConfig);
 AssertTrue(Condition := bOk, Message := 'The registration session must start for first-error testing.');
 bOk := _LinkVariableManager.M_RegisterModuleNode(
@@ -279,7 +279,7 @@ AssertFalse(Condition := bOk, Message := 'A variable outside the active Module i
 sFirstError := _LinkVariableManager.ErrorMessage;
 
 bOk := _LinkVariableManager.M_RegisterModuleNode(
-	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Variable := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
 	Access := E_VariableAccess.ReadWrite);
 AssertFalse(Condition := bOk, Message := 'Calls after the first registration error must be ignored.');
 bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sModuleSymbol);
@@ -288,16 +288,16 @@ AssertTrue(Condition := _LinkVariableManager.ErrorMessage = sFirstError, Message
 
 _LinkVariableManager.M_ClearModuleNodes();
 bOk := _LinkVariableManager.M_BeginModuleRegistration(
-	Address := ADR(GVL_Module.GC[1]),
-	Size := SIZEOF(GVL_Module.GC[1]),
+	Address := ADR(GVL_Module.Chamber1[1]),
+	Size := SIZEOF(GVL_Module.Chamber1[1]),
 	ModuleConfig := _ModuleConfig);
 AssertTrue(Condition := bOk, Message := 'A new registration session must start after Module nodes are cleared.');
 bOk := _LinkVariableManager.M_RegisterModuleNode(
-	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Variable := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
 	Access := E_VariableAccess.ReadWrite);
 AssertTrue(Condition := bOk, Message := 'The first declaration of a Module variable must succeed.');
 bOk := _LinkVariableManager.M_RegisterModuleNode(
-	Variable := GVL_Module.GC[1].HwInput.bDoorClosed,
+	Variable := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
 	Access := E_VariableAccess.ReadWrite);
 AssertFalse(Condition := bOk, Message := 'Declaring the same full Module symbol twice must fail.');
 
@@ -431,13 +431,13 @@ MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
 BaseUnit := _IncompatibleBaseUnit;
 _FakeReferenceBindings.M_SetRequiredResult(BaseUnit := BaseUnit);
 ReferenceBindings := _FakeReferenceBindings;
-bOk := _GCAdapter.M_PrepareInstance(
+bOk := _Chamber1Adapter.M_PrepareInstance(
 	Slot := 1,
 	ReferenceBindings := ReferenceBindings,
 	ModuleConfig := _ModuleConfig,
 	LinkVariableManager := _LinkVariableManager,
 	ErrorMessage => sErrorMessage);
-AssertFalse(Condition := bOk, Message := 'The GC adapter must reject a BaseUnit that does not implement I_Axis_BaseUnit.');
+AssertFalse(Condition := bOk, Message := 'The Chamber1 adapter must reject a BaseUnit that does not implement I_Axis_BaseUnit.');
 
 TEST_FINISHED();]]></ST>
       </Implementation>

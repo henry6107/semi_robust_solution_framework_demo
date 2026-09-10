@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_Chamber1SingleProcessStage" Id="{7df990a2-494a-40ba-b4cb-804b3ee52003}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE E_Chamber1SingleProcessStage :
+(
+	None := 0,
+	Prepare := 1,
+	LiftReady := 2,
+	SpinAlign := 3,
+	ConcurrentProcessEntry := 4,
+	SpinRampUp := 5,
+	ProcessHold := 6,
+	ConcurrentProcessExit := 7,
+	SpinStandby := 8
+) UINT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

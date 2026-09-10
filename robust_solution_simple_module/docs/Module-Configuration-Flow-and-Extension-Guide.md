@@ -19,7 +19,7 @@
 | Configuration orchestrator | [`FB_ModuleConfigurationManager`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ModuleConfigurationManager.TcPOU) | 載入與解析 JSON、執行共用驗證、解析 Module adapter，並建立 mapping、reference 與 runtime bindings。它不知道各 Module type 專屬的 GVL array 與 reference 型別。 |
 | Module type registry | [`FB_ModuleTypeRegistry`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ModuleTypeRegistry.TcPOU) | 保存 `T_ModuleTypeName -> I_ModuleConfigurationAdapter` 對應，並依 config 的 `moduleType` 解析 adapter。 |
 | Module configuration seam | [`I_ModuleConfigurationAdapter`](../robust_solution_simple_module/Untitled1/Configuration/Interfaces/I_ModuleConfigurationAdapter.TcIO) | 定義不同 Module type 必須提供的 slot、instance preparation、runtime config 與清除行為。 |
-| GC adapter | [`FB_GCModuleConfigurationAdapter`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_GCModuleConfigurationAdapter.TcPOU) | 將通用設定轉接到 `GVL_Module.GC_*`，宣告 GC nodes，並拉取、驗證 GC 所需的 typed references。 |
+| Chamber1 adapter | [`FB_Chamber1ModuleConfigurationAdapter`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_Chamber1ModuleConfigurationAdapter.TcPOU) | 將通用設定轉接到 `GVL_Module.Chamber1_*`，宣告 Chamber1 nodes，並拉取、驗證 Chamber1 所需的 typed references。 |
 | Variable node registry／link manager | [`FB_LinkVariableManager`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_LinkVariableManager.TcPOU) | 註冊具 Symbol Name、位址、型別、大小與 access metadata 的節點；建立 mapping；初始化時解析 readable node handle；cyclic 時執行 link copy 與 node read。 |
 | Variable node reader seam | [`I_VariableNodeReader`](../robust_solution_simple_module/Untitled1/Configuration/Interfaces/I_VariableNodeReader.TcIO) | 只公開 `NodeHandle -> raw value` 的讀取能力，讓 Module 不接觸 node registry、Symbol Name lookup 或裸 `PVOID`。 |
 | Reference manager | [`FB_ReferenceManager`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ReferenceManager.TcPOU) | 以完整 ADS symbol name 註冊並解析通用 `I_BaseUnit` reference；不知道 Module target port 與實際 specialized interface。 |
@@ -27,7 +27,7 @@
 | ADS symbol provider | [`I_AdsSymbolProvider`](../robust_solution_simple_module/Untitled1/Configuration/Interfaces/I_AdsSymbolProvider.TcIO)、[`FB_BaseUnit`](../robust_solution_simple_module/Untitled1/POUs/00_BaseUnit/FB_BaseUnit.TcPOU) | 提供 BaseUnit 實體位址與大小，讓 Reference Manager 自動取得全域 ADS symbol name。ADS symbol 在此用於初始化識別，不代表 configured values 仍透過 ADS 讀取。 |
 | Configured value snapshot | [`FB_ConfigValueSnapshotReader`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_ConfigValueSnapshotReader.TcPOU) | 依 Runtime Binding 的 NodeHandle 建立本機 raw-value snapshot，並轉換為數值或字串。 |
 | Module runtime base | [`FB_ModuleBase`](../robust_solution_simple_module/Untitled1/POUs/10_Module/FB_ModuleBase.TcPOU) | 注入 `I_VariableNodeReader`，更新共用 VariableList、configured AlarmList 與 configuration status。 |
-| Module-specific storage | [`GVL_Module`](../robust_solution_simple_module/Untitled1/GVLs/GVL_Module.TcGVL) | 每種 Module type 擁有自己的 FB、Runtime、Control 與 reference arrays；目前 GC 使用 `GC`、`GC_Runtime`、`GC_Control`、`GC_SpinAxis`、`GC_LiftPinAxis`。 |
+| Module-specific storage | [`GVL_Module`](../robust_solution_simple_module/Untitled1/GVLs/GVL_Module.TcGVL) | 每種 Module type 擁有自己的 FB、Runtime、Control 與 reference arrays；目前 Chamber1 使用 `Chamber1`、`Chamber1_Runtime`、`Chamber1_Control`、`Chamber1_SpinAxis`、`Chamber1_LiftPinAxis`。 |
 
 主要 interface 與資料流如下：
 
@@ -74,8 +74,8 @@ flowchart LR
 ```iecst
 IF _bRegistrationOk THEN
     _bRegistrationOk := _ModuleTypeRegistry.M_Register(
-        ModuleTypeName := 'GC',
-        Adapter := _GCModuleConfigurationAdapter);
+        ModuleTypeName := 'Chamber1',
+        Adapter := _Chamber1ModuleConfigurationAdapter);
 END_IF
 _bInfrastructureRegistered := _bRegistrationOk;
 ```
@@ -184,7 +184,7 @@ sequenceDiagram
 
 各步驟的重點：
 
-1. **Adapter 解析**：Configuration Manager 只取得 `I_ModuleConfigurationAdapter`，不知道 GC 或其他 Module type。
+1. **Adapter 解析**：Configuration Manager 只取得 `I_ModuleConfigurationAdapter`，不知道 Chamber1 或其他 Module type。
 2. **Module instance preparation**：adapter 選擇 `GVL_Module.<Type>[slot]`，在 Begin／End session 之間，以 `M_RegisterModuleNode(variable, access)` 宣告每個 scalar 或 array element。Manager 從變數本身取得完整 ADS symbol，並驗證它屬於目前 Module root。
 3. **Mapping**：無 transform 時要求型別與大小相同並使用 `MEMCPY`；有 transform 時要求支援的數值型別，執行 `target = source * scale + offset`。
 4. **Reference binding**：adapter 依自身固定契約，以語意名稱 pull required／optional reference；binding context 查找 JSON、透過 Reference Manager resolve `I_BaseUnit`，adapter 只需以 `__QUERYINTERFACE` 驗證 specialized interface。所有項目成功後才提交到 type-specific reference array；未取用的 JSON key 由 context 的 `M_End()` 視為 unknown port 拒絕。

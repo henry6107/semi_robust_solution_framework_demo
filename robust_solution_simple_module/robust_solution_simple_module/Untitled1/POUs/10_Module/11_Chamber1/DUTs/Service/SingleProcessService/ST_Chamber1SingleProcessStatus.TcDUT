@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_Chamber1SingleProcessStatus" Id="{c0ba11b5-bedb-4bc4-9d21-17ebcb01ab25}">
+    <Declaration><![CDATA[TYPE ST_Chamber1SingleProcessStatus :
+STRUCT
+	CurrentStage : E_Chamber1SingleProcessStage;
+	CurrentStageElapsed : TIME;
+	CurrentCycle : ST_Chamber1SingleProcessCycleRecord;
+	LastCycle : ST_Chamber1SingleProcessCycleRecord;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

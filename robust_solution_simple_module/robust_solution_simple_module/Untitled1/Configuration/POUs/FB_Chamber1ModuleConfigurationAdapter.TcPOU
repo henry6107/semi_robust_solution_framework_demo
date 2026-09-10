@@ -1,0 +1,184 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Chamber1ModuleConfigurationAdapter" Id="{d1ed4bb2-81ea-4b79-900f-c662788b8aa5}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1ModuleConfigurationAdapter IMPLEMENTS I_ModuleConfigurationAdapter
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="M_ApplyRuntimeConfig" Id="{3fe7b39d-d396-4fb1-a765-1f717436db5b}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ApplyRuntimeConfig : BOOL
+VAR_INPUT
+	Slot : UINT;
+END_VAR
+VAR_IN_OUT CONSTANT
+	RuntimeConfig : ST_ModuleRuntimeConfig;
+END_VAR
+VAR_OUTPUT
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ApplyRuntimeConfig := FALSE;
+ErrorMessage := '';
+IF NOT M_IsSlotSupported(Slot := Slot) THEN
+	ErrorMessage := 'Chamber1 slot is outside the supported range.';
+	RETURN;
+END_IF
+IF RuntimeConfig.ModuleType <> 'Chamber1' THEN
+	ErrorMessage := 'Runtime configuration type is incompatible with the Chamber1 adapter.';
+	RETURN;
+END_IF
+GVL_Module.Chamber1_Runtime[Slot] := RuntimeConfig;
+M_ApplyRuntimeConfig := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearAllSlots" Id="{3eff8948-41a3-47d4-b197-f93e2ec9fbf1}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ClearAllSlots : BOOL
+VAR_OUTPUT
+	ErrorMessage : STRING(255);
+END_VAR
+VAR
+	nSlot : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ClearAllSlots := FALSE;
+ErrorMessage := '';
+FOR nSlot := 1 TO Param_Config.MaxModulePerType DO
+	GVL_Module.Chamber1_SpinAxis[nSlot] := 0;
+	GVL_Module.Chamber1_LiftPinAxis[nSlot] := 0;
+	MEMSET(ADR(GVL_Module.Chamber1_Runtime[nSlot]), 0, SIZEOF(GVL_Module.Chamber1_Runtime[nSlot]));
+END_FOR
+M_ClearAllSlots := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_IsSlotSupported" Id="{59dbc889-0ba5-462f-b874-f60410801f22}">
+      <Declaration><![CDATA[METHOD PUBLIC M_IsSlotSupported : BOOL
+VAR_INPUT
+	Slot : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_IsSlotSupported := (Slot >= 1) AND (Slot <= Param_Config.MaxModulePerType);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_PrepareInstance" Id="{afcdad32-5005-4810-bb84-67a02f90ef60}">
+      <Declaration><![CDATA[METHOD PUBLIC M_PrepareInstance : BOOL
+VAR_INPUT
+	Slot : UINT;
+	ReferenceBindings : I_ModuleReferenceBindings;
+END_VAR
+VAR_IN_OUT
+	ModuleConfig : ST_ModuleFileConfig;
+	LinkVariableManager : FB_LinkVariableManager;
+END_VAR
+VAR_OUTPUT
+	ModuleSymbol : STRING(255);
+	ErrorMessage : STRING(255);
+END_VAR
+VAR
+	bDeclared : BOOL;
+	BaseUnit : I_BaseUnit;
+	SpinAxis : I_Axis_BaseUnit;
+	LiftPinAxis : I_Axis_BaseUnit;
+	sReferenceError : STRING(255);
+	nIndex : DINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_PrepareInstance := FALSE;
+ModuleSymbol := '';
+ErrorMessage := '';
+IF NOT M_IsSlotSupported(Slot := Slot) THEN
+	ErrorMessage := 'Chamber1 slot is outside the supported range.';
+	RETURN;
+END_IF
+
+// Register module hardware I/O as link node
+bDeclared := LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.Chamber1[Slot]),
+	Size := SIZEOF(GVL_Module.Chamber1[Slot]),
+	ModuleConfig := ModuleConfig);
+
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[Slot].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[Slot].HwInput.rTemperature,
+	Access := E_VariableAccess.ReadWrite);
+
+FOR nIndex := LOWER_BOUND(GVL_Module.Chamber1[Slot].HwInput.bDIs, 1)
+	TO UPPER_BOUND(GVL_Module.Chamber1[Slot].HwInput.bDIs, 1) DO
+	bDeclared := LinkVariableManager.M_RegisterModuleNode(
+		Variable := GVL_Module.Chamber1[Slot].HwInput.bDIs[nIndex],
+		Access := E_VariableAccess.ReadWrite);
+END_FOR
+FOR nIndex := LOWER_BOUND(GVL_Module.Chamber1[Slot].HwInput.rAIs, 1)
+	TO UPPER_BOUND(GVL_Module.Chamber1[Slot].HwInput.rAIs, 1) DO
+	bDeclared := LinkVariableManager.M_RegisterModuleNode(
+		Variable := GVL_Module.Chamber1[Slot].HwInput.rAIs[nIndex],
+		Access := E_VariableAccess.ReadWrite);
+END_FOR
+
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[Slot].HwOutput.bVaccumOn,
+	Access := E_VariableAccess.ReadOnly);
+FOR nIndex := LOWER_BOUND(GVL_Module.Chamber1[Slot].HwOutput.bDOs, 1)
+	TO UPPER_BOUND(GVL_Module.Chamber1[Slot].HwOutput.bDOs, 1) DO
+	bDeclared := LinkVariableManager.M_RegisterModuleNode(
+		Variable := GVL_Module.Chamber1[Slot].HwOutput.bDOs[nIndex],
+		Access := E_VariableAccess.ReadOnly);
+END_FOR
+FOR nIndex := LOWER_BOUND(GVL_Module.Chamber1[Slot].HwOutput.rAOs, 1)
+	TO UPPER_BOUND(GVL_Module.Chamber1[Slot].HwOutput.rAOs, 1) DO
+	bDeclared := LinkVariableManager.M_RegisterModuleNode(
+		Variable := GVL_Module.Chamber1[Slot].HwOutput.rAOs[nIndex],
+		Access := E_VariableAccess.ReadOnly);
+END_FOR
+
+IF NOT LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => ModuleSymbol) THEN
+	ErrorMessage := LinkVariableManager.ErrorMessage;
+	RETURN;
+END_IF
+
+// Bind base-unit instance to module-base-unit interface
+IF ReferenceBindings = 0 THEN
+	ErrorMessage := 'Chamber1 requires a Module reference binding context.';
+	RETURN;
+END_IF
+
+BaseUnit := ReferenceBindings.M_TakeRequired(
+	Name := 'SpinAxis_BaseUnit',
+	ErrorMessage => sReferenceError);
+IF BaseUnit = 0 THEN
+	ErrorMessage := sReferenceError;
+	RETURN;
+END_IF
+SpinAxis := 0;
+IF NOT __QUERYINTERFACE(BaseUnit, SpinAxis) THEN
+	ErrorMessage := 'SpinAxis_BaseUnit requires I_Axis_BaseUnit.';
+	RETURN;
+END_IF
+
+BaseUnit := ReferenceBindings.M_TakeRequired(
+	Name := 'LiftPinAxis_BaseUnit',
+	ErrorMessage => sReferenceError);
+IF BaseUnit = 0 THEN
+	ErrorMessage := sReferenceError;
+	RETURN;
+END_IF
+LiftPinAxis := 0;
+IF NOT __QUERYINTERFACE(BaseUnit, LiftPinAxis) THEN
+	ErrorMessage := 'LiftPinAxis_BaseUnit requires I_Axis_BaseUnit.';
+	RETURN;
+END_IF
+
+// Commit typed references only after the complete Chamber1 reference contract is valid.
+GVL_Module.Chamber1_SpinAxis[Slot] := SpinAxis;
+GVL_Module.Chamber1_LiftPinAxis[Slot] := LiftPinAxis;
+M_PrepareInstance := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

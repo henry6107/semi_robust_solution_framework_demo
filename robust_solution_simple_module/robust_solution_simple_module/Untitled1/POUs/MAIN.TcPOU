@@ -8,7 +8,7 @@ VAR
 	_LinkVariableManager : FB_LinkVariableManager;
 	_ReferenceManager : FB_ReferenceManager;
 	_ModuleTypeRegistry : FB_ModuleTypeRegistry;
-	_GCModuleConfigurationAdapter : FB_GCModuleConfigurationAdapter;
+	_Chamber1ModuleConfigurationAdapter : FB_Chamber1ModuleConfigurationAdapter;
 	_ModuleConfigurationManager : FB_ModuleConfigurationManager;
 	_bInfrastructureRegistrationAttempted : BOOL;
 	_bInfrastructureRegistered : BOOL;
@@ -38,22 +38,22 @@ IF _ModuleConfigurationManager.Ready THEN
 	
 	// Call module instance
 	FOR _nModule := 1 TO Param_Config.MaxModulePerType DO
-		IF GVL_Module.GC_Runtime[_nModule].Enabled AND GVL_Module.GC_Runtime[_nModule].Valid THEN
-			GVL_Module.GC[_nModule](
-				HeartbeatIndex := GVL_Module.GC_Control[_nModule].HeartbeatIndex,
-				ModuleCtrl := GVL_Module.GC_Control[_nModule].ModuleCtrl,
-				ServiceCtrl := GVL_Module.GC_Control[_nModule].ServiceCtrl,
-				ServiceParam := GVL_Module.GC_Control[_nModule].ServiceParam,
+		IF GVL_Module.Chamber1_Runtime[_nModule].Enabled AND GVL_Module.Chamber1_Runtime[_nModule].Valid THEN
+			GVL_Module.Chamber1[_nModule](
+				HeartbeatIndex := GVL_Module.Chamber1_Control[_nModule].HeartbeatIndex,
+				ModuleCtrl := GVL_Module.Chamber1_Control[_nModule].ModuleCtrl,
+				ServiceCtrl := GVL_Module.Chamber1_Control[_nModule].ServiceCtrl,
+				ServiceParam := GVL_Module.Chamber1_Control[_nModule].ServiceParam,
 				SystemContext := _SystemContext,
-				RuntimeConfig := GVL_Module.GC_Runtime[_nModule],
+				RuntimeConfig := GVL_Module.Chamber1_Runtime[_nModule],
 				VariableNodeReader := _LinkVariableManager,
-				SpinAxis_BaseUnit := GVL_Module.GC_SpinAxis[_nModule],
-				LiftPinAxis_BaseUnit := GVL_Module.GC_LiftPinAxis[_nModule],
-				ModuleStatus => GVL_Module.GC_Control[_nModule].ModuleStatus,
-				ServiceStatus => GVL_Module.GC_Control[_nModule].ServiceStatus,
-				ModuleAlarmList => GVL_Module.GC_Control[_nModule].ModuleAlarmList,
-				ModuleDataList => GVL_Module.GC_Control[_nModule].ModuleDataList,
-				ModuleVariableList => GVL_Module.GC_Control[_nModule].ModuleVariableList);
+				SpinAxis_BaseUnit := GVL_Module.Chamber1_SpinAxis[_nModule],
+				LiftPinAxis_BaseUnit := GVL_Module.Chamber1_LiftPinAxis[_nModule],
+				ModuleStatus => GVL_Module.Chamber1_Control[_nModule].ModuleStatus,
+				ServiceStatus => GVL_Module.Chamber1_Control[_nModule].ServiceStatus,
+				ModuleAlarmList => GVL_Module.Chamber1_Control[_nModule].ModuleAlarmList,
+				ModuleDataList => GVL_Module.Chamber1_Control[_nModule].ModuleDataList,
+				ModuleVariableList => GVL_Module.Chamber1_Control[_nModule].ModuleVariableList);
 		END_IF
 	END_FOR
 	
@@ -110,8 +110,8 @@ END_IF
 // Register Module adapters before loading configuration.
 IF _bRegistrationOk THEN
 	_bRegistrationOk := _ModuleTypeRegistry.M_Register(
-		ModuleTypeName := 'GC',
-		Adapter := _GCModuleConfigurationAdapter);
+		ModuleTypeName := 'Chamber1',
+		Adapter := _Chamber1ModuleConfigurationAdapter);
 END_IF
 _bInfrastructureRegistered := _bRegistrationOk;]]></ST>
       </Implementation>

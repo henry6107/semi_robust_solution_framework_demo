@@ -109,7 +109,7 @@
     <Compile Include="Configuration\POUs\FB_ConfigValueSnapshotReader.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Configuration\POUs\FB_GCModuleConfigurationAdapter.TcPOU">
+    <Compile Include="Configuration\POUs\FB_Chamber1ModuleConfigurationAdapter.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\POUs\FB_ModuleTypeRegistry.TcPOU">
@@ -143,9 +143,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\E_DescriptorType.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="DUTs\E_ModuleId.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\E_Severity.TcDUT">
@@ -235,14 +232,6 @@
     <Compile Include="DUTs\Wafer Transfer\ST_WaferTransferRequest.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="GVLs\GVL_CSharp.TcGVL">
-      <SubType>Code</SubType>
-      <LinkAlways>true</LinkAlways>
-    </Compile>
-    <Compile Include="GVLs\GVL_GUI.TcGVL">
-      <SubType>Code</SubType>
-      <LinkAlways>true</LinkAlways>
-    </Compile>
     <Compile Include="GVLs\GVL_IO.TcGVL">
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
@@ -276,125 +265,125 @@
     <Compile Include="POUs\00_BaseUnit\T_ResourceOwnerId.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\E_GCServiceId.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\E_Chamber1ServiceId.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Signal_In.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Hardware\ST_Chamber1_Signal_In.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Hardware\ST_GC_Signal_Out.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Hardware\ST_Chamber1_Signal_Out.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCDataId.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\E_Chamber1DataId.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\E_GCErrorCode.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\E_Chamber1ErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService\ST_GCLiftPinAxisMoveAbsParam.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveAbsService\ST_Chamber1LiftPinAxisMoveAbsParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveVelService\ST_GCLiftPinAxisMoveVelParam.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveVelService\ST_Chamber1LiftPinAxisMoveVelParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\E_GCSingleProcessAbortPhase.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\E_Chamber1SingleProcessAbortPhase.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\E_GCSingleProcessAxis.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\E_Chamber1SingleProcessAxis.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\E_GCSingleProcessResult.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\E_Chamber1SingleProcessResult.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\E_GCSingleProcessStage.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\E_Chamber1SingleProcessStage.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessCycleRecord.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessCycleRecord.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessParam.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStageTimeConfig.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStageTimeConfig.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStageTimeConfigs.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStageTimeConfigs.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStageTiming.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStageTiming.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStageTimings.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStageTimings.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\ST_GCSingleProcessStatus.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\U_GCSingleProcessStageTimeConfigView.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\U_Chamber1SingleProcessStageTimeConfigView.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService\U_GCSingleProcessStageTimingView.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\U_Chamber1SingleProcessStageTimingView.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService\ST_GCSpinAxisJogParam.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisJogService\ST_Chamber1SpinAxisJogParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService\ST_GCSpinAxisMoveAbsParam.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveAbsService\ST_Chamber1SpinAxisMoveAbsParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService\ST_GCSpinAxisMoveVelParam.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveVelService\ST_Chamber1SpinAxisMoveVelParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceCtrl.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\ST_Chamber1_ServiceCtrl.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceParam.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\ST_Chamber1_ServiceParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\ST_GC_ServiceStatus.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\ST_Chamber1_ServiceStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\U_GC_ServiceCtrlView.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\U_Chamber1_ServiceCtrlView.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\Service\U_GC_ServiceStatusView.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\U_Chamber1_ServiceStatusView.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\DUTs\ST_GC_CtrlStatus.TcDUT">
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\ST_Chamber1_CtrlStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\FB_GC_Module.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\FB_Chamber1_Module.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\GVLs\GVL_GC_Config.TcGVL">
+    <Compile Include="POUs\10_Module\11_Chamber1\GVLs\GVL_Chamber1_Config.TcGVL">
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveAbsServices.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1LiftPinAxisMoveAbsServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveVelCCWServices.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1LiftPinAxisMoveVelCCWServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCLiftPinAxisMoveVelCWServices.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1LiftPinAxisMoveVelCWServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSingleProcessService.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SingleProcessService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisJogCWServices.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SpinAxisJogCWServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveAbsServices.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SpinAxisMoveAbsServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCSpinAxisMoveVelCWServices.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SpinAxisMoveVelCWServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCWaferSendService.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1WaferSendService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_GC\Services\FB_GCWaferReceiveService.TcPOU">
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1WaferReceiveService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\FB_ModuleAlarmManager.TcPOU">
@@ -490,7 +479,7 @@
     <Compile Include="Tests\Suites\Configuration\FB_ModuleResourceRegistrationTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\Modules\FB_GC_ModuleTests.TcPOU">
+    <Compile Include="Tests\Suites\Modules\FB_Chamber1_ModuleTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Modules\FB_ModuleAlarmManagerTests.TcPOU">
@@ -499,7 +488,7 @@
     <Compile Include="Tests\Suites\Modules\FB_ModuleBaseTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\Suites\Services\FB_GCSpinAxisMoveAbsServiceTests.TcPOU">
+    <Compile Include="Tests\Suites\Services\FB_Chamber1SpinAxisMoveAbsServiceTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Services\FB_ServiceBaseTests.TcPOU">
@@ -523,18 +512,18 @@
     <Folder Include="POUs\00_BaseUnit" />
     <Folder Include="POUs\00_BaseUnit\Interfaces" />
     <Folder Include="POUs\10_Module" />
-    <Folder Include="POUs\10_Module\11_GC" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\Hardware" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\Service" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveAbsService" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\LiftPinAxisMoveVelService" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SingleProcessService" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisJogService" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveAbsService" />
-    <Folder Include="POUs\10_Module\11_GC\DUTs\Service\SpinAxisMoveVelService" />
-    <Folder Include="POUs\10_Module\11_GC\GVLs" />
-    <Folder Include="POUs\10_Module\11_GC\Services" />
+    <Folder Include="POUs\10_Module\11_Chamber1" />
+    <Folder Include="POUs\10_Module\11_Chamber1\DUTs" />
+    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Hardware" />
+    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service" />
+    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveAbsService" />
+    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveVelService" />
+    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService" />
+    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisJogService" />
+    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveAbsService" />
+    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveVelService" />
+    <Folder Include="POUs\10_Module\11_Chamber1\GVLs" />
+    <Folder Include="POUs\10_Module\11_Chamber1\Services" />
     <Folder Include="POUs\PackML_Base" />
     <Folder Include="POUs\PackML_Base\DUTs" />
     <Folder Include="POUs\PackML_Base\Utilities" />

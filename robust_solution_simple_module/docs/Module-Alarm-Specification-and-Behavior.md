@@ -8,7 +8,7 @@
 - 由各 Service `ST_ServiceStatus.ErrorList` 產生的 Service alarm。
 - PLC 與 C# 之間的 acknowledge request／response handshake。
 
-兩種來源都由 [`FB_ModuleAlarmManager`](../robust_solution_simple_module/Untitled1/POUs/10_Module/FB_ModuleAlarmManager.TcPOU) 管理 latch、Active、Acknowledged、OccurrenceCount、移除、容量與發布。GC Module 不再直接把 Service ErrorList 複製到 ModuleAlarmList。
+兩種來源都由 [`FB_ModuleAlarmManager`](../robust_solution_simple_module/Untitled1/POUs/10_Module/FB_ModuleAlarmManager.TcPOU) 管理 latch、Active、Acknowledged、OccurrenceCount、移除、容量與發布。Chamber1 Module 不再直接把 Service ErrorList 複製到 ModuleAlarmList。
 
 本規格中的「同 scan」指同一次 PLC cyclic execution；不代表 C# 一定能觀察到該 scan 中的中間狀態。
 
@@ -69,7 +69,7 @@ Service ErrorList 是來源觀測，不是上位 AlarmList 本身；只有 Modul
 
 ### 4.2 Ack request
 
-[`ST_AlarmAckRequest`](../robust_solution_simple_module/Untitled1/DUTs/ST_AlarmAckRequest.TcDUT) 欄位如下：
+[`ST_AlarmAckRequest`](../robust_solution_simple_module/Untitled1/DUTs/Alarm/ST_AlarmAckRequest.TcDUT) 欄位如下：
 
 | 欄位 | 用途 |
 |---|---|
@@ -83,7 +83,7 @@ Service ErrorList 是來源觀測，不是上位 AlarmList 本身；只有 Modul
 
 ### 4.3 Module alarm status
 
-[`ST_ModuleAlarmStatus`](../robust_solution_simple_module/Untitled1/DUTs/ST_ModuleAlarmStatus.TcDUT) 提供：
+[`ST_ModuleAlarmStatus`](../robust_solution_simple_module/Untitled1/DUTs/Alarm/ST_ModuleAlarmStatus.TcDUT) 提供：
 
 | 欄位 | 用途 |
 |---|---|
@@ -160,7 +160,7 @@ stateDiagram-v2
 1. `BeginCycle`：處理 ModuleId/config revision scope，清除 Service 的 seen markers。
 2. Ack：只處理本 scan 開始前已 latch 的 lifecycle。
 3. Configured sampling：更新 configured condition。
-4. Service observation：GC Module 提交目前非零的 Service ErrorList entries。
+4. Service observation：Chamber1 Module 提交目前非零的 Service ErrorList entries。
 5. Finalize：未觀測到的 Service identity 轉為 inactive；符合移除條件者刪除。
 6. Dense publish：Service alarms 在前，ConfiguredAlarms 在後。
 
@@ -249,14 +249,14 @@ Configuration revision 改變只清除 ConfiguredAlarm lifecycle；Service lifec
 
 ## 11. SingleProcess 行為
 
-[`FB_GCSingleProcessService`](../robust_solution_simple_module/Untitled1/POUs/10_Module/11_GC/Services/FB_GCSingleProcessService.TcPOU) 第一次呼叫 `M_SetFailure` 時會同步：
+[`FB_Chamber1SingleProcessService`](../robust_solution_simple_module/Untitled1/POUs/10_Module/11_Chamber1/Services/FB_Chamber1SingleProcessService.TcPOU) 第一次呼叫 `M_SetFailure` 時會同步：
 
 - 設定 `Status.ServiceErrorId`。
 - 透過 `M_AddError` 建立 Service ErrorList entry。
 - Message 包含簡短錯誤描述、`Axis=<FailedAxis>` 與 `Stage=<CurrentStage>`。
 - 保留第一個 failure，後續 cleanup failure 不覆寫該 lifecycle 的主要資訊。
 
-Service 進入 Resetting 時會同時清除 `ServiceErrorId` 與 `ErrorList`。GC Module 在同 scan 不再觀測到該 identity，manager 將其設為 inactive；若先前已 Ack，alarm 同 scan 移除，否則以 inactive/unacknowledged 狀態繼續發布。
+Service 進入 Resetting 時會同時清除 `ServiceErrorId` 與 `ErrorList`。Chamber1 Module 在同 scan 不再觀測到該 identity，manager 將其設為 inactive；若先前已 Ack，alarm 同 scan 移除，否則以 inactive/unacknowledged 狀態繼續發布。
 
 ## 12. 上位 metadata 與相容性
 

@@ -131,7 +131,7 @@
 | Current Implementation Profile | 目前專案的容量、schema version、支援型別等限制 | 可以隨框架版本調整，但必須同步記錄 |
 | Example | 示範其中一種符合契約的做法 | 可以被其他符合契約的 Implementation 取代 |
 
-例如，Module ID 必須全域唯一屬於 Framework Contract；目前每種 Module Type 最多建立多少個 instance 屬於 Current Implementation Profile；GC Module 如何命名內部 Service FB 則屬於 Example。
+例如，Module ID 必須全域唯一屬於 Framework Contract；目前每種 Module Type 最多建立多少個 instance 屬於 Current Implementation Profile；Chamber1 Module 如何命名內部 Service FB 則屬於 Example。
 
 ### 1.9 符合性原則
 
@@ -203,7 +203,7 @@ Interface 不只代表 TwinCAT `INTERFACE` 宣告，也不只是 method signatur
 
 #### Module Type
 
-一類具有相同專屬 Interface、Service 集合、I/O 結構及 Reference Port 契約的 Module 定義，例如目前的 `GC`。
+一類具有相同專屬 Interface、Service 集合、I/O 結構及 Reference Port 契約的 Module 定義，例如目前的 `Chamber1`。
 
 Module Type 的公開名稱會出現在 runtime configuration 中，因此其拼字及大小寫是組態契約的一部分。
 
@@ -1364,7 +1364,7 @@ BaseUnit 的 `M_CyclicUpdate()` 負責推進底層設備 FB、讀取設備狀態
 
 若 BaseUnit FB body 會委派至 `M_CyclicUpdate()`，組合者不得在同一 scan 同時呼叫 FB body 與該 method。新 BaseUnit 必須在其專屬規格中明訂「由 FB body 更新」或「由 Module hook 明確更新」的實際呼叫方式。
 
-> 目前 `FB_Axis_BaseUnit` 的 FB body 會委派至 `M_CyclicUpdate()`，GC Module 則直接透過 Interface 呼叫該 method；現有 `MAIN` 沒有再獨立呼叫 Axis FB body。未來修改組合方式時，仍必須避免同一 instance 每 scan 被更新兩次。
+> 目前 `FB_Axis_BaseUnit` 的 FB body 會委派至 `M_CyclicUpdate()`，Chamber1 Module 則直接透過 Interface 呼叫該 method；現有 `MAIN` 沒有再獨立呼叫 Axis FB body。未來修改組合方式時，仍必須避免同一 instance 每 scan 被更新兩次。
 
 ### 5.7 Feedback 與可觀察狀態
 
@@ -1992,7 +1992,7 @@ IF _bRegistrationOk THEN
 END_IF
 IF _bRegistrationOk THEN
     _bRegistrationOk := _ModuleTypeRegistry.M_Register(
-        ModuleTypeName := 'GC', Adapter := _GCModuleConfigurationAdapter);
+        ModuleTypeName := 'Chamber1', Adapter := _Chamber1ModuleConfigurationAdapter);
 END_IF
 _bInfrastructureRegistered := _bRegistrationOk;
 ```
@@ -2364,7 +2364,7 @@ flowchart LR
 | `I_` | Interface | `I_Axis_BaseUnit` |
 | `ST_` | Structure | `ST_ServiceStatus` |
 | `E_` | Enum | `E_PackMLState` |
-| `U_` | Union／alternate view | `U_GC_ServiceStatusView` |
+| `U_` | Union／alternate view | `U_Chamber1_ServiceStatusView` |
 | `T_` | Alias type | `T_ModuleTypeName` |
 | `F_` | Function | `F_AlarmConditionMet` |
 | `GVL_` | Global Variable List | `GVL_Module` |

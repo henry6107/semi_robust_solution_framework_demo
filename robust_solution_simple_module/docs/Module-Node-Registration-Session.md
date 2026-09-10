@@ -2,12 +2,12 @@
 
 ## 1. 文件目的
 
-本文件說明 [`FB_GCModuleConfigurationAdapter.M_PrepareInstance`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_GCModuleConfigurationAdapter.TcPOU) 中，為什麼 Module node declarations 必須放在以下兩個呼叫之間：
+本文件說明 [`FB_Chamber1ModuleConfigurationAdapter.M_PrepareInstance`](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_Chamber1ModuleConfigurationAdapter.TcPOU) 中，為什麼 Module node declarations 必須放在以下兩個呼叫之間：
 
 ```iecst
 bDeclared := LinkVariableManager.M_BeginModuleRegistration(
-	Address := ADR(GVL_Module.GC[Slot]),
-	Size := SIZEOF(GVL_Module.GC[Slot]),
+	Address := ADR(GVL_Module.Chamber1[Slot]),
+	Size := SIZEOF(GVL_Module.Chamber1[Slot]),
 	ModuleConfig := ModuleConfig);
 
 // M_RegisterModuleNode declarations
@@ -41,7 +41,7 @@ End：驗證宣告完整性、回傳 Module symbol、結束 session
 4. 透過 `GetSymbolNameByAddress()` 自動解析 Module instance 的 ADS root symbol，例如：
 
    ```text
-   GVL_Module.GC[1]
+   GVL_Module.Chamber1[1]
    ```
 
 5. 保存本次 `ModuleConfig`，供 End 檢查 configuration 引用的 nodes 是否都有宣告。
@@ -51,23 +51,23 @@ End：驗證宣告完整性、回傳 Module symbol、結束 session
 
 ```iecst
 bDeclared := LinkVariableManager.M_RegisterModuleNode(
-	Variable := GVL_Module.GC[Slot].HwInput.bDoorClosed,
+	Variable := GVL_Module.Chamber1[Slot].HwInput.bDoorClosed,
 	Access := E_VariableAccess.ReadWrite);
 ```
 
 `M_RegisterModuleNode` 會由變數的 address 與 size 直接取得完整 ADS symbol，例如：
 
 ```text
-GVL_Module.GC[1].HwInput.bDoorClosed
-GVL_Module.GC[1].HwInput.bDIs[3]
-GVL_Module.GC[1].HwOutput.rAOs[4]
+GVL_Module.Chamber1[1].HwInput.bDoorClosed
+GVL_Module.Chamber1[1].HwInput.bDIs[3]
+GVL_Module.Chamber1[1].HwOutput.rAOs[4]
 ```
 
 它不會先轉成 relative path，也不會使用 root symbol 重新組合 node name。Begin 保存的 root 只用來確認該完整 symbol 屬於目前的 Module instance。
 
 ## 3. 中間 declarations 的行為
 
-GC adapter 可以宣告完整的 I/O surface，例如：
+Chamber1 adapter 可以宣告完整的 I/O surface，例如：
 
 - scalar input／output；
 - BOOL array；
@@ -75,7 +75,7 @@ GC adapter 可以宣告完整的 I/O surface，例如：
 
 每個 declaration 都會 materialize 到 `_Nodes`。Array 則由 adapter 依實際 bounds 逐元素呼叫相同的 `M_RegisterModuleNode`，因此不需要帶 relative path 的 array-specific interface。
 
-未被 configuration 使用的 nodes 仍會占用 node-table 容量，但不會建立 link，也不會增加 cyclic copy 或 configured-value read。現有每個 GC instance 會註冊 67 個 nodes；6 個 GC 與 34 個 Beckhoff hardware nodes 合計最多 436 個，低於目前 `MaxConfigVariableNodes = 512`。
+未被 configuration 使用的 nodes 仍會占用 node-table 容量，但不會建立 link，也不會增加 cyclic copy 或 configured-value read。現有每個 Chamber1 instance 會註冊 67 個 nodes；6 個 Chamber1 與 34 個 Beckhoff hardware nodes 合計最多 436 個，低於目前 `MaxConfigVariableNodes = 512`。
 
 ## 4. `M_EndModuleRegistration` 的用途
 
@@ -133,11 +133,11 @@ Begin／Declare／End 提供的是通用 registration seam。`FB_LinkVariableMan
 - access direction；
 - configuration relative path 的完整性驗證。
 
-它不需要知道 GC、未來新增的 Module type，或該 Module 的 DUT 欄位結構。Module-specific 知識保留在各自的 Configuration Adapter 中。
+它不需要知道 Chamber1、未來新增的 Module type，或該 Module 的 DUT 欄位結構。Module-specific 知識保留在各自的 Configuration Adapter 中。
 
 ## 6. `bDeclared` 為什麼會反覆被覆寫
 
-目前 GC adapter 的 declaration 寫法如下：
+目前 Chamber1 adapter 的 declaration 寫法如下：
 
 ```iecst
 bDeclared := LinkVariableManager.M_RegisterModuleNode(...);

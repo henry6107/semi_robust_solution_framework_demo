@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_Chamber1SingleProcessParam" Id="{ce49dc48-904b-48bf-ae58-aca545aab98d}">
+    <Declaration><![CDATA[TYPE ST_Chamber1SingleProcessParam :
+STRUCT
+	LiftReady : ST_Chamber1LiftPinAxisMoveAbsParam;
+	SpinAlign : ST_Chamber1SpinAxisMoveAbsParam;
+	ProcessEntrySpin : ST_Chamber1SpinAxisMoveAbsParam;
+	ProcessEntryLift : ST_Chamber1LiftPinAxisMoveAbsParam;
+	SpinProcess : ST_Chamber1SpinAxisMoveVelParam;
+	ProcessExitLift : ST_Chamber1LiftPinAxisMoveAbsParam;
+	SpinStandby : ST_Chamber1SpinAxisMoveAbsParam;
+	SpinStopDeceleration : LREAL;
+	LiftStopDeceleration : LREAL;
+	StageTiming : ST_Chamber1SingleProcessStageTimeConfigs;
+	StopTimeout : TIME;
+	ResetTimeout : TIME;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
