@@ -13,16 +13,26 @@ VAR
 	_FakeAdapter : FB_FakeModuleConfigurationAdapter;
 	_IncompatibleBaseUnit : FB_FakeBaseUnit;
 	_ModuleConfig : ST_ModuleFileConfig;
+	_InfrastructurePrepared : BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[GCDeclarationsUseResolvedFullSymbols();
+      <ST><![CDATA[IF NOT _InfrastructurePrepared THEN
+	_InfrastructurePrepared := _LinkVariableManager.M_BeginInfrastructureRegistration();
+	IF _InfrastructurePrepared THEN
+		_InfrastructurePrepared := _LinkVariableManager.M_SealInfrastructureRegistration();
+	END_IF
+END_IF
+
+IF _InfrastructurePrepared THEN
+	GCDeclarationsUseResolvedFullSymbols();
 ModuleSlotsResolveDistinctFullSymbols();
 MissingModuleDeclarationFailsEndSession();
 RegistrationSessionEnforcesOrdering();
 RegistrationSessionUsesFirstErrorWins();
 ReferenceBindingsEnforceFrameworkContract();
-NewModuleTypeUsesGenericFrameworkSeam();]]></ST>
+NewModuleTypeUsesGenericFrameworkSeam();
+END_IF]]></ST>
     </Implementation>
     <Method Name="GCDeclarationsUseResolvedFullSymbols" Id="{6eed6450-f0f0-4b23-9a5b-21bd0e767cc9}">
       <Declaration><![CDATA[METHOD GCDeclarationsUseResolvedFullSymbols
@@ -41,7 +51,6 @@ _LinkVariableManager.M_ClearLinks();
 _LinkVariableManager.M_ClearModuleNodes();
 _ReferenceBindingContext.M_Clear();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
 bOk := _ReferenceManager.M_RegisterReference(BaseUnit := GVL_IO.NC_Axis1);
 AssertTrue(Condition := bOk, Message := 'The first Axis BaseUnit must be available to the binding context.');
 bOk := _ReferenceManager.M_RegisterReference(BaseUnit := GVL_IO.NC_Axis2);
@@ -142,7 +151,6 @@ END_VAR
 _LinkVariableManager.M_ClearLinks();
 _LinkVariableManager.M_ClearModuleNodes();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
 
 bOk := _LinkVariableManager.M_BeginModuleRegistration(
 	Address := ADR(GVL_Module.GC[1]),
@@ -197,7 +205,6 @@ END_VAR
 _LinkVariableManager.M_ClearLinks();
 _LinkVariableManager.M_ClearModuleNodes();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
 _ModuleConfig.VariableCount := 1;
 _ModuleConfig.VariableList[1].Source := 'HwInput.notDeclared';
 
@@ -228,7 +235,6 @@ END_VAR
         <ST><![CDATA[TEST('RegistrationSessionEnforcesOrdering');
 _LinkVariableManager.M_ClearModuleNodes();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
 bOk := _LinkVariableManager.M_BeginModuleRegistration(
 	Address := ADR(GVL_Module.GC[1]),
 	Size := SIZEOF(GVL_Module.GC[1]),
@@ -258,7 +264,6 @@ END_VAR
 _LinkVariableManager.M_ClearLinks();
 _LinkVariableManager.M_ClearModuleNodes();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
 _ModuleConfig.InputMappingCount := 1;
 _ModuleConfig.InputMappings[1].Target := 'HwInput.bDoorClosed';
 
@@ -423,7 +428,6 @@ AssertFalse(Condition := bOk, Message := 'A Module reference map beyond fixed ca
 _LinkVariableManager.M_ClearLinks();
 _LinkVariableManager.M_ClearModuleNodes();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
 BaseUnit := _IncompatibleBaseUnit;
 _FakeReferenceBindings.M_SetRequiredResult(BaseUnit := BaseUnit);
 ReferenceBindings := _FakeReferenceBindings;
@@ -455,7 +459,6 @@ _LinkVariableManager.M_ClearLinks();
 _LinkVariableManager.M_ClearModuleNodes();
 _ReferenceBindingContext.M_Clear();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-bOk := _LinkVariableManager.M_SealInfrastructureRegistration();
 _ModuleConfig.ModuleType := 'FAKE';
 _ModuleConfig.InputMappingCount := 1;
 _ModuleConfig.InputMappings[1].Target := 'bDoorClosed';

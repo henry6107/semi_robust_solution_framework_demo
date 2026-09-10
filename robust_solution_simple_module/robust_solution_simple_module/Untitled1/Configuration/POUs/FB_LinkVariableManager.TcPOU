@@ -11,6 +11,7 @@ VAR
 	_NodeCount : UINT;
 	_InfrastructureNodeCount : UINT;
 	_InfrastructureSealed : BOOL;
+	_InfrastructureRegistrationActive : BOOL;
 	_ModuleRegistrationActive : BOOL;
 	_ModuleRootName : STRING(255);
 	_ModuleConfig : REFERENCE TO ST_ModuleFileConfig;
@@ -22,8 +23,7 @@ END_VAR
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
-    <Folder Name="Beckhoff Registry" Id="{92a2770c-659d-4164-a8f2-33d4bdfba0b7}" />
-    <Folder Name="Common Registry" Id="{4919fca1-b34f-43b2-b5a2-723c18ce552b}" />
+    <Folder Name="Infrastructure Node Registry" Id="{92a2770c-659d-4164-a8f2-33d4bdfba0b7}" />
     <Folder Name="Module Node Registry" Id="{1c0d45e5-c6c3-47ab-a45c-84628a85d555}" />
     <Folder Name="Private" Id="{e208b29b-f674-48c8-ba09-da80fd6c3e46}" />
     <Method Name="M_AddLink" Id="{11c3d68c-d253-4d56-ad40-679c1999e4e0}">
@@ -116,6 +116,47 @@ _LinkCount := nNext;
 M_AddLink := TRUE;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_BeginInfrastructureRegistration" Id="{21384997-3908-4c4e-92b5-6fd56c424e7f}" FolderPath="Infrastructure Node Registry\">
+      <Declaration><![CDATA[METHOD PUBLIC M_BeginInfrastructureRegistration : BOOL
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_BeginInfrastructureRegistration := FALSE;
+IF _InfrastructureRegistrationActive THEN
+	IF NOT Error THEN
+		Error := TRUE;
+		ErrorMessage := 'An Infrastructure registration session is already active.';
+	END_IF
+	RETURN;
+END_IF
+IF _InfrastructureSealed THEN
+	IF NOT Error THEN
+		Error := TRUE;
+		ErrorMessage := 'Infrastructure node registration is already sealed.';
+	END_IF
+	RETURN;
+END_IF
+IF _ModuleRegistrationActive THEN
+	IF NOT Error THEN
+		Error := TRUE;
+		ErrorMessage := 'Cannot begin Infrastructure registration during Module registration.';
+	END_IF
+	RETURN;
+END_IF
+
+Error := FALSE;
+ErrorMessage := '';
+FOR nIndex := 1 TO _NodeCount DO
+	MEMSET(ADR(_Nodes[nIndex]), 0, SIZEOF(_Nodes[nIndex]));
+END_FOR
+_NodeCount := 0;
+_InfrastructureNodeCount := 0;
+_InfrastructureRegistrationActive := TRUE;
+M_BeginInfrastructureRegistration := TRUE;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_BeginModuleRegistration" Id="{627f2ae4-4655-4612-9934-2f22c8c094c3}" FolderPath="Module Node Registry\">
       <Declaration><![CDATA[METHOD PUBLIC M_BeginModuleRegistration : BOOL
 VAR_INPUT
@@ -131,6 +172,13 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[M_BeginModuleRegistration := FALSE;
+IF _InfrastructureRegistrationActive THEN
+	IF NOT Error THEN
+		Error := TRUE;
+		ErrorMessage := 'Cannot begin Module registration during Infrastructure registration.';
+	END_IF
+	RETURN;
+END_IF
 IF _ModuleRegistrationActive THEN
 	IF NOT Error THEN
 		Error := TRUE;
@@ -447,130 +495,64 @@ ELSE
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_RegisterEL1889" Id="{890efd5c-833e-4076-899e-a5543ce108dd}" FolderPath="Beckhoff Registry\">
-      <Declaration><![CDATA[METHOD PUBLIC M_RegisterEL1889 : BOOL
-VAR_IN_OUT CONSTANT
-	Terminal : ST_EL1889Ex;
+    <Method Name="M_RegisterInfrastructureNode" Id="{7cbbd06f-a655-405e-a5c1-c79aa7ff5341}" FolderPath="Infrastructure Node Registry\">
+      <Declaration><![CDATA[METHOD PUBLIC M_RegisterInfrastructureNode : BOOL
+VAR_INPUT
+	Variable : ANY;
+	Access : E_VariableAccess;
 END_VAR
 VAR
-	sRootName : STRING(255);
-	sRelativeName : STRING(255);
 	sNodeName : STRING(255);
-	nChannel : UINT;
 	hrErrorCode : HRESULT;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_RegisterEL1889 := FALSE;
-Error := FALSE;
-ErrorMessage := '';
-
-sRootName := _JsonDataType.GetSymbolNameByAddress(
-	nData := SIZEOF(Terminal.Chl),
-	pData := ADR(Terminal.Chl),
-	hrErrorCode => hrErrorCode);
-IF (hrErrorCode <> 0) OR (sRootName = '') THEN
+        <ST><![CDATA[M_RegisterInfrastructureNode := FALSE;
+IF Error THEN
+	RETURN;
+END_IF
+IF NOT _InfrastructureRegistrationActive THEN
 	Error := TRUE;
-	ErrorMessage := 'Cannot resolve the EL1889 ADS symbol name.';
+	ErrorMessage := 'No Infrastructure registration session is active.';
+	RETURN;
+END_IF
+IF _InfrastructureSealed THEN
+	Error := TRUE;
+	ErrorMessage := 'Infrastructure node registration is already sealed.';
+	RETURN;
+END_IF
+IF (Variable.pValue = 0) OR (Variable.diSize <= 0) THEN
+	Error := TRUE;
+	ErrorMessage := 'An Infrastructure node requires a valid address and positive size.';
+	RETURN;
+END_IF
+IF (Access <> E_VariableAccess.ReadOnly)
+	AND (Access <> E_VariableAccess.WriteOnly)
+	AND (Access <> E_VariableAccess.ReadWrite) THEN
+	Error := TRUE;
+	ErrorMessage := 'Registered node access is invalid.';
 	RETURN;
 END_IF
 
-FOR nChannel := 1 TO 16 DO
-	sRelativeName := CONCAT(CONCAT('[', UINT_TO_STRING(nChannel)), ']');
-	sNodeName := CONCAT(sRootName, sRelativeName);
-	IF NOT M_RegisterNode(
-		Name := sNodeName,
-		Variable := Terminal.Chl[nChannel],
-		Access := E_VariableAccess.ReadOnly) THEN
-		RETURN;
-	END_IF
-END_FOR
-
-M_RegisterEL1889 := TRUE;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_RegisterEL2809" Id="{7376f834-583c-4f3c-9f1d-cde75d97c5f8}" FolderPath="Beckhoff Registry\">
-      <Declaration><![CDATA[METHOD PUBLIC M_RegisterEL2809 : BOOL
-VAR_IN_OUT CONSTANT
-	Terminal : ST_EL2809Ex;
-END_VAR
-VAR
-	sRootName : STRING(255);
-	sRelativeName : STRING(255);
-	sNodeName : STRING(255);
-	nChannel : UINT;
-	hrErrorCode : HRESULT;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[M_RegisterEL2809 := FALSE;
-Error := FALSE;
-ErrorMessage := '';
-
-sRootName := _JsonDataType.GetSymbolNameByAddress(
-	nData := SIZEOF(Terminal.Chl),
-	pData := ADR(Terminal.Chl),
+sNodeName := _JsonDataType.GetSymbolNameByAddress(
+	nData := DINT_TO_UDINT(Variable.diSize),
+	pData := Variable.pValue,
 	hrErrorCode => hrErrorCode);
-IF (hrErrorCode <> 0) OR (sRootName = '') THEN
+IF (hrErrorCode <> 0) OR (sNodeName = '') THEN
 	Error := TRUE;
-	ErrorMessage := 'Cannot resolve the EL2809 ADS symbol name.';
+	ErrorMessage := 'Cannot resolve the Infrastructure node ADS symbol name.';
 	RETURN;
 END_IF
 
-FOR nChannel := 1 TO 16 DO
-	sRelativeName := CONCAT(CONCAT('[', UINT_TO_STRING(nChannel)), ']');
-	sNodeName := CONCAT(sRootName, sRelativeName);
-	IF NOT M_RegisterNode(
-		Name := sNodeName,
-		Variable := Terminal.Chl[nChannel],
-		Access := E_VariableAccess.WriteOnly) THEN
-		RETURN;
-	END_IF
-END_FOR
-
-M_RegisterEL2809 := TRUE;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_RegisterEL3602" Id="{db0707dd-5cd4-4b57-8eb1-f568cf32caa8}" FolderPath="Beckhoff Registry\">
-      <Declaration><![CDATA[METHOD PUBLIC M_RegisterEL3602 : BOOL
-VAR_IN_OUT CONSTANT
-	Terminal : ST_EL3602Ex;
-END_VAR
-VAR
-	sRootName : STRING(255);
-	sRelativeName : STRING(255);
-	sNodeName : STRING(255);
-	nChannel : UINT;
-	hrErrorCode : HRESULT;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[M_RegisterEL3602 := FALSE;
-Error := FALSE;
-ErrorMessage := '';
-
-sRootName := _JsonDataType.GetSymbolNameByAddress(
-	nData := SIZEOF(Terminal.Chl),
-	pData := ADR(Terminal.Chl),
-	hrErrorCode => hrErrorCode);
-IF (hrErrorCode <> 0) OR (sRootName = '') THEN
+IF M_FindNode(Name := sNodeName) <> 0 THEN
 	Error := TRUE;
-	ErrorMessage := 'Cannot resolve the EL3602 ADS symbol name.';
+	ErrorMessage := CONCAT('Duplicate Infrastructure node declaration: ', sNodeName);
 	RETURN;
 END_IF
-
-FOR nChannel := 1 TO 2 DO
-	sRelativeName := CONCAT(CONCAT('[', UINT_TO_STRING(nChannel)), ']');
-	sNodeName := CONCAT(sRootName, sRelativeName);
-	IF NOT M_RegisterNode(
-		Name := sNodeName,
-		Variable := Terminal.Chl[nChannel],
-		Access := E_VariableAccess.ReadOnly) THEN
-		RETURN;
-	END_IF
-END_FOR
-
-M_RegisterEL3602 := TRUE;]]></ST>
+M_RegisterInfrastructureNode := M_RegisterNode(
+	Name := sNodeName,
+	Variable := Variable,
+	Access := Access);]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_RegisterNode" Id="{563ad443-6d1d-4e7a-a2a4-7d74ea3654e8}" FolderPath="Private\">
@@ -653,7 +635,7 @@ _Nodes[nIndex].Access := Access;
 M_RegisterNode := TRUE;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_RegisterModuleNode" Id="{b8271799-8316-4f9d-8134-51fd896c032b}" FolderPath="Common Registry\">
+    <Method Name="M_RegisterModuleNode" Id="{b8271799-8316-4f9d-8134-51fd896c032b}" FolderPath="Module Node Registry\">
       <Declaration><![CDATA[METHOD PUBLIC M_RegisterModuleNode : BOOL
 VAR_INPUT
 	Variable : ANY;
@@ -783,21 +765,44 @@ NodeHandle := nNode;
 M_ResolveReadableNode := TRUE;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_SealInfrastructureRegistration" Id="{66c63671-fec9-42dd-b958-46a82e15ebf9}" FolderPath="Module Node Registry\">
+    <Method Name="M_SealInfrastructureRegistration" Id="{66c63671-fec9-42dd-b958-46a82e15ebf9}" FolderPath="Infrastructure Node Registry\">
       <Declaration><![CDATA[METHOD PUBLIC M_SealInfrastructureRegistration : BOOL
+VAR
+	nIndex : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[M_SealInfrastructureRegistration := FALSE;
 IF Error THEN
+	IF _InfrastructureRegistrationActive THEN
+		FOR nIndex := 1 TO _NodeCount DO
+			MEMSET(ADR(_Nodes[nIndex]), 0, SIZEOF(_Nodes[nIndex]));
+		END_FOR
+		_NodeCount := 0;
+		_InfrastructureNodeCount := 0;
+		_InfrastructureRegistrationActive := FALSE;
+	END_IF
+	RETURN;
+END_IF
+IF NOT _InfrastructureRegistrationActive THEN
+	Error := TRUE;
+	ErrorMessage := 'No Infrastructure registration session is active.';
 	RETURN;
 END_IF
 IF _ModuleRegistrationActive THEN
 	Error := TRUE;
 	ErrorMessage := 'Cannot seal infrastructure nodes during Module registration.';
+	FOR nIndex := 1 TO _NodeCount DO
+		MEMSET(ADR(_Nodes[nIndex]), 0, SIZEOF(_Nodes[nIndex]));
+	END_FOR
+	_NodeCount := 0;
+	_InfrastructureNodeCount := 0;
+	_InfrastructureRegistrationActive := FALSE;
 	RETURN;
 END_IF
 _InfrastructureNodeCount := _NodeCount;
 _InfrastructureSealed := TRUE;
+_InfrastructureRegistrationActive := FALSE;
 M_SealInfrastructureRegistration := TRUE;]]></ST>
       </Implementation>
     </Method>

@@ -10,13 +10,15 @@ VAR
 	_ModuleTypeRegistry : FB_ModuleTypeRegistry;
 	_GCModuleConfigurationAdapter : FB_GCModuleConfigurationAdapter;
 	_ModuleConfigurationManager : FB_ModuleConfigurationManager;
+	_bInfrastructureRegistrationAttempted : BOOL;
 	_bInfrastructureRegistered : BOOL;
 	_bRegistrationOk : BOOL;
 	_nModule : UINT;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[IF NOT _bInfrastructureRegistered THEN
+      <ST><![CDATA[IF NOT _bInfrastructureRegistrationAttempted THEN
+	_bInfrastructureRegistrationAttempted := TRUE;
 	M_HwModuleRegister();
 END_IF
 
@@ -61,27 +63,37 @@ END_IF]]></ST>
     </Implementation>
     <Method Name="M_HwModuleRegister" Id="{046a91b2-6210-4144-b43e-89faaf1ecae8}">
       <Declaration><![CDATA[METHOD PRIVATE M_HwModuleRegister
-VAR_INPUT
+VAR
+	nChannel : DINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Register shared hardware terminals before loading configuration.
-_bRegistrationOk := _LinkVariableManager.M_RegisterEL1889(
-	Terminal := GVL_IO.Term4_EL1889);
+_bRegistrationOk := _LinkVariableManager.M_BeginInfrastructureRegistration();
 
 IF _bRegistrationOk THEN
-	_bRegistrationOk := _LinkVariableManager.M_RegisterEL3602(
-		Terminal := GVL_IO.Term2_EL3602);
-END_IF
+	FOR nChannel := LOWER_BOUND(GVL_IO.Term4_EL1889.Chl, 1)
+		TO UPPER_BOUND(GVL_IO.Term4_EL1889.Chl, 1) DO
+		_LinkVariableManager.M_RegisterInfrastructureNode(
+			Variable := GVL_IO.Term4_EL1889.Chl[nChannel],
+			Access := E_VariableAccess.ReadOnly);
+	END_FOR
 
-IF _bRegistrationOk THEN
-	_bRegistrationOk := _LinkVariableManager.M_RegisterEL2809(
-		Terminal := GVL_IO.Term3_EL2809);
-END_IF
+	FOR nChannel := LOWER_BOUND(GVL_IO.Term2_EL3602.Chl, 1)
+		TO UPPER_BOUND(GVL_IO.Term2_EL3602.Chl, 1) DO
+		_LinkVariableManager.M_RegisterInfrastructureNode(
+			Variable := GVL_IO.Term2_EL3602.Chl[nChannel],
+			Access := E_VariableAccess.ReadOnly);
+	END_FOR
 
-// Preserve these Beckhoff hardware nodes across Module configuration retries.
-// 未來如果想要支援 Online Change 程式碼後也能重建 Module Node，才需要用到
-IF _bRegistrationOk THEN
+	FOR nChannel := LOWER_BOUND(GVL_IO.Term3_EL2809.Chl, 1)
+		TO UPPER_BOUND(GVL_IO.Term3_EL2809.Chl, 1) DO
+		_LinkVariableManager.M_RegisterInfrastructureNode(
+			Variable := GVL_IO.Term3_EL2809.Chl[nChannel],
+			Access := E_VariableAccess.WriteOnly);
+	END_FOR
+
+	// Seal decides whether the whole first-error-wins session succeeded.
 	_bRegistrationOk := _LinkVariableManager.M_SealInfrastructureRegistration();
 END_IF
 
