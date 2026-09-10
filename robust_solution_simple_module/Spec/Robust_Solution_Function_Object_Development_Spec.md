@@ -3,8 +3,8 @@
 | 文件屬性 | 內容 |
 |---|---|
 | 文件狀態 | Draft（討論中） |
-| 文件版本 | 0.3 |
-| 最後更新 | 2026-09-08 |
+| 文件版本 | 0.4 |
+| 最後更新 | 2026-09-10 |
 | 適用框架 | Robust Solution Module Framework |
 | 目前完成範圍 | 第 1～14 章初稿；各章待確認事項尚待逐項定案 |
 
@@ -647,7 +647,7 @@ Framework 的運作分為兩個主要階段：
 
 建立並驗證 cyclic execution 所需的所有基礎設施：
 
-- 註冊實體 I/O 或共享 variable node。
+- 以 Begin／逐點 Register／Seal session 註冊實體 I/O 或共享 variable node（見 8.10）。
 - 註冊可供 Module 綁定的 BaseUnit reference。
 - 註冊各 Module Type 的 Module Configuration Adapter。
 - 載入並解析 UTF-8 JSON configuration。
@@ -679,10 +679,26 @@ sequenceDiagram
     participant Config as Configuration Manager
     participant Adapter as Module Configuration Adapter
 
-    loop Until infrastructure registration succeeds
-        Task->>Link: Register shared I/O and readable nodes
-        Task->>Ref: Register BaseUnit references
-        Task->>Registry: Register Module Type adapters
+    Note over Task,Link: MAIN attempts startup registration once
+    Task->>Link: M_BeginInfrastructureRegistration()
+    break Begin fails
+        Link-->>Task: FALSE, ErrorMessage; keep Execute = FALSE
+    end
+    loop Every shared scalar / array element
+        Task->>Link: M_RegisterInfrastructureNode(Variable, Access)
+        Note over Task,Link: First error is retained; later declarations stop processing
+    end
+    Task->>Link: M_SealInfrastructureRegistration()
+    break Seal fails
+        Link-->>Task: Roll back session nodes; retain first error; Execute = FALSE
+    end
+    Task->>Ref: Register BaseUnit references
+    break Reference registration fails
+        Note over Task,Ref: Keep Execute = FALSE; sealed nodes remain
+    end
+    Task->>Registry: Register Module Type adapters
+    break Adapter registration fails
+        Note over Task,Registry: Keep Execute = FALSE; sealed nodes remain
     end
 
     Task->>Config: Execute = infrastructure registered
@@ -939,7 +955,7 @@ Data aggregation 遇到重複 Data ID 時，不得發布第二筆相同 ID，並
 
 | 條件 | 目前必要行為 |
 |---|---|
-| Infrastructure registration 尚未成功 | 不啟動 configuration loading；後續 scan 可以重試 registration |
+| Infrastructure registration 尚未成功 | `Execute = FALSE`，不啟動 configuration loading；目前 `MAIN` 只嘗試一次，不會在後續 scan 自動重試。Node session 失敗須由 Seal rollback，重試條件見 8.10 |
 | Configuration loading／parsing 進行中 | `Busy = TRUE`、`Ready = FALSE`；不執行 mapping 或 Module |
 | Configuration validation／application 失敗 | 清除已套用 runtime links 與 Adapter slots；`Error = TRUE`、`Ready = FALSE` |
 | Configuration 尚未 Ready | 跳過 input mapping、全部 Module invocation 與 output mapping |
@@ -1854,9 +1870,9 @@ Module Adapter 可以描述完整 I/O surface，但 Registry 只需保留本次 
 
 ### 8.6 I/O node contract
 
-每個可註冊 node 必須提供：
+每個 node declaration 必須提供 `Variable : ANY` 與 `Access : E_VariableAccess`；Manager 由實際變數解析 symbol 與型別資訊，註冊後的 node 必須具備：
 
-- non-empty relative path。
+- 可解析且 non-empty 的完整 ADS symbol name（由 address／size 解析，不由呼叫端手寫）。
 - 有效 address 與正確 size。
 - 支援的 primitive data type。
 - `ReadOnly`、`WriteOnly` 或 `ReadWrite` access metadata。
@@ -1864,6 +1880,8 @@ Module Adapter 可以描述完整 I/O surface，但 Registry 只需保留本次 
 目前支援的 primitive node type 為 `BOOL`、`DINT`、`UDINT`、`REAL`、`LREAL` 與 `STRING(80)` 範圍內的字串。
 
 Mapping source 不得是 write-only，target 不得是 read-only。Configured Variable 與 Alarm source 必須可讀。
+
+共享實體 I/O 使用 `M_RegisterInfrastructureNode`；Module instance 內的 node 由 Adapter 在 Module session 中使用 `M_RegisterModuleNode`。JSON 的 Module relative path 用於組態引用，不是這兩個逐點註冊 API 的參數。Array 必須依實際 bounds 逐元素註冊，不得將整個 array 或 terminal struct 當成一個 primitive node 傳入。
 
 ### 8.7 JSON configuration contract
 
@@ -1912,15 +1930,82 @@ Cyclic phase 只能透過 `I_VariableNodeReader` 與 NodeHandle 建立本機 sna
 
 ### 8.10 Registry 與 initialization wiring
 
-System Orchestration 必須依序：
+System Orchestration（目前為 `MAIN.M_HwModuleRegister()`）必須依序：
 
-1. 註冊共享 Beckhoff I/O node。
-2. seal infrastructure node registration，使 Module configuration retry 不會清除共享 node。
-3. 註冊所有可配置的 BaseUnit reference。
-4. 以 Module Type name 與 Adapter 註冊每個 Module Type。
-5. 所有步驟成功後才將 infrastructure registration 標記完成。
+1. 呼叫 `M_BeginInfrastructureRegistration()`，且只在回傳 `TRUE` 後進入逐點宣告。
+2. 對每個共享 scalar 或 array element 呼叫 `M_RegisterInfrastructureNode(Variable := ..., Access := ...)`。
+3. 呼叫 `M_SealInfrastructureRegistration()` 作為整個 node session 的最終結果；即使中間 declaration 失敗，也必須呼叫 Seal 完成 rollback。
+4. 只有 Seal 成功後才註冊所有可配置的 BaseUnit reference，再以 Module Type name 與 Adapter 註冊每個 Module Type；每一步都必須檢查回傳值，失敗即停止後續步驟。
+5. 全部成功後才設定 `_bInfrastructureRegistered := TRUE`，並以此驅動 Configuration Manager 的 `Execute`。Node Seal 成功本身不代表整體 initialization 已完成。
 
 相同 Module Type name 再次 registration 可以替換 Adapter reference，但不得增加重複 registry entry。Registry 滿時必須失敗並提供 diagnostics。
+
+#### 8.10.1 Infrastructure node session 契約
+
+| API（皆回傳 `BOOL`） | 前置條件與可觀察行為 |
+|---|---|
+| `M_BeginInfrastructureRegistration()` | 不得已有 active Infrastructure／Module session，且 Infrastructure 不得已 sealed。成功時清除舊錯誤、未封存 nodes 與 node counts，開啟新 session；重複 Begin 或 sealed 後 Begin 回傳 `FALSE`，不重設既有第一個錯誤。 |
+| `M_RegisterInfrastructureNode(Variable : ANY, Access : E_VariableAccess)` | 必須有 active Infrastructure session 且尚未 sealed。由變數 address／size 解析完整 ADS symbol，驗證 access、primitive type、size 及容量後加入 node table。相同 symbol 重複宣告必須失敗，即使變數與 access 相同也不覆寫。 |
+| `M_SealInfrastructureRegistration()` | 必須有 active Infrastructure session，且不得與 Module session 重疊。無錯誤時保存 Infrastructure node count、標記 sealed 並結束 session；有錯誤時回傳 `FALSE` 並對 active Infrastructure session 執行 rollback。空 session 也可以成功 Seal。 |
+
+`Access` 是相對於 Link Variable Manager 的讀寫權限，由呼叫端明確指定：實體 input（例如 EL1889、EL3602 channel）使用 `ReadOnly`，實體 output（例如 EL2809 channel）使用 `WriteOnly`；確實需要雙向存取的共享變數才使用 `ReadWrite`。Manager 不依端子型號推斷 access。
+
+**First-error-wins**：第一個失敗的 registration call 設定 `Error = TRUE` 與 `ErrorMessage`。後續逐點 Register 回傳 `FALSE`、不再新增 node，也不覆蓋首錯；Seal 保留原始錯誤。因此不得以「最後一個 Register 的 BOOL」代表整個 session 結果，必須檢查 Seal。Session 內不得插入會清除錯誤的 `M_ClearLinks()`、`M_ClearModuleNodes()`、`M_AddLink()` 或 `M_ResolveReadableNode()`；first-error-wins 是 registration 流程的契約，不是 Manager 所有 API 的全域錯誤政策。
+
+**失敗 rollback**：Register 失敗當下，先前成功加入的 nodes 尚可能留在 table。Seal 在 active session 有錯誤時清除本次 Infrastructure nodes，將 `_NodeCount` 與 `_InfrastructureNodeCount` 歸零並關閉 session，保留 `Error`／`ErrorMessage`，且不標記 sealed。必須先保存診斷；呼叫端若明確啟動新 attempt，可在 rollback 後重新 Begin，成功的 Begin 才會清除舊錯誤。不得藉重複 Begin 跳過尚未結束的 session。
+
+成功 Seal 後不得再 Begin 或追加 Infrastructure node。後續 Module configuration application 失敗時，外層 Configuration Manager 清除 Module nodes／links／runtime 與 references；`M_ClearModuleNodes()` 保留已 sealed 的 Infrastructure nodes。這與 Infrastructure Seal 的 rollback 範圍不同。BaseUnit reference 或 Adapter registration 在 Seal 之後失敗，也不會撤銷已 sealed nodes。
+
+目前 `MAIN` 以 `_bInfrastructureRegistrationAttempted` 確保啟動註冊只嘗試一次，以 `_bInfrastructureRegistered` 保存所有步驟的成功結果；失敗後不會每個 scan 自動重試。Manager 可在未 sealed 且 rollback 完成後接受新 attempt，不代表現有 `MAIN` 已提供 retry／runtime reload。
+
+#### 8.10.2 新 Module 開發者可套用的簡短範例
+
+以下為 `MAIN.M_HwModuleRegister()` 的註冊骨架，使用現有 `MAIN` 的 manager、adapter 與 BOOL 變數；method local 宣告 `nChannel : DINT`。新增 Module Type 時，替換或追加其硬體節點、BaseUnit 與 Adapter registration，並保留每一步的成功 gating。這段初始化由 `MAIN` 的 attempted guard 呼叫一次，不應放進 Module cyclic body。
+
+```iecst
+_bRegistrationOk := _LinkVariableManager.M_BeginInfrastructureRegistration();
+IF _bRegistrationOk THEN
+    // Array 依實際 bounds 逐點宣告；scalar 直接傳入變數。
+    FOR nChannel := LOWER_BOUND(GVL_IO.Term4_EL1889.Chl, 1)
+        TO UPPER_BOUND(GVL_IO.Term4_EL1889.Chl, 1) DO
+        _LinkVariableManager.M_RegisterInfrastructureNode(
+            Variable := GVL_IO.Term4_EL1889.Chl[nChannel],
+            Access := E_VariableAccess.ReadOnly);
+    END_FOR
+    _LinkVariableManager.M_RegisterInfrastructureNode(
+        Variable := GVL_IO.Term2_EL3602.Chl[1],
+        Access := E_VariableAccess.ReadOnly);
+    _LinkVariableManager.M_RegisterInfrastructureNode(
+        Variable := GVL_IO.Term3_EL2809.Chl[1],
+        Access := E_VariableAccess.WriteOnly);
+
+    // 不因單點失敗而提前 RETURN：Seal 統一判定並 rollback。
+    _bRegistrationOk := _LinkVariableManager.M_SealInfrastructureRegistration();
+END_IF
+IF _bRegistrationOk THEN
+    _bRegistrationOk := _ReferenceManager.M_RegisterReference(
+        BaseUnit := GVL_IO.NC_Axis1);
+END_IF
+IF _bRegistrationOk THEN
+    _bRegistrationOk := _ReferenceManager.M_RegisterReference(
+        BaseUnit := GVL_IO.NC_Axis2);
+END_IF
+IF _bRegistrationOk THEN
+    _bRegistrationOk := _ModuleTypeRegistry.M_Register(
+        ModuleTypeName := 'GC', Adapter := _GCModuleConfigurationAdapter);
+END_IF
+_bInfrastructureRegistered := _bRegistrationOk;
+```
+
+此精簡範例只宣告 EL3602／EL2809 的第 1 點；實際整合必須補齊 configuration 使用的 channel，可套用相同 `LOWER_BOUND`／`UPPER_BOUND` 迴圈。Configuration Manager 使用 `Execute := _bInfrastructureRegistered`；失敗診斷應讀取失敗步驟所屬 Manager 的 `ErrorMessage`（node session 為 `_LinkVariableManager.ErrorMessage`）。Module 自己的 `HwInput`／`HwOutput` 仍由 Adapter 在 `M_BeginModuleRegistration()`／`M_EndModuleRegistration()` 之間逐點 `M_RegisterModuleNode()`，不得混入上述 Infrastructure session。
+
+#### 8.10.3 舊端子專用 API 遷移
+
+`M_RegisterEL1889()`、`M_RegisterEL2809()`、`M_RegisterEL3602()` 已淘汰，目前 `FB_LinkVariableManager` 已無這些 method；新程式與文件範例不得再使用。EL1889／EL2809／EL3602 的硬體與 `GVL_IO` DUT 仍可使用，淘汰的是端子專用註冊方式。
+
+遷移時，將一次 terminal registration 改為 Begin → 各 `Chl[index]` 逐點 Register（明確指定 Access）→ Seal，再依成功結果繼續 reference／adapter registration。新增端子或 Module Type 不需要為 Link Variable Manager 增加 concrete registration API。
+
+實作依據：[FB_LinkVariableManager](../robust_solution_simple_module/Untitled1/Configuration/POUs/FB_LinkVariableManager.TcPOU)、[MAIN](../robust_solution_simple_module/Untitled1/POUs/MAIN.TcPOU)；Module session 的獨立清除流程另見 [Module Node Registration Session 說明](../docs/Module-Node-Registration-Session.md)。
 
 ### 8.11 Current Implementation Profile
 
@@ -1950,6 +2035,8 @@ System Orchestration 必須依序：
 - [ ] type-specific GVL arrays 使用相同 Slot bounds。
 - [ ] Adapter 完整實作所有 `I_ModuleConfigurationAdapter` method。
 - [ ] I/O node 透過通用 registration Interface 宣告。
+- [ ] 共享 node 使用 Begin／逐點 Register／Seal，未使用已淘汰的端子專用 API；Begin 成功後即使 declaration 失敗也會執行 Seal。
+- [ ] 已驗證首錯保留、重複 node／Begin 拒絕、失敗 Seal 清除 nodes，以及成功 Seal 後禁止追加；全部 Infrastructure wiring 成功前 `Execute = FALSE`。
 - [ ] Reference Port name、token、required flag 唯一且可驗證。
 - [ ] bound BaseUnit 使用 `__QUERYINTERFACE` 轉為 typed Interface。
 - [ ] disabled Slot 及 `M_ClearAllSlots()` 會清除 runtime 與 references。
@@ -2747,6 +2834,10 @@ Deprecated contract 應記錄：
 降低 capacity 可能使既有 configuration 無法載入，預設視為 breaking change。任何 capacity 變更都必須更新 Current Implementation Profile 並執行最大容量測試。
 
 ### 14.9 版本與變更紀錄
+
+| 文件版本 | 日期 | 文件變更 |
+|---|---|---|
+| 0.4 | 2026-09-10 | 對齊現有 Infrastructure Begin／逐點 Register／Seal 實作，補充 first-error-wins、失敗 rollback、一次性啟動 gating、端子專用 API 遷移與範例；本次僅更新文件。 |
 
 至少應維護：
 

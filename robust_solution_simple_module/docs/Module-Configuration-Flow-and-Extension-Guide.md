@@ -58,27 +58,33 @@ flowchart LR
 
 ### 3.1 Phase 0：註冊共享基礎設施
 
-[`MAIN.M_HwModuleRegister()`](../robust_solution_simple_module/Untitled1/POUs/MAIN.TcPOU) 使用 `_bInfrastructureRegistered` 確保註冊只成功執行一次：
+[`MAIN.M_HwModuleRegister()`](../robust_solution_simple_module/Untitled1/POUs/MAIN.TcPOU) 由 `_bInfrastructureRegistrationAttempted` 保證啟動時只嘗試一次；`_bInfrastructureRegistered` 保存所有註冊步驟的成功結果，失敗不會在後續 scan 自動重試：
 
-1. 將共享實體端子註冊到 `FB_LinkVariableManager`。
-   - `M_RegisterEL1889()`：實體 input，固定為 `ReadOnly`。
-   - `M_RegisterEL3602()`：實體 input，固定為 `ReadOnly`。
-   - `M_RegisterEL2809()`：實體 output，固定為 `WriteOnly`。
-2. 將共享 BaseUnit 註冊到 `FB_ReferenceManager`。
+1. 呼叫 `FB_LinkVariableManager.M_BeginInfrastructureRegistration()`，成功後逐點呼叫 `M_RegisterInfrastructureNode(Variable := ..., Access := ...)`。Array 依 `LOWER_BOUND`／`UPPER_BOUND` 逐元素傳入，完整 ADS symbol name 由變數 address／size 解析。
+   - EL1889／EL3602 實體 input channel：呼叫端指定 `ReadOnly`。
+   - EL2809 實體 output channel：呼叫端指定 `WriteOnly`。
+   - 共享變數確實需要雙向存取時可指定 `ReadWrite`；Manager 不依端子型號推斷 access。
+2. 呼叫 `M_SealInfrastructureRegistration()` 判定整個 node session。即使逐點宣告失敗，也必須執行 Seal：first-error-wins 保留第一個 `ErrorMessage`，後續 Register 不再新增 node；失敗的 Seal 清除 active session 的 Infrastructure nodes、將 node counts 歸零並結束 session，保留錯誤且不標記 sealed。
+3. 只有 Seal 成功後才將共享 BaseUnit 註冊到 `FB_ReferenceManager`，每次檢查回傳值。
    - 呼叫端只傳入 `I_BaseUnit`。
    - Reference Manager 透過 `__QUERYINTERFACE` 取得 `I_AdsSymbolProvider`。
    - `GetSymbolNameByAddress()` 將位址解析成例如 `GVL_IO.NC_Axis1` 的完整 Symbol Name。
-3. 將 Module type 與 adapter 註冊到 `FB_ModuleTypeRegistry`。
+4. 前面步驟都成功後，將 Module type 與 adapter 註冊到 `FB_ModuleTypeRegistry`。
 
 ```iecst
-_ModuleTypeRegistry.M_Register(
-    ModuleTypeName := 'GC',
-    Adapter := _GCModuleConfigurationAdapter);
+IF _bRegistrationOk THEN
+    _bRegistrationOk := _ModuleTypeRegistry.M_Register(
+        ModuleTypeName := 'GC',
+        Adapter := _GCModuleConfigurationAdapter);
+END_IF
+_bInfrastructureRegistered := _bRegistrationOk;
 ```
 
 `T_ModuleTypeName` 是固定長度的字串 key。新增 Module type 只需在 composition root 註冊新名稱，不必修改 framework enum；JSON `moduleType` 與註冊名稱採大小寫完全一致的比較。
 
-若任一步驟失敗，Configuration Manager 不會開始載入設定。
+若任一步驟失敗，Configuration Manager 的 `Execute := _bInfrastructureRegistered` 保持 `FALSE`。成功 Seal 後不得再 Begin 或追加 Infrastructure node；後續 Module configuration 失敗只清除 Module nodes 等套用結果，保留已 sealed Infrastructure nodes。未 sealed 的失敗 session 必須先由 Seal rollback，Manager 才能接受新的 Begin；現有 `MAIN` 不會自動啟動此 retry。
+
+舊 `M_RegisterEL1889()`／`M_RegisterEL2809()`／`M_RegisterEL3602()` 已淘汰並自 Manager 移除。硬體型號與 DUT 並未淘汰；請改用通用逐點 API。完整 session 契約與可套用的短範例見[功能物件開發規格 8.10](../Spec/Robust_Solution_Function_Object_Development_Spec.md#810-registry-與-initialization-wiring)。
 
 ### 3.2 Phase 1：載入、解析與 schema 驗證
 
