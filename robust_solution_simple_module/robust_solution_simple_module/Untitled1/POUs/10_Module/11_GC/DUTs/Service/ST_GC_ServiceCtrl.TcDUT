@@ -10,7 +10,7 @@ STRUCT
 	LiftPinAxisMoveVelCCW : ST_ServiceCtrl;
 	LiftPinAxisMoveAbs : ST_ServiceCtrl;
 	SingleProcess : ST_ServiceCtrl;
-	// Aggregation slots only; the Module routes commands from WaferTransferRequestList[1].
+	
 	WaferSend : ST_ServiceCtrl;
 	WaferReceive : ST_ServiceCtrl;
 END_STRUCT

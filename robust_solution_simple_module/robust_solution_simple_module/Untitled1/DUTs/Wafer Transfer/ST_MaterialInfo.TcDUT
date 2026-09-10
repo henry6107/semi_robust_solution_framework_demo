@@ -4,7 +4,7 @@
     <Declaration><![CDATA[TYPE ST_MaterialInfo :
 STRUCT
 	MaterialPresence : BOOL;	// Could be sensor signal
-	OwnerShip : BOOL;
+	OwnerShip : BOOL;			// Pure software logic
 	ReceiveState : E_ReceiveState;
 	OperationState : E_OperationState;
 	MaterialContext : ST_MaterialContext;

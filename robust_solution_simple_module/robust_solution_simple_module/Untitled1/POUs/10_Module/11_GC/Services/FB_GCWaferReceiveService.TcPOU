@@ -18,7 +18,7 @@ VAR_OUTPUT
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.ReceiveWafer);]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{60d1dd31-2224-4849-ae56-5d896fbf2a68}" />
     <Method Name="H_OnAborting" Id="{f6237217-291f-47f3-85aa-1d639fca1749}" FolderPath="StateAction\">

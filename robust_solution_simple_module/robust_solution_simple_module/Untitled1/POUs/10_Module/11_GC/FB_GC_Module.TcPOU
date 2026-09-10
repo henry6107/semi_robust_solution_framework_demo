@@ -46,7 +46,7 @@ ModuleStatus.WaferTransferResponseList[1].EndpointId := 1;
 ModuleStatus.WaferTransferResponseList[1].WaferHandlingType := E_WaferHandlingType.Passive;
 ModuleStatus.WaferTransferResponseList[1].Capability := E_TransferCapability.Bidirectional;
 ModuleStatus.WaferTransferResponseList[1].SendServiceId := E_GCServiceId.WaferSend;
-ModuleStatus.WaferTransferResponseList[1].ReceiveServiceId := E_GCServiceId.WaferReceive; 
+ModuleStatus.WaferTransferResponseList[1].ReceiveServiceId := E_GCServiceId.WaferReceive;
 
 _ServiceCtrlView.ByName := ServiceCtrl;
 M_UpdateModule(
