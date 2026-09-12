@@ -131,15 +131,6 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_UpdateServiceParam" Id="{f8022e96-fc7c-4f3a-b06b-d55e075ed120}" FolderPath="HookMethod\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceParam
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="H_UpdateVariable" Id="{9d15debf-7709-4c12-8971-2dc378590faa}" FolderPath="HookMethod\">
       <Declaration><![CDATA[METHOD PROTECTED H_UpdateVariable
 ]]></Declaration>
@@ -433,7 +424,6 @@ _ServiceContext.ModuleId := _ModuleId;
 _ServiceContext.UtcDateTime := SystemContext.UtcDateTime;
 
 // Update service state machine
-H_UpdateServiceParam();
 M_SelectServiceControlSource(ServiceControls := ServiceControls);
 H_UpdateService();
 

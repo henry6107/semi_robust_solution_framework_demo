@@ -854,9 +854,8 @@ flowchart TD
     ModulePackML[Execute Module PackML state machine]
     Snapshot[Apply Runtime identity and capture configured value snapshot]
     Context[Build Service Context]
-    Params[H_UpdateServiceParam]
-    SelectCtrl[Select external or Module-wide Service Control]
-    Services[H_UpdateService]
+    SelectCtrl["M_SelectServiceControlSource(): select external or Module-wide Service Control"]
+    Services["H_UpdateService(): route each Service Parameter and invoke each Service"]
     BaseUnits[H_UpdateBaseUnit]
     Response[Update request response and Module PackML Status]
     Alarm[Evaluate and publish Alarm state]
@@ -873,8 +872,7 @@ flowchart TD
     Summary --> ModulePackML
     ModulePackML --> Snapshot
     Snapshot --> Context
-    Context --> Params
-    Params --> SelectCtrl
+    Context --> SelectCtrl
     SelectCtrl --> Services
     Services --> BaseUnits
     BaseUnits --> Response
@@ -891,7 +889,7 @@ Module-level cyclic contract：
 3. `M_UpdateServiceStateSummary()` 使用 Module invocation 開始時已存在的 Service Status；本 scan 內 `H_UpdateService()` 產生的新狀態會在下一次 Module invocation 才參與 Module transition completion 判斷。
 4. Runtime Configuration 有效時，Module 必須更新 Module ID、Enabled、Module Type 與 configured value snapshot。
 5. Service Context 必須在呼叫任何 Service 前，使用目前 Module ID 與本 scan 的 System Context 建立。
-6. Service Parameter routing 必須先於 Service invocation。
+6. `H_UpdateService()` 必須在呼叫每個 Service instance 前，先將該 Service 的 Module-specific Parameter 路由至其 `Param`。
 7. BaseUnit cyclic update 必須在所有 Service 本 scan 的命令呼叫完成後執行。
 8. Alarm、Data 與 Variable publication 必須在 Service 與 BaseUnit update phase 之後完成；其個別資料來源仍受第 3.11 節的 snapshot timing 約束。
 
@@ -920,7 +918,8 @@ Module-wide override 必須同時傳遞 `ModuleCtrl.PackMLIn` 與 `ModuleCtrl.Re
 | Input Mapping target | 所有 Module invocation 前 | Module-specific input logic | Module 取得本 scan mapping 後的 input |
 | Service Status summary | `H_UpdateService()` 前 | Module PackML transition hook | 使用進入本次 Module invocation 時已存在的 Service Status |
 | Configured value snapshot | Module PackML update 後、Service update 前 | 本 scan 後段的 configured Alarm／Variable publication | 即使後續 Service 改變來源 node，本次 publication 仍使用較早取得的 snapshot |
-| Service Control／Parameter | Service invocation 前 | 本 scan 的 Service | Service 取得本 scan routing 後的值 |
+| Service Control | `H_UpdateService()` 前由 `M_SelectServiceControlSource()` 選擇 | 本 scan 的 Service | Service 取得依本 scan Module State 選擇的外部或 Module-wide Control |
+| Service Parameter | `H_UpdateService()` 內、對應 Service invocation 前 | 本 scan 的 Service | Service 取得本 scan 路由後的 Parameter |
 | Service Error／Data | `H_UpdateService()` 中 | 本 scan 後段的 Module Alarm／Data aggregation | 本 scan 可以被 Module 彙整 |
 | BaseUnit cyclic state | Service command phase 後 | BaseUnit／下一次 Service observation | Service 先提出本 scan 命令，再由 BaseUnit 執行 cyclic update；不得假設所有非同步結果一定在同一 scan 完成 |
 | Module output node | Module invocation 中 | scan 結尾的 output mapping | Output target 取得本 scan Module execution 後的值 |
@@ -929,7 +928,7 @@ Module-wide override 必須同時傳遞 `ModuleCtrl.PackMLIn` 與 `ModuleCtrl.Re
 
 ### 3.12 Service 與 BaseUnit 的呼叫模型
 
-Module 的 `H_UpdateService()` 必須對每個 Service instance 執行一次，並提供：
+Module 的 `H_UpdateService()` 必須將每個 Service 的 Parameter 指派與 invocation 放在同一個 Service 區塊中：先將本 scan 的 Module-specific Parameter 指派至該 Service instance，再呼叫該 Service 一次，並提供：
 
 - 對應的 Service Control。
 - 本 scan 已路由的 Service Parameter。
@@ -1281,6 +1280,7 @@ BaseUnit 是設備能力與 Resource Ownership 的 seam。它應在小而明確�
 
 ```mermaid
 classDiagram
+    direction BT
     class I_BaseUnit
     class I_ResourceLock {
         +M_AcquireResource(OwnerId) BOOL
@@ -1713,11 +1713,10 @@ Derived Module FB body 應保持精簡：
 
 | Hook | 責任 | 必須發生的順序 |
 |---|---|---|
-| `H_UpdateServiceParam` | 將 Module-specific Parameter 路由至各 Service instance | 在 Service invocation 前 |
-| `H_UpdateService` | 對每個 Service instance 呼叫一次，傳入 Control、Context、Service ID 與 BaseUnit reference | Parameter routing 與 Control Source selection 後 |
+| `H_UpdateService` | 將 Module-specific Parameter 路由至對應 Service，並對每個 Service instance 呼叫一次，傳入 Control、Context、Service ID 與 BaseUnit reference | Control Source selection 後；每筆 Parameter 指派必須緊鄰且位於對應 Service invocation 前 |
 | `H_UpdateBaseUnit` | 推進 Module 所負責的 BaseUnit cyclic update | 所有 Service invocation 後 |
 
-這三個 hook 不得重新實作 Module Base 已負責的 Heartbeat、PackML、Alarm、Data 或 Variable 工作。
+這兩個 hook 不得重新實作 Module Base 已負責的 Heartbeat、PackML、Alarm、Data 或 Variable 工作。
 
 ### 7.6 Service ID 與 indexed view
 

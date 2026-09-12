@@ -83,6 +83,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[_SpinAxisJogCWService(
 	Ctrl:= _ServiceCtrlView.ByName.SpinAxisJogCW,
+	Param:= ServiceParam.SpinAxisJogCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	// Owner IDs are assigned by the Module so each Service instance is unique.
@@ -91,6 +92,7 @@ END_VAR
 
 _SpinAxisMoveAbsService(
 	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveAbs,
+	Param:= ServiceParam.SpinAxisMoveAbs,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.SpinAxisMoveAbs,
@@ -98,6 +100,7 @@ _SpinAxisMoveAbsService(
 
 _SpinAxisMoveVelCWService(
 	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveVelCW,
+	Param:= ServiceParam.SpinAxisMoveVelCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.SpinAxisMoveVelCW,
@@ -105,6 +108,7 @@ _SpinAxisMoveVelCWService(
 
 _LiftPinAxisMoveVelCWService(
 	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCW,
+	Param:= ServiceParam.LiftPinAxisMoveVelCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveVelCW,
@@ -112,6 +116,7 @@ _LiftPinAxisMoveVelCWService(
 
 _LiftPinAxisMoveVelCCWService(
 	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCCW,
+	Param:= ServiceParam.LiftPinAxisMoveVelCCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveVelCCW,
@@ -119,6 +124,7 @@ _LiftPinAxisMoveVelCCWService(
 
 _LiftPinAxisMoveAbsService(
 	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveAbs,
+	Param:= ServiceParam.LiftPinAxisMoveAbs,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveAbs,
@@ -126,6 +132,7 @@ _LiftPinAxisMoveAbsService(
 
 _SingleProcessService(
 	Ctrl := _ServiceCtrlView.ByName.SingleProcess,
+	Param:= ServiceParam.SingleProcess,
 	Context := _ServiceContext,
 	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
 	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
@@ -136,6 +143,7 @@ _SingleProcessService(
 // TODO: Coordinate Send/Receive access when implementing the transfer sequences.
 _WaferSendService(
 	Ctrl := _ServiceCtrlView.ByName.WaferSend,
+	Param := ServiceParam.WaferSend,
 	Context := _ServiceContext,
 	ServiceId := E_Chamber1ServiceId.WaferSend,
 	MaterialInfo := ModuleStatus.WaferTransferResponseList[1].MaterialInfo,
@@ -145,6 +153,7 @@ _WaferSendService(
 
 _WaferReceiveService(
 	Ctrl := _ServiceCtrlView.ByName.WaferReceive,
+	Param := ServiceParam.WaferReceive,
 	Context := _ServiceContext,
 	ServiceId := E_Chamber1ServiceId.WaferReceive,
 	MaterialInfo := ModuleStatus.WaferTransferResponseList[1].MaterialInfo,
@@ -152,23 +161,6 @@ _WaferReceiveService(
 	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
 	Status => _ServiceStatusView.ByName.WaferReceive);
 ]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_UpdateServiceParam" Id="{1a4b35b3-f132-467f-941f-899cd13c7e6b}" FolderPath="ModuleUpdate\">
-      <Declaration><![CDATA[METHOD PROTECTED H_UpdateServiceParam
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[_SpinAxisMoveAbsService.Param := ServiceParam.SpinAxisMoveAbs;
-_SpinAxisJogCWService.Param := ServiceParam.SpinAxisJogCW;
-_SpinAxisMoveVelCWService.Param := ServiceParam.SpinAxisMoveVelCW;
-_LiftPinAxisMoveVelCWService.Param := ServiceParam.LiftPinAxisMoveVelCW;
-_LiftPinAxisMoveVelCCWService.Param := ServiceParam.LiftPinAxisMoveVelCCW;
-_LiftPinAxisMoveAbsService.Param := ServiceParam.LiftPinAxisMoveAbs;
-_SingleProcessService.Param := ServiceParam.SingleProcess;
-_WaferSendService.Param := ServiceParam.WaferSend;
-_WaferReceiveService.Param := ServiceParam.WaferReceive;]]></ST>
       </Implementation>
     </Method>
   </POU>
