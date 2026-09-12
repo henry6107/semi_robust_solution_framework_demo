@@ -23,7 +23,7 @@ _Avoid_: Slot, array index
 ## Alarm Lifecycle Language
 
 **Alarm Identity**:
-The stable key `(ServiceId, MainErrorId)` within one Module. Configured alarms always use `ServiceId = 0`; a published list index is never an identity.
+The stable key `(ServiceId, MainErrorId)` within one Module. Configured and Hook alarms always use `ServiceId = 0`; a valid configured definition owns the complete identity when it overlaps a Hook submission. Non-zero Service IDs remain independent. A published list index is never an identity.
 _Avoid_: AlarmList index, Message, SourceErrorId
 
 **Alarm Lifecycle**:
@@ -31,7 +31,7 @@ The interval from the first active occurrence of one Alarm Identity until that i
 _Avoid_: One PLC scan, one ErrorList snapshot
 
 **Active Alarm**:
-An alarm whose source condition currently exists. For Service alarms this means the identity was observed in the Service ErrorList during the current Module scan; for configured alarms it means the configured condition currently evaluates true.
+An alarm whose source condition currently exists. For Service alarms this means the identity was observed in the Service ErrorList during the current Module scan; for Hook alarms it means the identity was submitted from `H_UpdateAlarm()` in that scan; for configured alarms it means the latest valid configured sample evaluated true. An invalid configured sample retains the previous lifecycle state and never falls back to a Hook condition.
 _Avoid_: Latched Alarm, unacknowledged alarm
 
 **Acknowledged Alarm**:
@@ -45,3 +45,14 @@ _Avoid_: Active-only snapshot, Service ErrorList entry
 **Occurrence**:
 A `FALSE -> TRUE` transition of an Alarm Identity within its current lifecycle. The first occurrence sets `OccurrenceCount = 1`; continuous active scans do not increment it.
 _Avoid_: PLC cycle count, ErrorList polling count
+
+## Module Hook Language
+
+**Hook Alarm**:
+A Module-level alarm submitted by application logic after the Base Unit cyclic update, using `M_AddAlarm` within `H_UpdateAlarm`. It shares the existing Alarm Lifecycle and acknowledgement contract and has 30 reserved lifecycle slots. Service alarms have 40 slots and configured alarms have 30; the published total remains 100.
+
+**Configured Ownership**:
+A valid RuntimeConfig definition takes full precedence over the same Hook identity, including metadata, source value and alarm condition. Ownership does not depend on sample validity or whether an alarm is active. A configured takeover removes the old Hook lifecycle before acknowledgement; unrelated Hook and Service lifecycles survive configuration revision changes.
+
+**Hook SVID**:
+A descriptor submitted by `M_AddVariable` within `H_UpdateVariable` for the current Module scan. It needs no configured node registration and disappears when omitted. JSON descriptors have priority within the shared 100-entry VariableList; the descriptor ID, not its array index, is the identity.

@@ -56,7 +56,10 @@ Module type 自己的 FB、Runtime、Control 與 reference arrays，以及 adapt
 | Parameter | 目前值 | 作用範圍 |
 |---|---:|---|
 | `MaxModuleVariable` | 100 | 每個 Module 可發布的 SVID／VariableList 數量。 |
-| `MaxModuleAlarm` | 100 | 每個 Module 可發布的 ALID／AlarmList 數量。 |
+| `MaxModuleAlarm` | 100 | 每個 Module 可發布的 ALID／AlarmList 總數；包含 JSON 30、Hook 30、Service 40。 |
+| `MaxConfiguredAlarmsPerModule` | 30 | JSON Alarm lifecycle 容量。 |
+| `MaxHookAlarmsPerModule` | 30 | Module 自訂 Hook Alarm lifecycle 容量。 |
+| `MaxServiceAlarmsPerModule` | 40 | 彙整 Service Alarm lifecycle 容量。 |
 | `MaxModuleData` | 50 | 每個 Module 可發布的 DVID／ModuleDataList 數量。 |
 | `MaxServiceError` | 10 | 每個 Service 每輪可提供的 Error entry 數量。 |
 | `MaxModuleMappings` | 256 | 每個 Module 的 `inputMappings` 與 `outputMappings` 各自可配置的最大數量。 |
@@ -65,3 +68,7 @@ Module type 自己的 FB、Runtime、Control 與 reference arrays，以及 adapt
 | `MaxConfigReferenceNodes` | 100 | `FB_ReferenceManager` 可註冊的 BaseUnit reference source 總數。 |
 
 `MaxConfiguredValueSources` 為 `MaxModuleVariable + MaxConfiguredAlarmsPerModule`，限制每個 Module 一次本機 snapshot 可包含的 Variable／Alarm sources 總數。`MaxConfigValueSize` 則限制單一節點的原始資料大小，目前可容納 `STRING(80)` 與結尾字元。
+
+## Module 自訂 Hook
+
+Module 可覆寫 `H_UpdateAlarm()` 與 `H_UpdateVariable()`，直接讀取 Base Unit 狀態或發布計算值。JSON 整筆覆蓋同 ID 的 Hook 項目；SVID 每輪重建，Hook Alarm 沿用上層確認與鎖存機制。介面、完整範例、容量與狀態結構相容性請見 [Module Alarm 與 SVID Hook](module-hooks.md)。

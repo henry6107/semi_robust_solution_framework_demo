@@ -673,32 +673,32 @@ Initialization 必須先完成 infrastructure registration，再啟動 configura
 sequenceDiagram
     autonumber
     participant Task as PLC Task / MAIN
-    participant Link as Link Variable Manager
+    participant LinkManager as Link Variable Manager
     participant Ref as Reference Manager
     participant Registry as Module Type Registry
     participant Config as Configuration Manager
     participant Adapter as Module Configuration Adapter
 
-    Note over Task,Link: MAIN attempts startup registration once
-    Task->>Link: M_BeginInfrastructureRegistration()
+    Note over Task,LinkManager: MAIN attempts startup registration once
+    Task->>LinkManager: M_BeginInfrastructureRegistration()
     break Begin fails
-        Link-->>Task: FALSE, ErrorMessage; keep Execute = FALSE
+        LinkManager-->>Task: FALSE, ErrorMessage, keep Execute = FALSE
     end
     loop Every shared scalar / array element
-        Task->>Link: M_RegisterInfrastructureNode(Variable, Access)
-        Note over Task,Link: First error is retained; later declarations stop processing
+        Task->>LinkManager: M_RegisterInfrastructureNode(Variable, Access)
+        Note over Task,LinkManager: First error is retained, later declarations stop processing
     end
-    Task->>Link: M_SealInfrastructureRegistration()
+    Task->>LinkManager: M_SealInfrastructureRegistration()
     break Seal fails
-        Link-->>Task: Roll back session nodes; retain first error; Execute = FALSE
+        LinkManager-->>Task: Roll back session nodes, retain first error, Execute = FALSE
     end
     Task->>Ref: Register BaseUnit references
     break Reference registration fails
-        Note over Task,Ref: Keep Execute = FALSE; sealed nodes remain
+        Note over Task,Ref: Keep Execute = FALSE, sealed nodes remain
     end
     Task->>Registry: Register Module Type adapters
     break Adapter registration fails
-        Note over Task,Registry: Keep Execute = FALSE; sealed nodes remain
+        Note over Task,Registry: Keep Execute = FALSE, sealed nodes remain
     end
 
     Task->>Config: Execute = infrastructure registered
@@ -709,7 +709,7 @@ sequenceDiagram
 
     Note over Config,Adapter: Validate addressing before mutating runtime state
 
-    Config->>Link: Clear previously applied links
+    Config->>LinkManager: Clear previously applied links
     Config->>Registry: Clear all adapter-owned slots
 
     loop Every configured Module entry
@@ -717,14 +717,14 @@ sequenceDiagram
             Config->>Adapter: Apply disabled Runtime Configuration
         else Module enabled
             Config->>Adapter: Declare Module resources
-            Adapter->>Link: Declare referenced Module I/O nodes
+            Adapter->>LinkManager: Declare referenced Module I/O nodes
             Adapter->>Config: Declare named Reference Ports and tokens
-            Config->>Link: Add input and output mappings
+            Config->>LinkManager: Add input and output mappings
             Config->>Config: Resolve targetPort name to token
             Config->>Ref: Resolve configured BaseUnit source
             Config->>Adapter: Bind typed reference by port token
             Config->>Config: Mark port bound and validate required ports
-            Config->>Link: Resolve Variable and Alarm sources
+            Config->>LinkManager: Resolve Variable and Alarm sources
             Config->>Adapter: Apply valid Runtime Configuration
         end
     end
@@ -732,7 +732,7 @@ sequenceDiagram
     alt Entire application succeeds
         Config-->>Task: Ready = TRUE
     else Any step fails
-        Config->>Link: Clear applied links
+        Config->>LinkManager: Clear applied links
         Config->>Registry: Clear all adapter-owned slots
         Config-->>Task: Error = TRUE, Ready = FALSE
     end
@@ -759,7 +759,7 @@ sequenceDiagram
     participant Main as MAIN
     participant Config as Configuration Manager
     participant Clock as UTC Clock
-    participant Link as Link Variable Manager
+    participant LinkManager as Link Variable Manager
     participant Module as Enabled and Valid Modules
 
     Task->>Main: Invoke
@@ -769,14 +769,14 @@ sequenceDiagram
     Main->>Main: Update System Context
 
     alt Config.Ready = TRUE
-        Main->>Link: M_CyclicInput()
+        Main->>LinkManager: M_CyclicInput()
         loop Every supported Module Type and Slot
             alt RuntimeConfig.Enabled AND RuntimeConfig.Valid
                 Main->>Module: Invoke once
                 Module-->>Main: Status / Alarm / Data / Variable
             end
         end
-        Main->>Link: M_CyclicOutput()
+        Main->>LinkManager: M_CyclicOutput()
     else Config.Ready = FALSE
         Note over Main,Module: Skip input mapping, Module invocation and output mapping
     end
