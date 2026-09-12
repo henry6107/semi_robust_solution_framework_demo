@@ -283,10 +283,8 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF PackMLOut.eStateCurrent = E_PackMLState.Idle
-	OR PackMLOut.eStateCurrent = E_PackMLState.Starting
-	OR PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
-	// The caller preloads external Service controls for these states.
+        <ST><![CDATA[// Allow external call for services only when module is in Execute state
+IF PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
 	RETURN;
 END_IF
 

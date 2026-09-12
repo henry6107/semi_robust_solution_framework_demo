@@ -897,16 +897,18 @@ Module-level cyclic contract：
 
 ### 3.10 Service Control Source 選擇
 
-Module 依其目前 PackML State 決定 Service 使用外部 Service Control，或將 Module Control 套用至全部 Service。
+Module 只有在目前 PackML State 為 `Execute` 時，才允許個別 Service 使用外部 Service Control。其他所有 State 均由 `M_SelectServiceControlSource()` 將 Module Control 套用至全部 Service，使 Module lifecycle 擁有一致且唯一的控制權。
 
 | Module PackML State | Service Control Source | 目的 |
 |---|---|---|
-| `Idle` | 外部預載的個別 Service Control | 允許呼叫者選擇及準備要執行的 Service |
-| `Starting` | 外部預載的個別 Service Control | 讓選定的 Service 完成自己的 Starting 流程 |
 | `Execute` | 外部預載的個別 Service Control | 讓個別 Service 接收其操作命令 |
-| 其他 State | Module Control 覆寫所有 Service Control | 使 Stop、Abort、Clear、Reset 等 Module-wide lifecycle 與全部 Service 同步 |
+| 其他 | Module Control 覆寫所有 Service Control | 禁止外部個別操作，並使 Module-wide lifecycle 與全部 Service 同步 |
+
+`M_SelectServiceControlSource()` 在 Module PackML state machine 更新完成後執行，因此以本 scan 更新後的 `PackMLOut.eStateCurrent` 判定控制來源。Module 若在同一 scan 由 `Execute` 進入 `Stopping`、`Aborting` 或其他 State，外部 Service Control 會立即停止轉送，改由 Module Control 接管。
 
 Module-wide override 必須同時傳遞 `ModuleCtrl.PackMLIn` 與 `ModuleCtrl.RequestId` 至每個 Service Control。Derived Module 不得只覆寫部分 Service，否則 Module Base 對「所有 Service 已停止／中止／回到 Idle」的判斷可能無法完成。
+
+上位控制器只能在 `ModuleStatus.PackMLOut.eStateCurrent = E_PackMLState.Execute` 時送出個別 Service request。非 `Execute` 期間，外部 `ServiceCtrl` 不會傳入 Service，因此該外部 request 不會觸發命令接收，也不會使 Service 以外部 `RequestId` 更新 `ResponseId`。若外部 request 持續保持至 Module 重新進入 `Execute`，它會從該 scan 起成為有效輸入；若不希望延後執行，上位控制器必須在 Module 離開 `Execute` 時清除 request。
 
 ### 3.11 同一 Scan 的資料可見性
 
