@@ -5,10 +5,18 @@
 VAR
 	// Keep the large Module instance at Test Suite scope to avoid Method stack overflow.
 	HeartbeatModule : FB_TestableModuleBase;
+	HookModule : FB_TestableHookModule;
+	OverrideModule : FB_TestableHookModule;
+	CapacityModule : FB_TestableHookModule;
+	RegressionModule : FB_TestableModuleBase;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[HeartbeatChangeResetsTimeoutAndRestoresControlSource();]]></ST>
+      <ST><![CDATA[EmptyHooksPreserveConfiguredDataAndServiceAggregation();
+HookAndVariableCapacitiesPreserveExistingEntries();
+JsonOwnsHookIdentitiesIncludingFalseAndInvalidSamples();
+HooksReadBaseUnitAfterUpdateAndEnforceSubmissionContract();
+HeartbeatChangeResetsTimeoutAndRestoresControlSource();]]></ST>
     </Implementation>
     <Method Name="HeartbeatChangeResetsTimeoutAndRestoresControlSource" Id="{915b3734-1cf3-4fad-8f9c-42ab465f0820}">
       <Declaration><![CDATA[METHOD HeartbeatChangeResetsTimeoutAndRestoresControlSource
@@ -143,6 +151,264 @@ CASE nPhase OF
 		nPhase := 0;
 		TEST_FINISHED();
 END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HooksReadBaseUnitAfterUpdateAndEnforceSubmissionContract" Id="{078ceee7-aeba-426b-8b64-12bec83fb8c4}">
+      <Declaration><![CDATA[METHOD HooksReadBaseUnitAfterUpdateAndEnforceSubmissionContract
+VAR_INST
+	Ctrl : ST_ModuleCtrl;
+	Context : ST_SystemContext;
+	Config : ST_ModuleRuntimeConfig;
+	Axis : FB_FakeAxis_BaseUnit;
+	Reader : FB_FakeHookValueReader;
+END_VAR
+VAR_INST
+	bFinished : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HooksReadBaseUnitAfterUpdateAndEnforceSubmissionContract');
+IF bFinished THEN RETURN; END_IF
+
+Config.ModuleId := 81;
+Config.Valid := TRUE;
+Config.Enabled := TRUE;
+Config.Revision := 1;
+Context.UtcDateTime := '20260912090000000';
+Axis.M_SetAxisState(Disabled := TRUE, HasJob := FALSE);
+Axis.M_SetAxisFeedback(ActualPosition := 12.5, ActualVelocity := 0);
+HookModule.ProbeInvalidCalls := TRUE;
+HookModule.DuplicateAlarm := TRUE;
+HookModule.DuplicateVariable := TRUE;
+HookModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := HookModule.BaseUnitScans = 1 AND HookModule.AlarmHookScans = 1 AND HookModule.VariableHookScans = 1, Message := 'Both hooks run once outside Execute.');
+AssertTrue(Condition := HookModule.AlarmObservedScan = HookModule.BaseUnitScans AND HookModule.VariableObservedScan = HookModule.BaseUnitScans, Message := 'Hooks follow the Base Unit update.');
+AssertTrue(Condition := Axis.CurrentCycle = 1, Message := 'The typed Base Unit has completed its cyclic update.');
+AssertTrue(Condition := HookModule.AlarmAccepted AND HookModule.VariableAccepted, Message := 'Valid Hook submissions are accepted.');
+AssertTrue(Condition := NOT HookModule.OutsideAlarmAccepted AND NOT HookModule.OutsideVariableAccepted AND NOT HookModule.CrossAlarmAccepted AND NOT HookModule.CrossVariableAccepted, Message := 'Wrong submission phases are rejected.');
+AssertTrue(Condition := NOT HookModule.ZeroAlarmAccepted AND NOT HookModule.ZeroVariableAccepted, Message := 'Zero identities are rejected within the right hook.');
+AssertTrue(Condition := NOT HookModule.DuplicateAlarmAccepted AND NOT HookModule.DuplicateVariableAccepted, Message := 'Second Hook submissions are rejected.');
+AssertTrue(Condition := HookModule.ModuleStatus.Alarm.DuplicateId = 9001 AND HookModule.ModuleStatus.Variable.DuplicateId = 8001, Message := 'First duplicate identities are published.');
+AssertTrue(Condition := HookModule.ModuleAlarmList[1].Message = 'Axis disabled' AND HookModule.ModuleVariableList[1].Name = 'Axis position', Message := 'Duplicate submissions preserve the first descriptors.');
+AssertTrue(Condition := HookModule.ModuleAlarmList[1].ModuleId = 81 AND HookModule.ModuleAlarmList[1].ServiceId = 0, Message := 'The framework stamps the Module identity.');
+AssertTrue(Condition := HookModule.ModuleAlarmList[1].DateTime = Context.UtcDateTime AND HookModule.ModuleAlarmList[1].OccurrenceCount = 1, Message := 'The framework stamps the first occurrence.');
+AssertTrue(Condition := HookModule.ModuleVariableList[1].Value = LREAL_TO_STRING(12.5), Message := 'The SVID reads Axis feedback directly.');
+HookModule.DuplicateAlarm := FALSE;
+HookModule.DuplicateVariable := FALSE;
+Axis.M_SetAxisFeedback(ActualPosition := 25.0, ActualVelocity := 0);
+HookModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := HookModule.ModuleVariableList[1].Value = LREAL_TO_STRING(25.0), Message := 'The Hook SVID changes in the next Module scan.');
+AssertTrue(Condition := HookModule.ModuleAlarmList[1].OccurrenceCount = 1, Message := 'Continuous active scans do not count as recurrences.');
+AssertTrue(Condition := HookModule.ModuleStatus.Alarm.DuplicateId = 0 AND HookModule.ModuleStatus.Variable.DuplicateId = 0, Message := 'Duplicate diagnostics reset each scan.');
+HookModule.VariableCount := 0;
+Axis.M_SetAxisState(Disabled := FALSE, HasJob := FALSE);
+HookModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := HookModule.ModuleStatus.Variable.PublishedCount = 0 AND HookModule.ModuleVariableList[1].Id = 0, Message := 'Omitted SVIDs disappear without stale values.');
+AssertTrue(Condition := HookModule.ModuleStatus.Alarm.HookLatchedCount = 1 AND NOT HookModule.ModuleAlarmList[1].Active, Message := 'Omitted alarms become inactive but remain latched.');
+Ctrl.AlarmAckRequest.Command := E_AlarmAckCommand.AcknowledgeOne;
+Ctrl.AlarmAckRequest.MainErrorId := 9001;
+Ctrl.AlarmAckRequest.ServiceId := 0;
+Ctrl.AlarmAckRequest.RequestId := 1;
+Ctrl.AlarmAckRequest.bChangeRequest := TRUE;
+HookModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := HookModule.ModuleStatus.Alarm.AckAccepted AND HookModule.ModuleStatus.Alarm.HookLatchedCount = 0, Message := 'Module acknowledgement removes an inactive Hook lifecycle.');
+
+bFinished := TRUE;
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="JsonOwnsHookIdentitiesIncludingFalseAndInvalidSamples" Id="{53db649f-12f1-484d-b90f-ab9181bea66f}">
+      <Declaration><![CDATA[METHOD JsonOwnsHookIdentitiesIncludingFalseAndInvalidSamples
+VAR_INST
+	Ctrl : ST_ModuleCtrl;
+	Context : ST_SystemContext;
+	Config : ST_ModuleRuntimeConfig;
+	Axis : FB_FakeAxis_BaseUnit;
+	Reader : FB_FakeHookValueReader;
+END_VAR
+VAR_INST
+	bFinished : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('JsonOwnsHookIdentitiesIncludingFalseAndInvalidSamples');
+IF bFinished THEN RETURN; END_IF
+
+Config.ModuleId := 82;
+Config.Enabled := TRUE;
+Config.Valid := TRUE;
+Config.Revision := 1;
+OverrideModule.AlarmCount := 2;
+Axis.M_SetAxisState(Disabled := TRUE, HasJob := FALSE);
+Axis.M_SetAxisFeedback(ActualPosition := 12.5, ActualVelocity := 0);
+OverrideModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := OverrideModule.ModuleStatus.Alarm.HookLatchedCount = 2, Message := 'Two Hook identities are initially active.');
+
+// A new JSON definition takes ownership even while its condition is false.
+Config.Revision := 2;
+Config.AlarmCount := 1;
+Config.AlarmBindings[1].NodeHandle := 1;
+Config.AlarmBindings[1].Definition.MainErrorId := 9001;
+Config.AlarmBindings[1].Definition.SourceErrorId := 77;
+Config.AlarmBindings[1].Definition.Source := 'Test.JsonSource';
+Config.AlarmBindings[1].Definition.DataType := E_ConfigDataType.Float64;
+Config.AlarmBindings[1].Definition.Operator := E_AlarmOperator.GreaterThan;
+Config.AlarmBindings[1].Definition.Threshold := 10.0;
+Config.AlarmBindings[1].Definition.Message := 'JSON owns this alarm';
+Config.AlarmBindings[1].Definition.Severity := E_Severity.Warning;
+Config.VariableCount := 1;
+Config.VariableBindings[1].NodeHandle := 1;
+Config.VariableBindings[1].Definition.Id := 8001;
+Config.VariableBindings[1].Definition.Name := 'JSON value';
+Config.VariableBindings[1].Definition.Unit := 'rpm';
+Config.VariableBindings[1].Definition.DataType := E_ConfigDataType.Integer32;
+Reader.Sample := 5.0;
+OverrideModule.DuplicateAlarm := TRUE;
+OverrideModule.DuplicateVariable := TRUE;
+OverrideModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := OverrideModule.ModuleStatus.Alarm.ConfiguredLatchedCount = 0 AND OverrideModule.ModuleStatus.Alarm.HookLatchedCount = 1, Message := 'JSON false suppresses the matching Hook and preserves other lifecycles.');
+AssertTrue(Condition := OverrideModule.ModuleAlarmList[1].MainErrorId = 9002 AND OverrideModule.ModuleAlarmList[1].OccurrenceCount = 1, Message := 'Revision changes preserve unrelated Hook occurrences.');
+AssertTrue(Condition := OverrideModule.DuplicateAlarmAccepted AND OverrideModule.DuplicateVariableAccepted, Message := 'JSON ownership is accepted without consuming Hook capacity.');
+AssertTrue(Condition := OverrideModule.ModuleStatus.Alarm.DuplicateId = 0 AND OverrideModule.ModuleStatus.Variable.DuplicateId = 0, Message := 'Repeated JSON-owned submissions are not duplicate errors.');
+AssertTrue(Condition := OverrideModule.ModuleVariableList[1].Name = 'JSON value' AND OverrideModule.ModuleVariableList[1].Unit = 'rpm' AND OverrideModule.ModuleVariableList[1].Value = '5' AND OverrideModule.ModuleVariableList[1].DataType = E_DescriptorType.Integer_32bit, Message := 'JSON owns the complete SVID descriptor and value.');
+
+// Invalid samples never fall back to a true Hook condition or its SVID value.
+Reader.SampleValid := FALSE;
+OverrideModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := OverrideModule.ModuleStatus.Alarm.ConfiguredLatchedCount = 0 AND OverrideModule.ModuleStatus.Alarm.HookLatchedCount = 1, Message := 'Invalid JSON samples do not resurrect the overridden Hook.');
+AssertTrue(Condition := OverrideModule.ModuleVariableList[1].Value = '' AND OverrideModule.ModuleVariableList[1].Name = 'JSON value', Message := 'Invalid JSON SVID reads keep JSON metadata and the existing empty-value behavior.');
+Reader.SampleValid := TRUE;
+Reader.Sample := 20.0;
+OverrideModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := OverrideModule.ModuleStatus.Alarm.ConfiguredLatchedCount = 1 AND OverrideModule.ModuleStatus.Alarm.HookLatchedCount = 1, Message := 'The JSON condition alone starts its lifecycle.');
+AssertTrue(Condition := OverrideModule.ModuleAlarmList[1].MainErrorId = 9001 AND OverrideModule.ModuleAlarmList[1].Message = 'JSON owns this alarm' AND OverrideModule.ModuleAlarmList[1].Severity = E_Severity.Warning AND OverrideModule.ModuleAlarmList[1].SourceErrorId = 77, Message := 'JSON replaces the complete Alarm definition before the remaining Hook is published.');
+Reader.SampleValid := FALSE;
+OverrideModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := OverrideModule.ModuleAlarmList[1].Active AND OverrideModule.ModuleAlarmList[1].OccurrenceCount = 1, Message := 'Invalid JSON samples retain the last lifecycle state.');
+
+// A removed override lets the Hook start a fresh lifecycle.
+Config.Revision := 3;
+Config.AlarmCount := 0;
+Config.VariableCount := 0;
+Reader.SampleValid := TRUE;
+OverrideModule.DuplicateAlarm := FALSE;
+OverrideModule.DuplicateVariable := FALSE;
+OverrideModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := OverrideModule.ModuleStatus.Alarm.ConfiguredLatchedCount = 0 AND OverrideModule.ModuleStatus.Alarm.HookLatchedCount = 2, Message := 'Removing JSON ownership re-enables Hook submission.');
+AssertTrue(Condition := OverrideModule.ModuleVariableList[1].Name = 'Axis position', Message := 'Removing JSON ownership re-enables the Hook SVID.');
+Config.Valid := FALSE;
+OverrideModule.VariableCount := 0;
+OverrideModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := OverrideModule.ModuleStatus.Variable.PublishedCount = 0 AND OverrideModule.ModuleVariableList[1].Id = 0, Message := 'Invalid configuration cannot retain stale SVID entries.');
+
+bFinished := TRUE;
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HookAndVariableCapacitiesPreserveExistingEntries" Id="{329848dd-cc68-4e38-bb1b-11182db50e12}">
+      <Declaration><![CDATA[METHOD HookAndVariableCapacitiesPreserveExistingEntries
+VAR_INST
+	Ctrl : ST_ModuleCtrl;
+	Context : ST_SystemContext;
+	Config : ST_ModuleRuntimeConfig;
+	Axis : FB_FakeAxis_BaseUnit;
+	Reader : FB_FakeHookValueReader;
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+VAR_INST
+	bFinished : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HookAndVariableCapacitiesPreserveExistingEntries');
+IF bFinished THEN RETURN; END_IF
+
+Config.ModuleId := 83;
+Config.Valid := TRUE;
+Config.Enabled := TRUE;
+Config.Revision := 1;
+Axis.M_SetAxisState(Disabled := TRUE, HasJob := FALSE);
+CapacityModule.AlarmCount := Param_Config.MaxHookAlarmsPerModule + 1;
+CapacityModule.VariableCount := Param_Config.MaxModuleVariable + 1;
+CapacityModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := CapacityModule.ModuleStatus.Alarm.HookLatchedCount = 30 AND CapacityModule.ModuleStatus.Alarm.Overflow AND NOT CapacityModule.AlarmAccepted, Message := 'The 31st Hook lifecycle is rejected without replacing an existing one.');
+AssertTrue(Condition := CapacityModule.ModuleStatus.Variable.PublishedCount = 100 AND CapacityModule.ModuleStatus.Variable.Overflow AND NOT CapacityModule.VariableAccepted, Message := 'The 101st SVID is rejected without replacing an existing one.');
+AssertTrue(Condition := CapacityModule.ModuleAlarmList[30].MainErrorId = 9030 AND CapacityModule.ModuleAlarmList[31].MainErrorId = 0, Message := 'Hook overflow preserves its last available slot.');
+AssertTrue(Condition := CapacityModule.ModuleVariableList[100].Id = 8100, Message := 'Variable overflow preserves its last available slot.');
+// Filling all SVID positions with JSON leaves no space for Hook-only identities.
+Config.VariableCount := Param_Config.MaxModuleVariable;
+FOR nIndex := 1 TO Config.VariableCount DO
+	Config.VariableBindings[nIndex].Definition.Id := 10000 + UINT_TO_UDINT(nIndex);
+	Config.VariableBindings[nIndex].Definition.DataType := E_ConfigDataType.Float64;
+	Config.VariableBindings[nIndex].NodeHandle := 1;
+END_FOR
+CapacityModule.AlarmCount := 1;
+CapacityModule.VariableCount := 1;
+CapacityModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := NOT CapacityModule.ModuleStatus.Alarm.Overflow AND CapacityModule.ModuleStatus.Variable.Overflow, Message := 'Overflow diagnostics reset independently each scan.');
+AssertTrue(Condition := CapacityModule.ModuleVariableList[100].Id = 10100, Message := 'JSON takes capacity before Hook submissions.');
+Config.VariableBindings[1].Definition.Id := 8001;
+CapacityModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := CapacityModule.VariableAccepted AND NOT CapacityModule.ModuleStatus.Variable.Overflow AND CapacityModule.ModuleStatus.Variable.PublishedCount = 100, Message := 'A JSON-owned Hook ID needs no extra slot even when full.');
+Config.VariableCount := 99;
+Config.VariableBindings[1].Definition.Id := 10001;
+CapacityModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader, Axis := Axis);
+AssertTrue(Condition := CapacityModule.ModuleStatus.Variable.PublishedCount = 100 AND CapacityModule.ModuleVariableList[100].Id = 8001 AND NOT CapacityModule.ModuleStatus.Variable.Overflow, Message := 'Hook SVIDs use the remaining combined capacity.');
+
+bFinished := TRUE;
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="EmptyHooksPreserveConfiguredDataAndServiceAggregation" Id="{2a223ca6-d14f-4ace-ac21-6641235154df}">
+      <Declaration><![CDATA[METHOD EmptyHooksPreserveConfiguredDataAndServiceAggregation
+VAR_INST
+	Ctrl : ST_ModuleCtrl;
+	Context : ST_SystemContext;
+	Config : ST_ModuleRuntimeConfig;
+	Reader : FB_FakeHookValueReader;
+	ServiceStatus : ST_ServiceStatus;
+	bFinished : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('EmptyHooksPreserveConfiguredDataAndServiceAggregation');
+
+IF bFinished THEN RETURN; END_IF
+Config.ModuleId := 84;
+Config.Valid := TRUE;
+Config.Enabled := TRUE;
+Config.Revision := 1;
+Config.VariableCount := 1;
+Config.VariableBindings[1].Definition.Id := 8001;
+Config.VariableBindings[1].Definition.Name := 'Configured variable';
+Config.VariableBindings[1].Definition.DataType := E_ConfigDataType.Float64;
+Config.VariableBindings[1].NodeHandle := 1;
+Config.AlarmCount := 1;
+Config.AlarmBindings[1].Definition.MainErrorId := 9001;
+Config.AlarmBindings[1].Definition.Message := 'Configured alarm';
+Config.AlarmBindings[1].Definition.DataType := E_ConfigDataType.Float64;
+Config.AlarmBindings[1].Definition.Operator := E_AlarmOperator.GreaterThan;
+Config.AlarmBindings[1].Definition.Threshold := 10.0;
+Config.AlarmBindings[1].NodeHandle := 1;
+Reader.Sample := 42.0;
+ServiceStatus.ErrorList[1].MainErrorId := 9001;
+ServiceStatus.ErrorList[1].ServiceId := 11;
+ServiceStatus.ErrorList[1].Message := 'Service alarm';
+ServiceStatus.Data.DataList[1].Id := 7001;
+ServiceStatus.Data.DataList[1].Name := 'Completed result';
+ServiceStatus.Data.DataList[1].DataType := E_DescriptorType.Integer_32bit;
+ServiceStatus.Data.DataList[1].Value := '123';
+RegressionModule.M_SetServiceStatus(Status := ServiceStatus);
+RegressionModule(ModuleCtrl := Ctrl, SystemContext := Context, RuntimeConfig := Config, VariableNodeReader := Reader);
+AssertTrue(Condition := RegressionModule.ModuleStatus.Alarm.HookLatchedCount = 0 AND RegressionModule.ModuleStatus.Alarm.ConfiguredLatchedCount = 1 AND RegressionModule.ModuleStatus.Alarm.ServiceLatchedCount = 1, Message := 'Empty hooks preserve configured and Service alarm aggregation.');
+AssertTrue(Condition := RegressionModule.ModuleAlarmList[1].ServiceId = 11 AND RegressionModule.ModuleAlarmList[2].ServiceId = 0, Message := 'Legacy Service and JSON publication ordering is preserved.');
+AssertTrue(Condition := RegressionModule.ModuleStatus.Variable.PublishedCount = 1 AND RegressionModule.ModuleVariableList[1].Id = 8001 AND RegressionModule.ModuleVariableList[1].Value = LREAL_TO_STRING(42.0), Message := 'Empty hooks preserve configured SVID publication.');
+AssertTrue(Condition := RegressionModule.ModuleStatus.Data.PublishedCount = 1 AND RegressionModule.ModuleDataList[1].Id = 7001 AND RegressionModule.ModuleDataList[1].Value = '123', Message := 'DVID aggregation is independent of the new SVID hooks.');
+bFinished := TRUE;
+
+TEST_FINISHED();]]></ST>
       </Implementation>
     </Method>
   </POU>

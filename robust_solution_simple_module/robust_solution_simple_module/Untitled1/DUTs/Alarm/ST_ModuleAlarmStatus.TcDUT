@@ -9,6 +9,8 @@ STRUCT
 	ConfiguredLatchedCount : UINT;
 	ServiceLatchedCount : UINT;
 	Overflow : BOOL;
+	HookLatchedCount : UINT;
+	DuplicateId : UDINT;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

@@ -5,8 +5,9 @@
 VAR_GLOBAL CONSTANT
 	MaxModuleVariable : UINT := 100;	// Num of SVID
 	MaxConfiguredAlarmsPerModule : UINT := 30;	// Num of configured ALIDs.
-	MaxServiceAlarmsPerModule : UINT := 70;		// Reserved capacity for aggregated Service errors.
-	MaxPublishedModuleAlarms : UINT := MaxConfiguredAlarmsPerModule + MaxServiceAlarmsPerModule;
+	MaxHookAlarmsPerModule : UINT := 30;		// Reserved capacity for Module Hook alarms.
+	MaxServiceAlarmsPerModule : UINT := 40;		// Reserved capacity for aggregated Service errors.
+	MaxPublishedModuleAlarms : UINT := MaxConfiguredAlarmsPerModule + MaxHookAlarmsPerModule + MaxServiceAlarmsPerModule;
 	MaxModuleAlarm : UINT := MaxPublishedModuleAlarms;	// Compatibility alias for existing consumers.
 	MaxServiceError : UINT := 10;		// Num of Service Error per round
 	MaxServiceData : UINT := 30;		// Num of persistent Data descriptors per Service

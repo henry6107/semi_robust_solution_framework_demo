@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_FakeHookValueReader" Id="{0091635b-b463-4df3-b1e2-b2df37ce068e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_FakeHookValueReader IMPLEMENTS I_VariableNodeReader
+VAR_INPUT
+	Sample : LREAL;
+	SampleValid : BOOL := TRUE;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="M_ReadNode" Id="{5c7ed2db-9f8f-4cd4-bb6b-d0b8ac8d66b7}">
+      <Declaration><![CDATA[METHOD M_ReadNode : BOOL
+VAR_INPUT
+	NodeHandle : UINT;
+	ExpectedDataType : E_ConfigDataType;
+END_VAR
+VAR_IN_OUT
+	Value : ST_ConfigRawValue;
+END_VAR
+VAR_OUTPUT
+	ErrorCode : E_ConfigValueError;
+END_VAR
+VAR
+	nSample : DINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ReadNode := FALSE;
+MEMSET(ADR(Value), 0, SIZEOF(Value));
+ErrorCode := E_ConfigValueError.InvalidNodeHandle;
+IF NOT SampleValid OR (NodeHandle = 0) THEN RETURN; END_IF
+CASE ExpectedDataType OF
+	E_ConfigDataType.Float64:
+		MEMCPY(ADR(Value.Data), ADR(Sample), SIZEOF(Sample));
+	E_ConfigDataType.Integer32:
+		nSample := LREAL_TO_DINT(Sample);
+		MEMCPY(ADR(Value.Data), ADR(nSample), SIZEOF(nSample));
+ELSE
+	ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
+	RETURN;
+END_CASE
+ErrorCode := E_ConfigValueError.None;
+M_ReadNode := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

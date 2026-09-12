@@ -8,11 +8,17 @@ VAR
 	_ScopeManager : FB_ModuleAlarmManager;
 	_OverflowManager : FB_ModuleAlarmManager;
 	_ConfiguredManager : FB_ModuleAlarmManager;
+	_HookLifecycleManager : FB_ModuleAlarmManager;
+	_HookAckManager : FB_ModuleAlarmManager;
+	_HookCapacityManager : FB_ModuleAlarmManager;
 	_AlarmList : ARRAY[1..Param_Config.MaxPublishedModuleAlarms] OF ST_ExtAlarm;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[ServiceOccurrenceCountChangesOnlyOnActiveEdges();
+      <ST><![CDATA[HookCapacityAndConfigurationOwnershipHaveSeparateResetScopes();
+HookAcknowledgementsRespectIdentityAndNewEventOrdering();
+HookOccurrencesUseTheExistingAcknowledgementLifecycle();
+ServiceOccurrenceCountChangesOnlyOnActiveEdges();
 AcknowledgeOneUsesCompositeIdentityAndRemovalPredicate();
 AcknowledgementPrecedesNewSourcesAndResetsHaveSeparateScopes();
 ConfiguredOccurrencesAndDuplicateRequestsFollowTheSameContract();
@@ -309,6 +315,228 @@ _ConfiguredManager.M_EndCycle();
 _ConfiguredManager.M_Publish(AlarmList := _AlarmList);
 AssertTrue(Condition := _AlarmList[1].MainErrorId = 0, Message := 'Acknowledged configured alarm must be removed in the false sample scan.');
 
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HookOccurrencesUseTheExistingAcknowledgementLifecycle" Id="{5d6c2afc-ba4b-4481-8bf9-82023fb7862b}">
+      <Declaration><![CDATA[METHOD HookOccurrencesUseTheExistingAcknowledgementLifecycle
+VAR
+	Alarm : ST_ExtAlarm;
+	Request : ST_AlarmAckRequest;
+	Accepted : BOOL;
+END_VAR
+VAR_INST
+	bFinished : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HookOccurrencesUseTheExistingAcknowledgementLifecycle');
+IF bFinished THEN RETURN; END_IF
+
+Alarm.MainErrorId := 400;
+Alarm.Message := 'First Hook occurrence';
+Alarm.Path := 'Test.Axis';
+Alarm.Severity := E_Severity.Alarm;
+Alarm.DateTime := '20260912100000000';
+_HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
+_HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
+_HookLifecycleManager.M_EndCycle();
+_HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _AlarmList[1].ModuleId = 91 AND _AlarmList[1].ServiceId = 0 AND _AlarmList[1].OccurrenceCount = 1, Message := 'Hook lifecycle uses the Module identity and starts at one.');
+Alarm.Message := 'Must not refresh the lifecycle snapshot';
+Alarm.DateTime := '20260912100100000';
+_HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
+_HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
+Accepted := _HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
+_HookLifecycleManager.M_EndCycle();
+_HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := NOT Accepted AND _HookLifecycleManager.DuplicateId = 400, Message := 'Repeated submission in one scan is rejected.');
+AssertTrue(Condition := _AlarmList[1].OccurrenceCount = 1 AND _AlarmList[1].Message = 'First Hook occurrence' AND _AlarmList[1].DateTime = '20260912100000000', Message := 'Continuous observation and duplicates preserve the first snapshot.');
+_HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
+_HookLifecycleManager.M_EndCycle();
+_HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _AlarmList[1].MainErrorId = 400 AND NOT _AlarmList[1].Active AND NOT _AlarmList[1].Acknowledged, Message := 'An unobserved Hook condition is inactive and latched.');
+_HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
+_HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
+_HookLifecycleManager.M_EndCycle();
+_HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _AlarmList[1].Active AND NOT _AlarmList[1].Acknowledged AND _AlarmList[1].OccurrenceCount = 2, Message := 'Recurrence increments the count and clears acknowledgement.');
+
+Request.Command := E_AlarmAckCommand.AcknowledgeOne;
+Request.MainErrorId := 400;
+Request.ServiceId := 0;
+Request.RequestId := 1;
+Request.bChangeRequest := TRUE;
+_HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
+_HookLifecycleManager.M_ProcessAcknowledgement(Request := Request);
+_HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
+_HookLifecycleManager.M_EndCycle();
+_HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _HookLifecycleManager.AckAccepted AND _AlarmList[1].Active AND _AlarmList[1].Acknowledged, Message := 'Acknowledging an active Hook does not remove it.');
+Request.bChangeRequest := FALSE;
+_HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
+_HookLifecycleManager.M_ProcessAcknowledgement(Request := Request);
+_HookLifecycleManager.M_EndCycle();
+_HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _HookLifecycleManager.HookLatchedCount = 0 AND _AlarmList[1].MainErrorId = 0, Message := 'The first inactive scan removes an acknowledged Hook.');
+_HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
+_HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
+_HookLifecycleManager.M_EndCycle();
+_HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _AlarmList[1].OccurrenceCount = 1 AND NOT _AlarmList[1].Acknowledged AND _AlarmList[1].DateTime = '20260912100100000', Message := 'An occurrence after removal starts a new lifecycle.');
+
+bFinished := TRUE;
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HookAcknowledgementsRespectIdentityAndNewEventOrdering" Id="{43afd1b3-6247-4013-a852-d94e3421e04f}">
+      <Declaration><![CDATA[METHOD HookAcknowledgementsRespectIdentityAndNewEventOrdering
+VAR
+	HookAlarm : ST_ExtAlarm;
+	ServiceAlarm : ST_ExtAlarm;
+	ConfiguredAlarm : ST_ExtAlarm;
+	Request : ST_AlarmAckRequest;
+END_VAR
+VAR_INST
+	bFinished : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HookAcknowledgementsRespectIdentityAndNewEventOrdering');
+IF bFinished THEN RETURN; END_IF
+
+HookAlarm.MainErrorId := 500;
+HookAlarm.DateTime := '20260912110000000';
+ServiceAlarm := HookAlarm;
+ServiceAlarm.ServiceId := 11;
+ConfiguredAlarm.MainErrorId := 600;
+_HookAckManager.M_BeginCycle(ModuleId := 92, ConfigurationRevision := 1);
+_HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
+_HookAckManager.M_ObserveServiceAlarm(Alarm := ServiceAlarm);
+_HookAckManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := TRUE, Alarm := ConfiguredAlarm, UtcDateTime := '20260912110000000');
+_HookAckManager.M_EndCycle();
+_HookAckManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _AlarmList[1].ServiceId = 11 AND _AlarmList[2].MainErrorId = 600 AND _AlarmList[3].MainErrorId = 500, Message := 'Publish order is Service, JSON, Hook; matching numbers may coexist.');
+Request.Command := E_AlarmAckCommand.AcknowledgeOne;
+Request.ServiceId := 0;
+Request.MainErrorId := 500;
+Request.RequestId := 1;
+Request.bChangeRequest := TRUE;
+_HookAckManager.M_BeginCycle(ModuleId := 92, ConfigurationRevision := 1);
+_HookAckManager.M_ProcessAcknowledgement(Request := Request);
+_HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
+_HookAckManager.M_ObserveServiceAlarm(Alarm := ServiceAlarm);
+_HookAckManager.M_EndCycle();
+_HookAckManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _HookAckManager.AckAccepted AND _AlarmList[3].Acknowledged AND NOT _AlarmList[1].Acknowledged AND NOT _AlarmList[2].Acknowledged, Message := 'AcknowledgeOne targets the composite identity, not just the error number.');
+Request.bChangeRequest := FALSE;
+_HookAckManager.M_BeginCycle(ModuleId := 92, ConfigurationRevision := 1);
+_HookAckManager.M_ProcessAcknowledgement(Request := Request);
+_HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
+_HookAckManager.M_ObserveServiceAlarm(Alarm := ServiceAlarm);
+_HookAckManager.M_EndCycle();
+_HookAckManager.M_Publish(AlarmList := _AlarmList);
+Request.Command := E_AlarmAckCommand.AcknowledgeAll;
+Request.RequestId := 2;
+Request.bChangeRequest := TRUE;
+_HookAckManager.M_BeginCycle(ModuleId := 92, ConfigurationRevision := 1);
+_HookAckManager.M_ProcessAcknowledgement(Request := Request);
+_HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
+_HookAckManager.M_ObserveServiceAlarm(Alarm := ServiceAlarm);
+HookAlarm.MainErrorId := 501;
+_HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
+_HookAckManager.M_EndCycle();
+_HookAckManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _AlarmList[1].Acknowledged AND _AlarmList[2].Acknowledged AND _AlarmList[3].Acknowledged, Message := 'AcknowledgeAll includes all three existing sources.');
+AssertTrue(Condition := _AlarmList[4].MainErrorId = 501 AND NOT _AlarmList[4].Acknowledged, Message := 'AcknowledgeAll cannot consume a new Hook event in the same scan.');
+Request.bChangeRequest := FALSE;
+_HookAckManager.M_BeginCycle(ModuleId := 92, ConfigurationRevision := 1);
+_HookAckManager.M_ProcessAcknowledgement(Request := Request);
+_HookAckManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := FALSE, Alarm := ConfiguredAlarm, UtcDateTime := '20260912110100000');
+_HookAckManager.M_EndCycle();
+_HookAckManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _HookAckManager.ServiceLatchedCount = 0 AND _HookAckManager.ConfiguredLatchedCount = 0 AND _HookAckManager.HookLatchedCount = 1, Message := 'Inactive acknowledged identities are removed from all sources.');
+AssertTrue(Condition := _AlarmList[1].MainErrorId = 501 AND NOT _AlarmList[1].Active, Message := 'The new unacknowledged Hook event remains latched.');
+
+// Acknowledge an inactive identity before its next observation: start a fresh lifecycle.
+Request.Command := E_AlarmAckCommand.AcknowledgeOne;
+Request.MainErrorId := 501;
+Request.RequestId := 3;
+Request.bChangeRequest := TRUE;
+_HookAckManager.M_BeginCycle(ModuleId := 92, ConfigurationRevision := 1);
+_HookAckManager.M_ProcessAcknowledgement(Request := Request);
+_HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
+_HookAckManager.M_EndCycle();
+_HookAckManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _AlarmList[1].MainErrorId = 501 AND _AlarmList[1].Active AND NOT _AlarmList[1].Acknowledged AND _AlarmList[1].OccurrenceCount = 1, Message := 'Acknowledgement before a new observation cannot pre-acknowledge the new lifecycle.');
+
+bFinished := TRUE;
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HookCapacityAndConfigurationOwnershipHaveSeparateResetScopes" Id="{3b13ee73-9a15-4fd7-81e1-2dad4aca2381}">
+      <Declaration><![CDATA[METHOD HookCapacityAndConfigurationOwnershipHaveSeparateResetScopes
+VAR
+	Alarm : ST_ExtAlarm;
+	Request : ST_AlarmAckRequest;
+	nIndex : UINT;
+	Accepted : BOOL;
+END_VAR
+VAR_INST
+	bFinished : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('HookCapacityAndConfigurationOwnershipHaveSeparateResetScopes');
+IF bFinished THEN RETURN; END_IF
+
+AssertTrue(Condition := Param_Config.MaxConfiguredAlarmsPerModule = 30 AND Param_Config.MaxHookAlarmsPerModule = 30 AND Param_Config.MaxServiceAlarmsPerModule = 40 AND Param_Config.MaxPublishedModuleAlarms = 100, Message := 'Alarm partitions are fixed at JSON 30, Hook 30, Service 40.');
+_HookCapacityManager.M_BeginCycle(ModuleId := 93, ConfigurationRevision := 1);
+FOR nIndex := 1 TO Param_Config.MaxConfiguredAlarmsPerModule DO
+	Alarm.MainErrorId := 1000 + UINT_TO_UDINT(nIndex);
+	_HookCapacityManager.M_UpdateConfiguredAlarm(AlarmIndex := nIndex, SampleValid := TRUE, ConditionMet := TRUE, Alarm := Alarm, UtcDateTime := '20260912120000000');
+END_FOR
+Alarm.ServiceId := 0;
+FOR nIndex := 1 TO Param_Config.MaxHookAlarmsPerModule DO
+	Alarm.MainErrorId := 2000 + UINT_TO_UDINT(nIndex);
+	_HookCapacityManager.M_ObserveHookAlarm(Alarm := Alarm);
+END_FOR
+Alarm.ServiceId := 11;
+FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
+	Alarm.MainErrorId := 3000 + UINT_TO_UDINT(nIndex);
+	_HookCapacityManager.M_ObserveServiceAlarm(Alarm := Alarm);
+END_FOR
+_HookCapacityManager.M_EndCycle();
+_HookCapacityManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _HookCapacityManager.ConfiguredLatchedCount = 30 AND _HookCapacityManager.HookLatchedCount = 30 AND _HookCapacityManager.ServiceLatchedCount = 40 AND NOT _HookCapacityManager.Overflow, Message := 'All reserved capacities can be filled simultaneously.');
+AssertTrue(Condition := _AlarmList[40].MainErrorId = 3040 AND _AlarmList[70].MainErrorId = 1030 AND _AlarmList[100].MainErrorId = 2030, Message := 'All 100 entries preserve the source ordering.');
+Alarm.MainErrorId := 9999;
+Accepted := _HookCapacityManager.M_ObserveServiceAlarm(Alarm := Alarm);
+AssertTrue(Condition := NOT Accepted, Message := 'The 41st Service lifecycle is rejected.');
+Alarm.ServiceId := 0;
+Accepted := _HookCapacityManager.M_ObserveHookAlarm(Alarm := Alarm);
+AssertTrue(Condition := NOT Accepted, Message := 'The 31st Hook lifecycle is rejected.');
+_HookCapacityManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _HookCapacityManager.Overflow AND _AlarmList[100].MainErrorId = 2030, Message := 'Overflow cannot overwrite a latched Hook identity.');
+_HookCapacityManager.M_BeginCycle(ModuleId := 93, ConfigurationRevision := 2);
+_HookCapacityManager.M_SuppressHookAlarm(MainErrorId := 2001);
+_HookCapacityManager.M_EndCycle();
+_HookCapacityManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _HookCapacityManager.ConfiguredLatchedCount = 0 AND _HookCapacityManager.HookLatchedCount = 29 AND _HookCapacityManager.ServiceLatchedCount = 40 AND NOT _HookCapacityManager.Overflow, Message := 'Revision resets JSON and only the explicitly overridden Hook; Services survive.');
+AssertTrue(Condition := _AlarmList[41].MainErrorId = 2002 AND NOT _AlarmList[41].Active, Message := 'Unrelated unacknowledged Hook lifecycles survive revisions.');
+// Suppressed Hook lifecycles cannot be acknowledged through a stale identity.
+Request.Command := E_AlarmAckCommand.AcknowledgeOne;
+Request.MainErrorId := 2001;
+Request.RequestId := 1;
+Request.bChangeRequest := TRUE;
+_HookCapacityManager.M_ProcessAcknowledgement(Request := Request);
+AssertTrue(Condition := NOT _HookCapacityManager.AckAccepted AND _HookCapacityManager.AckError = E_AlarmAckError.AlarmNotFound, Message := 'A JSON takeover removes the old Hook identity before acknowledgement.');
+_HookCapacityManager.M_BeginCycle(ModuleId := 94, ConfigurationRevision := 2);
+_HookCapacityManager.M_EndCycle();
+_HookCapacityManager.M_Publish(AlarmList := _AlarmList);
+AssertTrue(Condition := _HookCapacityManager.ConfiguredLatchedCount = 0 AND _HookCapacityManager.HookLatchedCount = 0 AND _HookCapacityManager.ServiceLatchedCount = 0 AND _HookCapacityManager.AckResponseId = 0, Message := 'Changing Module identity clears every lifecycle and acknowledgement.');
+
+bFinished := TRUE;
 TEST_FINISHED();]]></ST>
       </Implementation>
     </Method>
