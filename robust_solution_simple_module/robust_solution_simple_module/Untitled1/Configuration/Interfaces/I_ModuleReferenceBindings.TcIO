@@ -6,9 +6,10 @@
     <Method Name="M_TakeOptional" Id="{d50f3ec8-2aec-453d-8698-8fe04702dde9}">
       <Declaration><![CDATA[METHOD M_TakeOptional : I_BaseUnit
 VAR_INPUT
-	Name : STRING(80);
+	Port : ANY;
 END_VAR
 VAR_OUTPUT
+	PortName : STRING(80);
 	Present : BOOL;
 	ErrorMessage : STRING(255);
 END_VAR
@@ -17,7 +18,18 @@ END_VAR
     <Method Name="M_TakeRequired" Id="{ff96cb85-1798-400c-9fcb-310cb018eeb0}">
       <Declaration><![CDATA[METHOD M_TakeRequired : I_BaseUnit
 VAR_INPUT
-	Name : STRING(80);
+	Port : ANY;
+END_VAR
+VAR_OUTPUT
+	PortName : STRING(80);
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="M_SetModuleScope" Id="{f188d7db-555f-4551-97e4-ec094335769f}">
+      <Declaration><![CDATA[METHOD M_SetModuleScope : BOOL
+VAR_INPUT
+	ModuleSymbol : STRING(255);
 END_VAR
 VAR_OUTPUT
 	ErrorMessage : STRING(255);

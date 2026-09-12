@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_ModuleResourceRegistrationTests" Id="{05cb9561-0cf5-485a-b1fb-cf7fec031db8}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleResourceRegistrationTests EXTENDS TcUnit.FB_TestSuite
@@ -14,6 +14,9 @@ VAR
 	_IncompatibleBaseUnit : FB_FakeBaseUnit;
 	_ModuleConfig : ST_ModuleFileConfig;
 	_InfrastructurePrepared : BOOL;
+	_JsonDataType : FB_JsonReadWriteDataType;
+	_PortFixture : FB_ReferencePortFixture;
+	_OtherPortFixture : FB_ReferencePortFixture;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -32,8 +35,73 @@ RegistrationSessionEnforcesOrdering();
 RegistrationSessionUsesFirstErrorWins();
 ReferenceBindingsEnforceFrameworkContract();
 NewModuleTypeUsesGenericFrameworkSeam();
+AdapterPassesActualPortsAndCommitsOnlyAfterAllTypesMatch();
+ReferenceNamesPreserveRelativePathsAndRejectTruncation();
+ReferenceScopeRejectsOtherModulesSlotsAndTransientPorts();
+ReferenceScopeRejectsInvalidOrderAndPreservesFirstError();
+ReferencePortsResolveCallerStorageWithoutWritingIt();
 END_IF]]></ST>
     </Implementation>
+    <Method Name="AdapterPassesActualPortsAndCommitsOnlyAfterAllTypesMatch" Id="{14aa916d-9b0a-4d1f-b11a-e2fc61e15970}">
+      <Declaration><![CDATA[METHOD AdapterPassesActualPortsAndCommitsOnlyAfterAllTypesMatch
+VAR
+	bOk : BOOL;
+	BaseUnit : I_BaseUnit;
+	OtherBaseUnit : I_BaseUnit;
+	ReferenceBindings : I_ModuleReferenceBindings;
+	SavedSpinAxis : I_Axis_BaseUnit;
+	SavedLiftPinAxis : I_Axis_BaseUnit;
+	sModuleSymbol : STRING(255);
+	sErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('AdapterPassesActualPortsAndCommitsOnlyAfterAllTypesMatch');
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+SavedSpinAxis := GVL_Module.Chamber1_SpinAxis[1];
+SavedLiftPinAxis := GVL_Module.Chamber1_LiftPinAxis[1];
+GVL_Module.Chamber1_SpinAxis[1] := 0;
+GVL_Module.Chamber1_LiftPinAxis[1] := 0;
+BaseUnit := GVL_IO.NC_Axis1;
+OtherBaseUnit := _IncompatibleBaseUnit;
+_FakeReferenceBindings.M_SetRequiredResults(First := BaseUnit, Second := OtherBaseUnit);
+ReferenceBindings := _FakeReferenceBindings;
+
+bOk := _Chamber1Adapter.M_PrepareInstance(
+	Slot := 1,
+	ReferenceBindings := ReferenceBindings,
+	ModuleConfig := _ModuleConfig,
+	LinkVariableManager := _LinkVariableManager,
+	ModuleSymbol => sModuleSymbol,
+	ErrorMessage => sErrorMessage);
+AssertFalse(Condition := bOk, Message := 'The second incompatible interface must fail adapter preparation.');
+AssertTrue(Condition := (GVL_Module.Chamber1_SpinAxis[1] = 0) AND (GVL_Module.Chamber1_LiftPinAxis[1] = 0), Message := 'A valid first reference must not be committed when the second fails.');
+AssertTrue(Condition := (_FakeReferenceBindings.TakeCount = 2) AND (_FakeReferenceBindings.ModuleScope = sModuleSymbol), Message := 'The adapter supplies the resolved Module scope before taking both references.');
+AssertTrue(Condition := _FakeReferenceBindings.TakenAddresses[1] = ADR(GVL_Module.Chamber1[1].SpinAxis_BaseUnit), Message := 'The first ANY argument must point to the actual SpinAxis port storage.');
+AssertTrue(Condition := _FakeReferenceBindings.TakenAddresses[2] = ADR(GVL_Module.Chamber1[1].LiftPinAxis_BaseUnit), Message := 'The second ANY argument must point to the actual LiftPinAxis port storage.');
+AssertTrue(Condition := (_FakeReferenceBindings.TakenSizes[1] = SIZEOF(GVL_Module.Chamber1[1].SpinAxis_BaseUnit)) AND (_FakeReferenceBindings.TakenSizes[2] = SIZEOF(GVL_Module.Chamber1[1].LiftPinAxis_BaseUnit)), Message := 'ANY must carry each interface variable size without dereferencing it.');
+AssertTrue(Condition := sErrorMessage = 'FakePort requires I_Axis_BaseUnit.', Message := 'Typed-interface diagnostics must use the name returned by the binding context.');
+
+// A second source lookup failure has the same all-or-nothing behavior.
+_LinkVariableManager.M_ClearModuleNodes();
+OtherBaseUnit := 0;
+_FakeReferenceBindings.M_SetRequiredResults(First := BaseUnit, Second := OtherBaseUnit);
+bOk := _Chamber1Adapter.M_PrepareInstance(
+	Slot := 1,
+	ReferenceBindings := ReferenceBindings,
+	ModuleConfig := _ModuleConfig,
+	LinkVariableManager := _LinkVariableManager,
+	ErrorMessage => sErrorMessage);
+AssertTrue(Condition := NOT bOk AND (sErrorMessage = 'Injected required reference failure.'), Message := 'A failed second source lookup must be propagated.');
+AssertTrue(Condition := (GVL_Module.Chamber1_SpinAxis[1] = 0) AND (GVL_Module.Chamber1_LiftPinAxis[1] = 0), Message := 'Lookup failure must not partially commit either reference.');
+
+GVL_Module.Chamber1_SpinAxis[1] := SavedSpinAxis;
+GVL_Module.Chamber1_LiftPinAxis[1] := SavedLiftPinAxis;
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="Chamber1DeclarationsUseResolvedFullSymbols" Id="{6eed6450-f0f0-4b23-9a5b-21bd0e767cc9}">
       <Declaration><![CDATA[METHOD Chamber1DeclarationsUseResolvedFullSymbols
 VAR
@@ -136,6 +204,38 @@ AssertTrue(Condition := bOk, Message := 'An unused Module declaration must still
 TEST_FINISHED();]]></ST>
       </Implementation>
     </Method>
+    <Method Name="MissingModuleDeclarationFailsEndSession" Id="{ca7efb75-1e34-40cc-88fc-9474d2b2dc13}">
+      <Declaration><![CDATA[METHOD MissingModuleDeclarationFailsEndSession
+VAR
+	bOk : BOOL;
+	sModuleSymbol : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('MissingModuleDeclarationFailsEndSession');
+
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.VariableCount := 1;
+_ModuleConfig.VariableList[1].Source := 'HwInput.notDeclared';
+
+bOk := _LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.Chamber1[1]),
+	Size := SIZEOF(GVL_Module.Chamber1[1]),
+	ModuleConfig := _ModuleConfig);
+AssertTrue(Condition := bOk, Message := 'The registration session must start for a valid Module instance.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+AssertTrue(Condition := bOk, Message := 'A Module variable must register from its resolved full symbol.');
+bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sModuleSymbol);
+AssertFalse(Condition := bOk, Message := 'End registration must reject a configured path not declared by the adapter.');
+AssertTrue(Condition := _LinkVariableManager.Error, Message := 'A missing declaration must leave the manager in its error state.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="ModuleSlotsResolveDistinctFullSymbols" Id="{e7b8f947-54f4-4b0e-a924-71c2c52d72b1}">
       <Declaration><![CDATA[METHOD ModuleSlotsResolveDistinctFullSymbols
 VAR
@@ -192,34 +292,441 @@ AssertTrue(Condition := bOk, Message := 'Slot 2 full node symbol must remain ind
 TEST_FINISHED();]]></ST>
       </Implementation>
     </Method>
-    <Method Name="MissingModuleDeclarationFailsEndSession" Id="{ca7efb75-1e34-40cc-88fc-9474d2b2dc13}">
-      <Declaration><![CDATA[METHOD MissingModuleDeclarationFailsEndSession
+    <Method Name="NewModuleTypeUsesGenericFrameworkSeam" Id="{a96e7693-3912-42cb-a3bd-2cdf6b7ad695}">
+      <Declaration><![CDATA[METHOD NewModuleTypeUsesGenericFrameworkSeam
 VAR
 	bOk : BOOL;
+	Adapter : I_ModuleConfigurationAdapter;
+	ReferenceBindings : I_ModuleReferenceBindings;
 	sModuleSymbol : STRING(255);
+	sErrorMessage : STRING(255);
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[TEST('MissingModuleDeclarationFailsEndSession');
+        <ST><![CDATA[TEST('NewModuleTypeUsesGenericFrameworkSeam');
 
 _LinkVariableManager.M_ClearLinks();
 _LinkVariableManager.M_ClearModuleNodes();
+_ReferenceBindingContext.M_Clear();
 MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-_ModuleConfig.VariableCount := 1;
-_ModuleConfig.VariableList[1].Source := 'HwInput.notDeclared';
+_ModuleConfig.ModuleType := 'FAKE';
+_ModuleConfig.InputMappingCount := 1;
+_ModuleConfig.InputMappings[1].Target := 'bDoorClosed';
 
-bOk := _LinkVariableManager.M_BeginModuleRegistration(
-	Address := ADR(GVL_Module.Chamber1[1]),
-	Size := SIZEOF(GVL_Module.Chamber1[1]),
-	ModuleConfig := _ModuleConfig);
-AssertTrue(Condition := bOk, Message := 'The registration session must start for a valid Module instance.');
-bOk := _LinkVariableManager.M_RegisterModuleNode(
-	Variable := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
-	Access := E_VariableAccess.ReadWrite);
-AssertTrue(Condition := bOk, Message := 'A Module variable must register from its resolved full symbol.');
-bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sModuleSymbol);
-AssertFalse(Condition := bOk, Message := 'End registration must reject a configured path not declared by the adapter.');
-AssertTrue(Condition := _LinkVariableManager.Error, Message := 'A missing declaration must leave the manager in its error state.');
+bOk := _ModuleTypeRegistry.M_Register(
+	ModuleTypeName := 'FAKE',
+	Adapter := _FakeAdapter);
+AssertTrue(Condition := bOk, Message := 'A new Module Type name must register without extending a framework enum.');
+Adapter := _ModuleTypeRegistry.M_Resolve(ModuleTypeName := 'FAKE');
+AssertTrue(Condition := Adapter <> 0, Message := 'The string-keyed registry must resolve the fake adapter.');
+
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'A Module with no references still receives the generic empty binding context.');
+ReferenceBindings := _ReferenceBindingContext;
+bOk := Adapter.M_PrepareInstance(
+	Slot := 1,
+	ReferenceBindings := ReferenceBindings,
+	ModuleConfig := _ModuleConfig,
+	LinkVariableManager := _LinkVariableManager,
+	ModuleSymbol => sModuleSymbol,
+	ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'A fake Module adapter must use the same generic resource-declaration seam without manager changes.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'The framework must accept an empty semantic reference map for the fake Module.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReferenceBindingsEnforceFrameworkContract" Id="{47f47f36-f40d-4f9f-941d-68565d7feaae}">
+      <Declaration><![CDATA[METHOD ReferenceBindingsEnforceFrameworkContract
+VAR
+	bOk : BOOL;
+	bPresent : BOOL;
+	BaseUnit : I_BaseUnit;
+	sErrorMessage : STRING(255);
+	sFirstError : STRING(255);
+	sModuleSymbol : STRING(255);
+	bScope : BOOL;
+	ReferenceBindings : I_ModuleReferenceBindings;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ReferenceBindingsEnforceFrameworkContract');
+sModuleSymbol := _JsonDataType.GetSymbolNameByAddress(
+	nData := SIZEOF(GVL_Module.Chamber1[1]), pData := ADR(GVL_Module.Chamber1[1]));
+AssertTrue(Condition := sModuleSymbol <> '', Message := 'The active Module must have a resolvable symbol.');
+
+bOk := _ReferenceManager.M_RegisterReference(BaseUnit := GVL_IO.NC_Axis1);
+AssertTrue(Condition := bOk, Message := 'The Axis BaseUnit source must register for binding tests.');
+
+// An omitted optional semantic reference is successful and explicitly absent.
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+IF bOk THEN
+	bScope := _ReferenceBindingContext.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+	AssertTrue(Condition := bScope, Message := 'A valid binding session must accept its Module scope.');
+END_IF
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeOptional(
+	Port := GVL_Module.Chamber1[1].SpinAxis_BaseUnit,
+	Present => bPresent,
+	ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND NOT bPresent AND (sErrorMessage = ''), Message := 'An omitted optional reference must be reported as not present without error.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'An omitted optional reference must not leave an unknown JSON key.');
+
+// The same source may be consumed by two different semantic names.
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 2;
+_ModuleConfig.References[1].Name := 'SpinAxis_BaseUnit';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
+_ModuleConfig.References[2].Name := 'LiftPinAxis_BaseUnit';
+_ModuleConfig.References[2].Source := 'GVL_IO.NC_Axis1';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+IF bOk THEN
+	bScope := _ReferenceBindingContext.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+	AssertTrue(Condition := bScope, Message := 'A valid binding session must accept its Module scope.');
+END_IF
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := GVL_Module.Chamber1[1].SpinAxis_BaseUnit, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := BaseUnit <> 0, Message := 'The first semantic name must resolve its source.');
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := GVL_Module.Chamber1[1].LiftPinAxis_BaseUnit, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := BaseUnit <> 0, Message := 'A second semantic name may use the same source.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'Every configured semantic reference was consumed exactly once.');
+
+// Taking one configured name twice is rejected with first-error-wins behavior.
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 1;
+_ModuleConfig.References[1].Name := 'SpinAxis_BaseUnit';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+IF bOk THEN
+	bScope := _ReferenceBindingContext.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+	AssertTrue(Condition := bScope, Message := 'A valid binding session must accept its Module scope.');
+END_IF
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := GVL_Module.Chamber1[1].SpinAxis_BaseUnit, ErrorMessage => sErrorMessage);
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := GVL_Module.Chamber1[1].SpinAxis_BaseUnit, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'Taking the same semantic reference twice must fail.');
+sFirstError := _ReferenceBindingContext.ErrorMessage;
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := GVL_Module.Chamber1[1].LiftPinAxis_BaseUnit, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := _ReferenceBindingContext.ErrorMessage = sFirstError, Message := 'Calls after a binding error must preserve the first error.');
+
+// A configured key that the adapter never takes is an unknown port.
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 1;
+_ModuleConfig.References[1].Name := 'UnknownAxis';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+IF bOk THEN
+	bScope := _ReferenceBindingContext.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+	AssertTrue(Condition := bScope, Message := 'A valid binding session must accept its Module scope.');
+END_IF
+bOk := _ReferenceBindingContext.M_End();
+AssertFalse(Condition := bOk, Message := 'An unconsumed JSON key must be rejected as an unknown Module reference.');
+
+// Required references and registered sources are enforced by the context.
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+IF bOk THEN
+	bScope := _ReferenceBindingContext.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+	AssertTrue(Condition := bScope, Message := 'A valid binding session must accept its Module scope.');
+END_IF
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := GVL_Module.Chamber1[1].SpinAxis_BaseUnit, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'A missing required semantic reference must fail.');
+
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 1;
+_ModuleConfig.References[1].Name := 'SpinAxis_BaseUnit';
+_ModuleConfig.References[1].Source := 'GVL_IO.NotRegistered';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+IF bOk THEN
+	bScope := _ReferenceBindingContext.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+	AssertTrue(Condition := bScope, Message := 'A valid binding session must accept its Module scope.');
+END_IF
+ReferenceBindings := _ReferenceBindingContext;
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := GVL_Module.Chamber1[1].SpinAxis_BaseUnit, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk AND (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'Taking a semantic reference whose source is not registered must fail.');
+
+// Duplicate semantic names and capacity overflow are rejected before binding starts.
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 2;
+_ModuleConfig.References[1].Name := 'DuplicateAxis';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
+_ModuleConfig.References[2].Name := 'DuplicateAxis';
+_ModuleConfig.References[2].Source := 'GVL_IO.NC_Axis1';
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+IF bOk THEN
+	bScope := _ReferenceBindingContext.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+	AssertTrue(Condition := bScope, Message := 'A valid binding session must accept its Module scope.');
+END_IF
+AssertFalse(Condition := bOk, Message := 'Duplicate semantic reference names must fail.');
+
+_ReferenceBindingContext.M_Clear();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := Param_Config.MaxModuleReferences + 1;
+bOk := _ReferenceBindingContext.M_Begin(
+	ModuleConfig := _ModuleConfig,
+	ReferenceManager := _ReferenceManager);
+IF bOk THEN
+	bScope := _ReferenceBindingContext.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+	AssertTrue(Condition := bScope, Message := 'A valid binding session must accept its Module scope.');
+END_IF
+AssertFalse(Condition := bOk, Message := 'A Module reference map beyond fixed capacity must fail.');
+
+// The adapter still owns typed-interface validation, without tokens or a port registry.
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+BaseUnit := _IncompatibleBaseUnit;
+_FakeReferenceBindings.M_SetRequiredResult(BaseUnit := BaseUnit);
+ReferenceBindings := _FakeReferenceBindings;
+bOk := _Chamber1Adapter.M_PrepareInstance(
+	Slot := 1,
+	ReferenceBindings := ReferenceBindings,
+	ModuleConfig := _ModuleConfig,
+	LinkVariableManager := _LinkVariableManager,
+	ErrorMessage => sErrorMessage);
+AssertFalse(Condition := bOk, Message := 'The Chamber1 adapter must reject a BaseUnit that does not implement I_Axis_BaseUnit.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReferenceNamesPreserveRelativePathsAndRejectTruncation" Id="{57fe4681-2951-4e2e-8e55-38b759142062}">
+      <Declaration><![CDATA[METHOD ReferenceNamesPreserveRelativePathsAndRejectTruncation
+VAR
+	bOk : BOOL;
+	bPresent : BOOL;
+	BaseUnit : I_BaseUnit;
+	ReferenceBindings : I_ModuleReferenceBindings;
+	sModuleSymbol : STRING(255);
+	sOtherSymbol : STRING(255);
+	sPortName : STRING(80);
+	sErrorMessage : STRING(255);
+	sFirstError : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ReferenceNamesPreserveRelativePathsAndRejectTruncation');
+
+ReferenceBindings := _ReferenceBindingContext;
+sModuleSymbol := _JsonDataType.GetSymbolNameByAddress(nData := SIZEOF(_PortFixture), pData := ADR(_PortFixture));
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'The Module scope must be set successfully.');
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := _PortFixture.Nested.Axis, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (sPortName = 'Nested.Axis') AND (sErrorMessage = ''), Message := 'Relative names preserve nested paths, not just the last segment.');
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := _PortFixture.Nested.Axes[2], Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (sPortName = 'Nested.Axes[2]') AND (sErrorMessage = ''), Message := 'Relative names preserve the selected array index.');
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := _PortFixture.BranchWithAnIntentionallyLongNameForReferenceTests.PortWithAnIntentionallyLongNameForReferenceBindingTests, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND NOT bPresent AND (sPortName = '') AND (sErrorMessage = 'The relative reference port name exceeds 80 characters.'), Message := 'An overlong name fails explicitly rather than truncating or looking like an absent Optional key.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReferencePortsResolveCallerStorageWithoutWritingIt" Id="{f51c29fa-b86c-483c-8053-f2f42e562a2f}">
+      <Declaration><![CDATA[METHOD ReferencePortsResolveCallerStorageWithoutWritingIt
+VAR
+	bOk : BOOL;
+	ExpectedAxis : I_Axis_BaseUnit;
+	ResolvedAxis : I_Axis_BaseUnit;
+	bPresent : BOOL;
+	BaseUnit : I_BaseUnit;
+	ReferenceBindings : I_ModuleReferenceBindings;
+	sModuleSymbol : STRING(255);
+	sOtherSymbol : STRING(255);
+	sPortName : STRING(80);
+	sErrorMessage : STRING(255);
+	sFirstError : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ReferencePortsResolveCallerStorageWithoutWritingIt');
+
+sModuleSymbol := _JsonDataType.GetSymbolNameByAddress(
+	nData := SIZEOF(_PortFixture), pData := ADR(_PortFixture));
+AssertTrue(Condition := sModuleSymbol <> '', Message := 'The fixture Module must have a resolvable symbol.');
+ReferenceBindings := _ReferenceBindingContext;
+bOk := _ReferenceManager.M_RegisterReference(BaseUnit := GVL_IO.NC_Axis1);
+AssertTrue(Condition := bOk, Message := 'The source BaseUnit must register.');
+_PortFixture.AxisOne := 0;
+_PortFixture.AxisTwo := GVL_IO.NC_Axis2;
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ModuleConfig.ReferenceCount := 2;
+_ModuleConfig.References[1].Name := 'AxisOne';
+_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
+_ModuleConfig.References[2].Name := 'AxisTwo';
+_ModuleConfig.References[2].Source := 'GVL_IO.NC_Axis1';
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'The Module scope must be set successfully.');
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := _PortFixture.AxisOne, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit <> 0) AND (sPortName = 'AxisOne') AND (sErrorMessage = ''), Message := 'An unbound interface variable must resolve its own member name.');
+AssertTrue(Condition := _PortFixture.AxisOne = 0, Message := 'Taking a reference must not bind the target port.');
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := _PortFixture.AxisTwo, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit <> 0) AND (sPortName = 'AxisTwo'), Message := 'A bound port must resolve its storage name, not its source symbol.');
+ExpectedAxis := GVL_IO.NC_Axis2;
+AssertTrue(Condition := _PortFixture.AxisTwo = ExpectedAxis, Message := 'Taking a reference must not replace an existing target value.');
+ResolvedAxis := 0;
+bOk := __QUERYINTERFACE(BaseUnit, ResolvedAxis);
+ExpectedAxis := GVL_IO.NC_Axis1;
+AssertTrue(Condition := bOk AND (ResolvedAxis = ExpectedAxis), Message := 'Different ports may resolve the same configured BaseUnit source.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'All configured port keys were consumed exactly once.');
+
+// A missing Optional key is successful after resolving the actual port name.
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'The Module scope must be set successfully.');
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := _PortFixture.OptionalAxis, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND NOT bPresent AND (sPortName = 'OptionalAxis') AND (sErrorMessage = ''), Message := 'A missing optional configuration is distinguishable from name resolution failure.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'Omitted optional ports leave no unconsumed configuration.');
+_PortFixture.AxisTwo := 0;
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReferenceScopeRejectsInvalidOrderAndPreservesFirstError" Id="{016ac963-1bad-4646-b484-d6c506883b40}">
+      <Declaration><![CDATA[METHOD ReferenceScopeRejectsInvalidOrderAndPreservesFirstError
+VAR
+	bOk : BOOL;
+	bPresent : BOOL;
+	BaseUnit : I_BaseUnit;
+	ReferenceBindings : I_ModuleReferenceBindings;
+	sModuleSymbol : STRING(255);
+	sOtherSymbol : STRING(255);
+	sPortName : STRING(80);
+	sErrorMessage : STRING(255);
+	sFirstError : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ReferenceScopeRejectsInvalidOrderAndPreservesFirstError');
+
+ReferenceBindings := _ReferenceBindingContext;
+sModuleSymbol := _JsonDataType.GetSymbolNameByAddress(nData := SIZEOF(_PortFixture), pData := ADR(_PortFixture));
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+_ReferenceBindingContext.M_Clear();
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := NOT bOk AND _ReferenceBindingContext.Error AND (sErrorMessage <> ''), Message := 'Scope cannot be set before a binding session starts.');
+sFirstError := sErrorMessage;
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := _PortFixture.OptionalAxis, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND NOT bPresent AND (sPortName = '') AND (sErrorMessage = sFirstError), Message := 'Optional calls preserve an existing failure rather than reporting an omitted port.');
+
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+BaseUnit := ReferenceBindings.M_TakeRequired(Port := _PortFixture.AxisOne, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND _ReferenceBindingContext.Error AND (sPortName = ''), Message := 'A Take requires a Module scope.');
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := '', ErrorMessage => sErrorMessage);
+AssertTrue(Condition := NOT bOk AND (sErrorMessage <> ''), Message := 'An empty Module scope is rejected.');
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'The Module scope must be set successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := NOT bOk AND _ReferenceBindingContext.Error, Message := 'Even the same scope may only be set once per session.');
+sFirstError := sErrorMessage;
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := '', ErrorMessage => sErrorMessage);
+AssertTrue(Condition := NOT bOk AND (sErrorMessage = sFirstError), Message := 'Later scope failures preserve the first error.');
+
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := _ReferenceBindingContext.M_End();
+AssertTrue(Condition := bOk, Message := 'An adapter with no references may end without a scope.');
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := _PortFixture.OptionalAxis, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'A closed session rejects subsequent takes.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReferenceScopeRejectsOtherModulesSlotsAndTransientPorts" Id="{ecd63950-e095-491b-878b-4ccdcf121be1}">
+      <Declaration><![CDATA[METHOD ReferenceScopeRejectsOtherModulesSlotsAndTransientPorts
+VAR
+	bOk : BOOL;
+	bPresent : BOOL;
+	BaseUnit : I_BaseUnit;
+	ReferenceBindings : I_ModuleReferenceBindings;
+	sModuleSymbol : STRING(255);
+	sOtherSymbol : STRING(255);
+	sPortName : STRING(80);
+	sErrorMessage : STRING(255);
+	sFirstError : STRING(255);
+END_VAR
+VAR
+	TransientPort : I_Axis_BaseUnit;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ReferenceScopeRejectsOtherModulesSlotsAndTransientPorts');
+
+ReferenceBindings := _ReferenceBindingContext;
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+sModuleSymbol := _JsonDataType.GetSymbolNameByAddress(nData := SIZEOF(GVL_Module.Chamber1[1]), pData := ADR(GVL_Module.Chamber1[1]));
+sOtherSymbol := _JsonDataType.GetSymbolNameByAddress(nData := SIZEOF(GVL_Module.Chamber1[2]), pData := ADR(GVL_Module.Chamber1[2]));
+AssertTrue(Condition := (sModuleSymbol <> '') AND (sOtherSymbol <> '') AND (sModuleSymbol <> sOtherSymbol), Message := 'Different Slots must have different resolved Module roots.');
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'The Module scope must be set successfully.');
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := GVL_Module.Chamber1[2].SpinAxis_BaseUnit, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := (BaseUnit = 0) AND NOT bPresent AND _ReferenceBindingContext.Error AND (sPortName = ''), Message := 'A same-named port from another Slot must not be accepted.');
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sOtherSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'The Module scope must be set successfully.');
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := GVL_Module.Chamber1[2].SpinAxis_BaseUnit, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := NOT bPresent AND (sPortName = 'SpinAxis_BaseUnit') AND (sErrorMessage = ''), Message := 'The same relative name works in its own Slot scope.');
+
+sModuleSymbol := _JsonDataType.GetSymbolNameByAddress(nData := SIZEOF(_PortFixture), pData := ADR(_PortFixture));
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'The Module scope must be set successfully.');
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := _OtherPortFixture.AxisOne, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := _ReferenceBindingContext.Error AND NOT bPresent, Message := 'A different Module instance cannot supply a port for this scope.');
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+AssertTrue(Condition := bOk, Message := 'The reference map must start successfully.');
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := sModuleSymbol, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := bOk, Message := 'The Module scope must be set successfully.');
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := TransientPort, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := _ReferenceBindingContext.Error AND NOT bPresent AND (sErrorMessage <> ''), Message := 'A transient variable that is not a scoped ADS member must not be treated as optional absence.');
+
+
+// A string prefix alone must not be mistaken for a Module parent.
+bOk := _ReferenceBindingContext.M_Begin(ModuleConfig := _ModuleConfig, ReferenceManager := _ReferenceManager);
+bOk := ReferenceBindings.M_SetModuleScope(ModuleSymbol := LEFT(sModuleSymbol, LEN(sModuleSymbol) - 1), ErrorMessage => sErrorMessage);
+BaseUnit := ReferenceBindings.M_TakeOptional(Port := _PortFixture.AxisOne, Present => bPresent, PortName => sPortName, ErrorMessage => sErrorMessage);
+AssertTrue(Condition := _ReferenceBindingContext.Error AND (sPortName = ''), Message := 'Scope matching requires a dot delimiter after the exact Module root.');
 
 TEST_FINISHED();]]></ST>
       </Implementation>
@@ -300,191 +807,6 @@ bOk := _LinkVariableManager.M_RegisterModuleNode(
 	Variable := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
 	Access := E_VariableAccess.ReadWrite);
 AssertFalse(Condition := bOk, Message := 'Declaring the same full Module symbol twice must fail.');
-
-TEST_FINISHED();]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="ReferenceBindingsEnforceFrameworkContract" Id="{47f47f36-f40d-4f9f-941d-68565d7feaae}">
-      <Declaration><![CDATA[METHOD ReferenceBindingsEnforceFrameworkContract
-VAR
-	bOk : BOOL;
-	bPresent : BOOL;
-	BaseUnit : I_BaseUnit;
-	sErrorMessage : STRING(255);
-	sFirstError : STRING(255);
-	ReferenceBindings : I_ModuleReferenceBindings;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[TEST('ReferenceBindingsEnforceFrameworkContract');
-
-bOk := _ReferenceManager.M_RegisterReference(BaseUnit := GVL_IO.NC_Axis1);
-AssertTrue(Condition := bOk, Message := 'The Axis BaseUnit source must register for binding tests.');
-
-// An omitted optional semantic reference is successful and explicitly absent.
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-bOk := _ReferenceBindingContext.M_Begin(
-	ModuleConfig := _ModuleConfig,
-	ReferenceManager := _ReferenceManager);
-ReferenceBindings := _ReferenceBindingContext;
-BaseUnit := ReferenceBindings.M_TakeOptional(
-	Name := 'OptionalAxis',
-	Present => bPresent,
-	ErrorMessage => sErrorMessage);
-AssertTrue(Condition := (BaseUnit = 0) AND NOT bPresent AND (sErrorMessage = ''), Message := 'An omitted optional reference must be reported as not present without error.');
-bOk := _ReferenceBindingContext.M_End();
-AssertTrue(Condition := bOk, Message := 'An omitted optional reference must not leave an unknown JSON key.');
-
-// The same source may be consumed by two different semantic names.
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-_ModuleConfig.ReferenceCount := 2;
-_ModuleConfig.References[1].Name := 'AxisOne';
-_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
-_ModuleConfig.References[2].Name := 'AxisTwo';
-_ModuleConfig.References[2].Source := 'GVL_IO.NC_Axis1';
-bOk := _ReferenceBindingContext.M_Begin(
-	ModuleConfig := _ModuleConfig,
-	ReferenceManager := _ReferenceManager);
-ReferenceBindings := _ReferenceBindingContext;
-BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'AxisOne', ErrorMessage => sErrorMessage);
-AssertTrue(Condition := BaseUnit <> 0, Message := 'The first semantic name must resolve its source.');
-BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'AxisTwo', ErrorMessage => sErrorMessage);
-AssertTrue(Condition := BaseUnit <> 0, Message := 'A second semantic name may use the same source.');
-bOk := _ReferenceBindingContext.M_End();
-AssertTrue(Condition := bOk, Message := 'Every configured semantic reference was consumed exactly once.');
-
-// Taking one configured name twice is rejected with first-error-wins behavior.
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-_ModuleConfig.ReferenceCount := 1;
-_ModuleConfig.References[1].Name := 'AxisOne';
-_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
-bOk := _ReferenceBindingContext.M_Begin(
-	ModuleConfig := _ModuleConfig,
-	ReferenceManager := _ReferenceManager);
-ReferenceBindings := _ReferenceBindingContext;
-BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'AxisOne', ErrorMessage => sErrorMessage);
-BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'AxisOne', ErrorMessage => sErrorMessage);
-AssertTrue(Condition := (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'Taking the same semantic reference twice must fail.');
-sFirstError := _ReferenceBindingContext.ErrorMessage;
-BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'MissingLater', ErrorMessage => sErrorMessage);
-AssertTrue(Condition := _ReferenceBindingContext.ErrorMessage = sFirstError, Message := 'Calls after a binding error must preserve the first error.');
-
-// A configured key that the adapter never takes is an unknown port.
-_ReferenceBindingContext.M_Clear();
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-_ModuleConfig.ReferenceCount := 1;
-_ModuleConfig.References[1].Name := 'UnknownAxis';
-_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
-bOk := _ReferenceBindingContext.M_Begin(
-	ModuleConfig := _ModuleConfig,
-	ReferenceManager := _ReferenceManager);
-bOk := _ReferenceBindingContext.M_End();
-AssertFalse(Condition := bOk, Message := 'An unconsumed JSON key must be rejected as an unknown Module reference.');
-
-// Required references and registered sources are enforced by the context.
-_ReferenceBindingContext.M_Clear();
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-bOk := _ReferenceBindingContext.M_Begin(
-	ModuleConfig := _ModuleConfig,
-	ReferenceManager := _ReferenceManager);
-ReferenceBindings := _ReferenceBindingContext;
-BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'RequiredAxis', ErrorMessage => sErrorMessage);
-AssertTrue(Condition := (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'A missing required semantic reference must fail.');
-
-_ReferenceBindingContext.M_Clear();
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-_ModuleConfig.ReferenceCount := 1;
-_ModuleConfig.References[1].Name := 'RequiredAxis';
-_ModuleConfig.References[1].Source := 'GVL_IO.NotRegistered';
-bOk := _ReferenceBindingContext.M_Begin(
-	ModuleConfig := _ModuleConfig,
-	ReferenceManager := _ReferenceManager);
-ReferenceBindings := _ReferenceBindingContext;
-BaseUnit := ReferenceBindings.M_TakeRequired(Name := 'RequiredAxis', ErrorMessage => sErrorMessage);
-AssertTrue(Condition := bOk AND (BaseUnit = 0) AND _ReferenceBindingContext.Error, Message := 'Taking a semantic reference whose source is not registered must fail.');
-
-// Duplicate semantic names and capacity overflow are rejected before binding starts.
-_ReferenceBindingContext.M_Clear();
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-_ModuleConfig.ReferenceCount := 2;
-_ModuleConfig.References[1].Name := 'DuplicateAxis';
-_ModuleConfig.References[1].Source := 'GVL_IO.NC_Axis1';
-_ModuleConfig.References[2].Name := 'DuplicateAxis';
-_ModuleConfig.References[2].Source := 'GVL_IO.NC_Axis1';
-bOk := _ReferenceBindingContext.M_Begin(
-	ModuleConfig := _ModuleConfig,
-	ReferenceManager := _ReferenceManager);
-AssertFalse(Condition := bOk, Message := 'Duplicate semantic reference names must fail.');
-
-_ReferenceBindingContext.M_Clear();
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-_ModuleConfig.ReferenceCount := Param_Config.MaxModuleReferences + 1;
-bOk := _ReferenceBindingContext.M_Begin(
-	ModuleConfig := _ModuleConfig,
-	ReferenceManager := _ReferenceManager);
-AssertFalse(Condition := bOk, Message := 'A Module reference map beyond fixed capacity must fail.');
-
-// The adapter still owns typed-interface validation, without tokens or a port registry.
-_LinkVariableManager.M_ClearLinks();
-_LinkVariableManager.M_ClearModuleNodes();
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-BaseUnit := _IncompatibleBaseUnit;
-_FakeReferenceBindings.M_SetRequiredResult(BaseUnit := BaseUnit);
-ReferenceBindings := _FakeReferenceBindings;
-bOk := _Chamber1Adapter.M_PrepareInstance(
-	Slot := 1,
-	ReferenceBindings := ReferenceBindings,
-	ModuleConfig := _ModuleConfig,
-	LinkVariableManager := _LinkVariableManager,
-	ErrorMessage => sErrorMessage);
-AssertFalse(Condition := bOk, Message := 'The Chamber1 adapter must reject a BaseUnit that does not implement I_Axis_BaseUnit.');
-
-TEST_FINISHED();]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="NewModuleTypeUsesGenericFrameworkSeam" Id="{a96e7693-3912-42cb-a3bd-2cdf6b7ad695}">
-      <Declaration><![CDATA[METHOD NewModuleTypeUsesGenericFrameworkSeam
-VAR
-	bOk : BOOL;
-	Adapter : I_ModuleConfigurationAdapter;
-	ReferenceBindings : I_ModuleReferenceBindings;
-	sModuleSymbol : STRING(255);
-	sErrorMessage : STRING(255);
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[TEST('NewModuleTypeUsesGenericFrameworkSeam');
-
-_LinkVariableManager.M_ClearLinks();
-_LinkVariableManager.M_ClearModuleNodes();
-_ReferenceBindingContext.M_Clear();
-MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
-_ModuleConfig.ModuleType := 'FAKE';
-_ModuleConfig.InputMappingCount := 1;
-_ModuleConfig.InputMappings[1].Target := 'bDoorClosed';
-
-bOk := _ModuleTypeRegistry.M_Register(
-	ModuleTypeName := 'FAKE',
-	Adapter := _FakeAdapter);
-AssertTrue(Condition := bOk, Message := 'A new Module Type name must register without extending a framework enum.');
-Adapter := _ModuleTypeRegistry.M_Resolve(ModuleTypeName := 'FAKE');
-AssertTrue(Condition := Adapter <> 0, Message := 'The string-keyed registry must resolve the fake adapter.');
-
-bOk := _ReferenceBindingContext.M_Begin(
-	ModuleConfig := _ModuleConfig,
-	ReferenceManager := _ReferenceManager);
-AssertTrue(Condition := bOk, Message := 'A Module with no references still receives the generic empty binding context.');
-ReferenceBindings := _ReferenceBindingContext;
-bOk := Adapter.M_PrepareInstance(
-	Slot := 1,
-	ReferenceBindings := ReferenceBindings,
-	ModuleConfig := _ModuleConfig,
-	LinkVariableManager := _LinkVariableManager,
-	ModuleSymbol => sModuleSymbol,
-	ErrorMessage => sErrorMessage);
-AssertTrue(Condition := bOk, Message := 'A fake Module adapter must use the same generic resource-declaration seam without manager changes.');
-bOk := _ReferenceBindingContext.M_End();
-AssertTrue(Condition := bOk, Message := 'The framework must accept an empty semantic reference map for the fake Module.');
 
 TEST_FINISHED();]]></ST>
       </Implementation>

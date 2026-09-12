@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ReferencePortFixture" Id="{3a1e1177-4a98-4194-9636-67c4f5f42799}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ReferencePortFixture
+VAR_INPUT
+	AxisOne : I_Axis_BaseUnit;
+	AxisTwo : I_Axis_BaseUnit;
+	OptionalAxis : I_Axis_BaseUnit;
+	Nested : ST_ReferencePortTestBranch;
+	BranchWithAnIntentionallyLongNameForReferenceTests : ST_ReferencePortTestBranch;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

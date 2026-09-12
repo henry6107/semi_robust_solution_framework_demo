@@ -83,6 +83,7 @@ VAR
 	SpinAxis : I_Axis_BaseUnit;
 	LiftPinAxis : I_Axis_BaseUnit;
 	sReferenceError : STRING(255);
+	sPortName : STRING(80);
 	nIndex : DINT;
 END_VAR
 ]]></Declaration>
@@ -148,8 +149,16 @@ IF ReferenceBindings = 0 THEN
 	RETURN;
 END_IF
 
+IF NOT ReferenceBindings.M_SetModuleScope(
+	ModuleSymbol := ModuleSymbol,
+	ErrorMessage => sReferenceError) THEN
+	ErrorMessage := sReferenceError;
+	RETURN;
+END_IF
+
 BaseUnit := ReferenceBindings.M_TakeRequired(
-	Name := 'SpinAxis_BaseUnit',
+	Port := GVL_Module.Chamber1[Slot].SpinAxis_BaseUnit,
+	PortName => sPortName,
 	ErrorMessage => sReferenceError);
 IF BaseUnit = 0 THEN
 	ErrorMessage := sReferenceError;
@@ -157,12 +166,13 @@ IF BaseUnit = 0 THEN
 END_IF
 SpinAxis := 0;
 IF NOT __QUERYINTERFACE(BaseUnit, SpinAxis) THEN
-	ErrorMessage := 'SpinAxis_BaseUnit requires I_Axis_BaseUnit.';
+	ErrorMessage := CONCAT(sPortName, ' requires I_Axis_BaseUnit.');
 	RETURN;
 END_IF
 
 BaseUnit := ReferenceBindings.M_TakeRequired(
-	Name := 'LiftPinAxis_BaseUnit',
+	Port := GVL_Module.Chamber1[Slot].LiftPinAxis_BaseUnit,
+	PortName => sPortName,
 	ErrorMessage => sReferenceError);
 IF BaseUnit = 0 THEN
 	ErrorMessage := sReferenceError;
@@ -170,7 +180,7 @@ IF BaseUnit = 0 THEN
 END_IF
 LiftPinAxis := 0;
 IF NOT __QUERYINTERFACE(BaseUnit, LiftPinAxis) THEN
-	ErrorMessage := 'LiftPinAxis_BaseUnit requires I_Axis_BaseUnit.';
+	ErrorMessage := CONCAT(sPortName, ' requires I_Axis_BaseUnit.');
 	RETURN;
 END_IF
 

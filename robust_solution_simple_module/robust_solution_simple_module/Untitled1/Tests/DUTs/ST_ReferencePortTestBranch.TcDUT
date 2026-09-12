@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_ReferencePortTestBranch" Id="{2c5697c0-f371-4f62-b335-e6bea5fd9862}">
+    <Declaration><![CDATA[TYPE ST_ReferencePortTestBranch :
+STRUCT
+	Axis : I_Axis_BaseUnit;
+	Axes : ARRAY[1..2] OF I_Axis_BaseUnit;
+	PortWithAnIntentionallyLongNameForReferenceBindingTests : I_Axis_BaseUnit;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

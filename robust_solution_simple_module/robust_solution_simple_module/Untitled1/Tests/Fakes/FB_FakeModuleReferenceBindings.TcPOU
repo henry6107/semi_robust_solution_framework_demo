@@ -2,8 +2,15 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_FakeModuleReferenceBindings" Id="{540a95cf-b9c6-4c97-a203-47ed6424c49a}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_FakeModuleReferenceBindings IMPLEMENTS I_ModuleReferenceBindings
+VAR_OUTPUT
+	ModuleScope : STRING(255);
+	ScopeSetCount : UINT;
+	TakeCount : UINT;
+	TakenAddresses : ARRAY[1..2] OF PVOID;
+	TakenSizes : ARRAY[1..2] OF DINT;
+END_VAR
 VAR
-	_RequiredResult : I_BaseUnit;
+	_RequiredResults : ARRAY[1..2] OF I_BaseUnit;
 END_VAR
 ]]></Declaration>
     <Implementation><ST><![CDATA[]]></ST></Implementation>
@@ -13,33 +20,85 @@ VAR_INPUT
 	BaseUnit : I_BaseUnit;
 END_VAR
 ]]></Declaration>
-      <Implementation><ST><![CDATA[_RequiredResult := BaseUnit;]]></ST></Implementation>
+      <Implementation><ST><![CDATA[_RequiredResults[1] := BaseUnit;
+_RequiredResults[2] := BaseUnit;]]></ST></Implementation>
     </Method>
     <Method Name="M_TakeOptional" Id="{885e7d7a-80d7-49fc-a25c-8351e71cf7f3}">
       <Declaration><![CDATA[METHOD PUBLIC M_TakeOptional : I_BaseUnit
 VAR_INPUT
-	Name : STRING(80);
+	Port : ANY;
 END_VAR
 VAR_OUTPUT
+	PortName : STRING(80);
 	Present : BOOL;
 	ErrorMessage : STRING(255);
 END_VAR
 ]]></Declaration>
-      <Implementation><ST><![CDATA[M_TakeOptional := 0;
-Present := FALSE;
-ErrorMessage := '';]]></ST></Implementation>
+      <Implementation><ST><![CDATA[TakeCount := TakeCount + 1;
+PortName := 'FakePort';
+ErrorMessage := '';
+IF TakeCount <= 2 THEN
+	TakenAddresses[TakeCount] := Port.pValue;
+	TakenSizes[TakeCount] := Port.diSize;
+END_IF
+M_TakeOptional := 0;
+Present := FALSE;]]></ST></Implementation>
     </Method>
     <Method Name="M_TakeRequired" Id="{ff07c556-8601-4428-ac01-0a4dbec26986}">
       <Declaration><![CDATA[METHOD PUBLIC M_TakeRequired : I_BaseUnit
 VAR_INPUT
-	Name : STRING(80);
+	Port : ANY;
+END_VAR
+VAR_OUTPUT
+	PortName : STRING(80);
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TakeCount := TakeCount + 1;
+PortName := 'FakePort';
+ErrorMessage := '';
+IF TakeCount <= 2 THEN
+	TakenAddresses[TakeCount] := Port.pValue;
+	TakenSizes[TakeCount] := Port.diSize;
+END_IF
+M_TakeRequired := 0;
+IF TakeCount <= 2 THEN
+	M_TakeRequired := _RequiredResults[TakeCount];
+END_IF
+IF M_TakeRequired = 0 THEN
+	ErrorMessage := 'Injected required reference failure.';
+END_IF]]></ST></Implementation>
+    </Method>
+    <Method Name="M_SetRequiredResults" Id="{7828fb66-a432-421b-b867-6bc4b415eb5e}">
+      <Declaration><![CDATA[METHOD PUBLIC M_SetRequiredResults
+VAR_INPUT
+	First : I_BaseUnit;
+	Second : I_BaseUnit;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_RequiredResults[1] := First;
+_RequiredResults[2] := Second;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetModuleScope" Id="{9db3a805-f896-4772-8961-0f15d3615dae}">
+      <Declaration><![CDATA[METHOD PUBLIC M_SetModuleScope : BOOL
+VAR_INPUT
+	ModuleSymbol : STRING(255);
 END_VAR
 VAR_OUTPUT
 	ErrorMessage : STRING(255);
 END_VAR
 ]]></Declaration>
-      <Implementation><ST><![CDATA[ErrorMessage := '';
-M_TakeRequired := _RequiredResult;]]></ST></Implementation>
+      <Implementation>
+        <ST><![CDATA[ModuleScope := ModuleSymbol;
+ScopeSetCount := ScopeSetCount + 1;
+TakeCount := 0;
+MEMSET(ADR(TakenAddresses), 0, SIZEOF(TakenAddresses));
+MEMSET(ADR(TakenSizes), 0, SIZEOF(TakenSizes));
+ErrorMessage := '';
+M_SetModuleScope := ModuleSymbol <> '';]]></ST>
+      </Implementation>
     </Method>
   </POU>
 </TcPlcObject>

@@ -25,6 +25,12 @@
     <Author>BATW</Author>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Tests\Fakes\FB_ReferencePortFixture.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\DUTs\ST_ReferencePortTestBranch.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Fakes\FB_FakeHookValueReader.TcPOU">
       <SubType>Code</SubType>
     </Compile>
