@@ -836,7 +836,8 @@ Mapping contract：
 2. 無 transform 的 mapping 必須符合 source 與 target 型別、大小相容規則。
 3. 有 transform 的 mapping 必須只用於 Framework 支援的數值型別，並依已驗證的 scale／offset 執行。
 4. Module-specific 邏輯不得依賴 JSON 字串名稱；cyclic execution 應使用已建立的 link 或 node handle。
-5. 任何需要跨 Module 傳值的 mapping，都必須明確規定 source 更新與 target 消費的 scan semantics；不得只依賴目前 Module loop 的偶然順序。
+5. 每個 resolved target node 只能由一條 mapping link 寫入；同一 source 可以 fan-out 至多個不同 target。
+6. 任何需要跨 Module 傳值的 mapping，都必須明確規定 source 更新與 target 消費的 scan semantics；不得只依賴目前 Module loop 的偶然順序。
 
 ### 3.9 Module-level Cyclic Execution
 
@@ -1915,7 +1916,7 @@ END_IF
 
 目前支援的 primitive node type 為 `BOOL`、`DINT`、`UDINT`、`REAL`、`LREAL` 與 `STRING(80)` 範圍內的字串。
 
-Mapping source 不得是 write-only，target 不得是 read-only。Configured Variable 與 Alarm source 必須可讀。
+Mapping source 不得是 write-only，target 不得是 read-only。Configured Variable 與 Alarm source 必須可讀。`WriteOnly` 或 `ReadWrite` 只表示 Link Variable Manager 可以寫入該 node，不表示該 node 可以接受多個 mapping writers。
 
 共享實體 I/O 使用 `M_RegisterInfrastructureNode`；Module instance 內的 node 由 Adapter 在 Module session 中使用 `M_RegisterModuleNode`。JSON 的 Module relative path 用於組態引用，不是這兩個逐點註冊 API 的參數。Array 必須依實際 bounds 逐元素註冊，不得將整個 array 或 terminal struct 當成一個 primitive node 傳入。
 
@@ -1948,7 +1949,12 @@ Mapping 必須包含 source、target、source data type 與 target data type。
 
 - 無 transform：source 與 target 的 registered type 及 size 必須完全一致，cyclic phase 使用 `MEMCPY`。
 - 有 transform：source 與 target 都必須是支援的 numeric type；依 `target = source * scale + offset` 的共同規則轉換。
+- 每個 resolved target node 在所有 cyclic phase 中只能有一條 link。任何第二條 link 都必須失敗，即使 source、phase 與 transform 完全相同；同一 source fan-out 至不同 target 仍然合法。
 - 任何 node 未註冊、access 不符、type metadata 不符或 link table overflow，都必須使 configuration application 失敗。
+
+單一 writer identity 以 Link Variable Manager 的 registered node handle 判定，不比較不同 node 的底層位址範圍。Variable／Alarm binding 是 reader，不占用 writer；disabled Module 不建立 link。限制只涵蓋 Link Variable Manager 建立的 mapping，無法偵測一般 PLC 程式、ADS client 或硬體 process image 的直接寫入。
+
+`M_AddLink()` 只有在 link 成功加入 table 後才登記 target writer。衝突診斷必須指出 target 與既有 source，並使 Configuration Manager 的整體 application 失敗；既有 rollback 會透過 `M_ClearLinks()` 清除 links 與 writer claims，使後續 application 可以重新分配 target。
 
 若浮點轉整數涉及 rounding、saturation 或 overflow，必須在 Link Variable Manager 專屬 Interface 中明訂；不得依賴隱含型別轉換。
 

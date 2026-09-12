@@ -29,6 +29,7 @@ END_IF
 
 IF _InfrastructurePrepared THEN
 	Chamber1DeclarationsUseResolvedFullSymbols();
+SingleWriterRejectsAdditionalTargetLinks();
 ModuleSlotsResolveDistinctFullSymbols();
 MissingModuleDeclarationFailsEndSession();
 RegistrationSessionEnforcesOrdering();
@@ -808,6 +809,153 @@ bOk := _LinkVariableManager.M_RegisterModuleNode(
 	Access := E_VariableAccess.ReadWrite);
 AssertFalse(Condition := bOk, Message := 'Declaring the same full Module symbol twice must fail.');
 
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SingleWriterRejectsAdditionalTargetLinks" Id="{62c37d45-78ac-4b63-9d52-bc165204451e}">
+      <Declaration><![CDATA[METHOD SingleWriterRejectsAdditionalTargetLinks
+VAR
+	bOk : BOOL;
+	sModuleSymbol : STRING(255);
+	sSourceOne : STRING(255);
+	sSourceTwo : STRING(255);
+	sTargetOne : STRING(255);
+	sTargetTwo : STRING(255);
+	sExpectedError : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('SingleWriterRejectsAdditionalTargetLinks');
+
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
+MEMSET(ADR(_ModuleConfig), 0, SIZEOF(_ModuleConfig));
+
+bOk := _LinkVariableManager.M_BeginModuleRegistration(
+	Address := ADR(GVL_Module.Chamber1[1]),
+	Size := SIZEOF(GVL_Module.Chamber1[1]),
+	ModuleConfig := _ModuleConfig);
+AssertTrue(Condition := bOk, Message := 'The single-writer fixture registration must begin.');
+
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[1].HwInput.bDIs[1],
+	Access := E_VariableAccess.ReadWrite);
+AssertTrue(Condition := bOk, Message := 'The first source node must register.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[1].HwInput.bDIs[2],
+	Access := E_VariableAccess.ReadWrite);
+AssertTrue(Condition := bOk, Message := 'The second source node must register.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
+	Access := E_VariableAccess.ReadWrite);
+AssertTrue(Condition := bOk, Message := 'The first target node must register.');
+bOk := _LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[1].HwInput.bDIs[3],
+	Access := E_VariableAccess.ReadWrite);
+AssertTrue(Condition := bOk, Message := 'The second target node must register.');
+
+bOk := _LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => sModuleSymbol);
+AssertTrue(Condition := bOk, Message := 'The single-writer fixture registration must complete.');
+
+sSourceOne := CONCAT(sModuleSymbol, '.HwInput.bDIs[1]');
+sSourceTwo := CONCAT(sModuleSymbol, '.HwInput.bDIs[2]');
+sTargetOne := CONCAT(sModuleSymbol, '.HwInput.bDoorClosed');
+sTargetTwo := CONCAT(sModuleSymbol, '.HwInput.bDIs[3]');
+
+bOk := _LinkVariableManager.M_AddLink(
+	SourceName := sSourceOne,
+	TargetName := sTargetOne,
+	SourceDataType := E_ConfigDataType.Float32,
+	TargetDataType := E_ConfigDataType.Boolean,
+	Phase := E_LinkPhase.InputToModule,
+	HasTransform := FALSE,
+	Scale := 1.0,
+	Offset := 0.0);
+AssertFalse(Condition := bOk, Message := 'An invalid link must fail before claiming its target.');
+
+bOk := _LinkVariableManager.M_AddLink(
+	SourceName := sSourceOne,
+	TargetName := sTargetOne,
+	SourceDataType := E_ConfigDataType.Boolean,
+	TargetDataType := E_ConfigDataType.Boolean,
+	Phase := E_LinkPhase.InputToModule,
+	HasTransform := FALSE,
+	Scale := 1.0,
+	Offset := 0.0);
+AssertTrue(Condition := bOk, Message := 'A valid writer must be accepted after an invalid link left the target unclaimed.');
+
+bOk := _LinkVariableManager.M_AddLink(
+	SourceName := sSourceTwo,
+	TargetName := sTargetOne,
+	SourceDataType := E_ConfigDataType.Boolean,
+	TargetDataType := E_ConfigDataType.Boolean,
+	Phase := E_LinkPhase.InputToModule,
+	HasTransform := FALSE,
+	Scale := 1.0,
+	Offset := 0.0);
+AssertFalse(Condition := bOk, Message := 'A different second source for the same target must be rejected.');
+sExpectedError := CONCAT(
+	CONCAT('Link target already has a writer: ', sTargetOne),
+	CONCAT(' (existing source: ', CONCAT(sSourceOne, ').')));
+AssertTrue(
+	Condition := _LinkVariableManager.ErrorMessage = sExpectedError,
+	Message := 'A writer conflict must identify the target and existing source.');
+
+GVL_Module.Chamber1[1].HwInput.bDIs[1] := TRUE;
+GVL_Module.Chamber1[1].HwInput.bDIs[2] := FALSE;
+GVL_Module.Chamber1[1].HwInput.bDoorClosed := FALSE;
+_LinkVariableManager.M_CyclicInput();
+AssertTrue(
+	Condition := GVL_Module.Chamber1[1].HwInput.bDoorClosed,
+	Message := 'Rejecting a second writer must preserve the first active link.');
+
+bOk := _LinkVariableManager.M_AddLink(
+	SourceName := sSourceOne,
+	TargetName := sTargetOne,
+	SourceDataType := E_ConfigDataType.Boolean,
+	TargetDataType := E_ConfigDataType.Boolean,
+	Phase := E_LinkPhase.InputToModule,
+	HasTransform := FALSE,
+	Scale := 1.0,
+	Offset := 0.0);
+AssertFalse(Condition := bOk, Message := 'An identical duplicate link must also be rejected.');
+
+bOk := _LinkVariableManager.M_AddLink(
+	SourceName := sSourceTwo,
+	TargetName := sTargetOne,
+	SourceDataType := E_ConfigDataType.Boolean,
+	TargetDataType := E_ConfigDataType.Boolean,
+	Phase := E_LinkPhase.ModuleToOutput,
+	HasTransform := FALSE,
+	Scale := 1.0,
+	Offset := 0.0);
+AssertFalse(Condition := bOk, Message := 'A target writer conflict must apply across cyclic phases.');
+
+bOk := _LinkVariableManager.M_AddLink(
+	SourceName := sSourceOne,
+	TargetName := sTargetTwo,
+	SourceDataType := E_ConfigDataType.Boolean,
+	TargetDataType := E_ConfigDataType.Boolean,
+	Phase := E_LinkPhase.InputToModule,
+	HasTransform := FALSE,
+	Scale := 1.0,
+	Offset := 0.0);
+AssertTrue(Condition := bOk, Message := 'One source must be allowed to fan out to another target.');
+
+_LinkVariableManager.M_ClearLinks();
+bOk := _LinkVariableManager.M_AddLink(
+	SourceName := sSourceTwo,
+	TargetName := sTargetOne,
+	SourceDataType := E_ConfigDataType.Boolean,
+	TargetDataType := E_ConfigDataType.Boolean,
+	Phase := E_LinkPhase.InputToModule,
+	HasTransform := FALSE,
+	Scale := 1.0,
+	Offset := 0.0);
+AssertTrue(Condition := bOk, Message := 'Clearing links must release the target writer claim.');
+
+_LinkVariableManager.M_ClearLinks();
+_LinkVariableManager.M_ClearModuleNodes();
 TEST_FINISHED();]]></ST>
       </Implementation>
     </Method>

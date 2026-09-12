@@ -17,6 +17,7 @@ VAR
 	_ModuleConfig : REFERENCE TO ST_ModuleFileConfig;
 	_Links : ARRAY[1..Param_Config.MaxModuleMappings * Param_Config.MaxTotalConfiguredModules * 2] OF ST_VariableLink;
 	_LinkCount : UINT;
+	_TargetWriterSourceNodes : ARRAY[1..Param_Config.MaxConfigVariableNodes] OF UINT;
 	_JsonDataType : FB_JsonReadWriteDataType;
 END_VAR
 ]]></Declaration>
@@ -95,6 +96,14 @@ ELSE
 	END_IF
 END_IF
 
+IF _TargetWriterSourceNodes[nTarget] <> 0 THEN
+	Error := TRUE;
+	ErrorMessage := CONCAT(
+		CONCAT('Link target already has a writer: ', TargetName),
+		CONCAT(' (existing source: ', CONCAT(_Nodes[_TargetWriterSourceNodes[nTarget]].Name, ').')));
+	RETURN;
+END_IF
+
 nNext := _LinkCount + 1;
 IF nNext > (Param_Config.MaxModuleMappings * Param_Config.MaxTotalConfiguredModules * 2) THEN
 	Error := TRUE;
@@ -113,6 +122,7 @@ _Links[nNext].HasTransform := HasTransform;
 _Links[nNext].Scale := Scale;
 _Links[nNext].Offset := Offset;
 _LinkCount := nNext;
+_TargetWriterSourceNodes[nTarget] := nSource;
 M_AddLink := TRUE;]]></ST>
       </Implementation>
     </Method>
@@ -251,6 +261,7 @@ M_BuildNodeName := TRUE;]]></ST>
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[MEMSET(ADR(_Links), 0, SIZEOF(_Links));
+MEMSET(ADR(_TargetWriterSourceNodes), 0, SIZEOF(_TargetWriterSourceNodes));
 _LinkCount := 0;
 Error := FALSE;
 ErrorMessage := '';]]></ST>

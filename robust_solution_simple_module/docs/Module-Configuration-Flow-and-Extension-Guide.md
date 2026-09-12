@@ -186,7 +186,7 @@ sequenceDiagram
 
 1. **Adapter 解析**：Configuration Manager 只取得 `I_ModuleConfigurationAdapter`，不知道 Chamber1 或其他 Module type。
 2. **Module instance preparation**：adapter 選擇 `GVL_Module.<Type>[slot]`，在 Begin／End session 之間，以 `M_RegisterModuleNode(variable, access)` 宣告每個 scalar 或 array element。Manager 從變數本身取得完整 ADS symbol，並驗證它屬於目前 Module root。
-3. **Mapping**：無 transform 時要求型別與大小相同並使用 `MEMCPY`；有 transform 時要求支援的數值型別，執行 `target = source * scale + offset`。
+3. **Mapping**：無 transform 時要求型別與大小相同並使用 `MEMCPY`；有 transform 時要求支援的數值型別，執行 `target = source * scale + offset`。每個 resolved target node 在所有 cyclic phase 中只能有一條 link，任何重複 target 都會使 configuration application 失敗；同一 source 仍可 fan-out 至不同 target。
 4. **Reference binding**：adapter 依自身固定契約，以語意名稱 pull required／optional reference；binding context 查找 JSON、透過 Reference Manager resolve `I_BaseUnit`，adapter 只需以 `__QUERYINTERFACE` 驗證 specialized interface。所有項目成功後才提交到 type-specific reference array；未取用的 JSON key 由 context 的 `M_End()` 視為 unknown port 拒絕。
 5. **Configured value binding**：VariableList／AlarmList 的相對 `source` 會加上 Module root symbol，再解析為 opaque `NodeHandle`。
 6. **Runtime config**：adapter 是唯一知道 `<ModuleType>_Runtime[slot]` 實際儲存位置的 implementation。
