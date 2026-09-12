@@ -338,27 +338,6 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="H_OnSuspended" Id="{a1ab0010-6b2c-4d3e-8f90-a1ab00000010}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspended
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnSuspending" Id="{a1ab0011-6b2c-4d3e-8f90-a1ab00000011}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspending : E_PackMLHookResult
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnSuspending := E_PackMLHookResult.Done;]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="H_OnUndefined" Id="{a1ab0012-6b2c-4d3e-8f90-a1ab00000012}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnUndefined : E_PackMLHookResult
 VAR_INPUT
@@ -379,17 +358,6 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
 H_OnUnholding := E_PackMLHookResult.Done;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnUnsuspending" Id="{a1ab0014-6b2c-4d3e-8f90-a1ab00000014}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnUnsuspending : E_PackMLHookResult
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
   </POU>
