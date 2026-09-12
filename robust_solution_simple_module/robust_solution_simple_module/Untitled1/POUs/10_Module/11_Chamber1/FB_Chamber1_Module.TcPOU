@@ -4,7 +4,6 @@
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1_Module EXTENDS FB_ModuleBase
 VAR_INPUT	
 	HwInput : ST_Chamber1_Signal_In;
-	HwOutput : ST_Chamber1_Signal_Out;
 
 	ServiceCtrl : REFERENCE TO ST_Chamber1_ServiceCtrl;
 	ServiceParam : REFERENCE TO ST_Chamber1_ServiceParam;
@@ -15,6 +14,7 @@ VAR_INPUT
 END_VAR
 
 VAR_OUTPUT
+	HwOutput : ST_Chamber1_Signal_Out;
 	ServiceStatus : ST_Chamber1_ServiceStatus;
 END_VAR
 
