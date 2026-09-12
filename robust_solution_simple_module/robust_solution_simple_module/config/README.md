@@ -19,7 +19,7 @@ Module ID 使用設定檔的數值 `id` 與 PLC 的 `UDINT` 欄位，不再提�
 - Root：`schemaVersion`、`modules`。schema v4 不再支援 `adsPort`。
 - Module：`enabled`、`moduleType`、`slot`。`moduleType` 必須與註冊至 `FB_ModuleTypeRegistry` 的名稱完全同名且大小寫一致；`slot` 是該 Module type 自己的 array index，同一 type 內不可重複，但不同 type 可使用相同 slot。啟用時另須非零且跨 type 全域唯一的 `id`。Module ADS symbol 會由 PLC 自動解析，不需在設定檔提供。
 - Mapping：`source`、`target`、`sourceDataType`、`targetDataType`。只有數值型別可使用 `transform`。
-- Reference：`references` 是 port name 到 BaseUnit source name 的 JSON object。key 必須與 adapter 使用的語意名稱完全同名且大小寫一致；value 必須是已註冊至 `FB_ReferenceManager` 的 `I_BaseUnit` source。Chamber1 目前要求 `SpinAxis_BaseUnit` 與 `LiftPinAxis_BaseUnit`。
+- Reference：`references` 是 port name 到 BaseUnit source name 的 JSON object。key 必須與實際 Module 引腳的相對成員路徑完全同名且大小寫一致；value 必須是已註冊至 `FB_ReferenceManager` 的 `I_BaseUnit` source。Chamber1 目前要求 `SpinAxis_BaseUnit` 與 `LiftPinAxis_BaseUnit`。
 - Variable：`source`、非零 `id`、`name`、`unit`、`dataType`。
 - Alarm：`source`、`dataType`、非零 `mainErrorId`、`message`、`severity`，以及結構化 `condition`。
 
@@ -29,7 +29,7 @@ Module ID 使用設定檔的數值 `id` 與 PLC 的 `UDINT` 欄位，不再提�
 
 設定檔只能使用 PLC initial 階段已註冊到 `FB_LinkVariableManager`／`FB_ReferenceManager` 的節點。Beckhoff 實體 I/O 與 BaseUnit reference 由 `MAIN` 註冊；兩個 manager 都會從實際變數位址自動取得 ADS symbol，呼叫端不需手寫名稱。Module I/O 則由對應 adapter 透過通用 registration interface 宣告；`FB_LinkVariableManager` 不包含 Chamber1 或其他應用 Module Type 的 concrete registration method。使用者仍只需修改 JSON 來選擇已公開的節點。
 
-Module adapter 以 `M_RegisterModuleNode(Variable, Access)` 宣告完整 I/O surface；manager 會從變數位址與大小取得完整 ADS symbol，所有 declarations 都會寫入 registry。未被 configuration 使用的 nodes 仍占用 node-table 容量，但不會建立 link，也不增加 cyclic copy 或 configured-value read。初始化每個 Module instance 時，adapter 依語意名稱呼叫 `M_TakeRequired`／`M_TakeOptional` 取得 reference；framework 統一處理 JSON lookup、source resolve、重複取用與未取用的 unknown key，adapter 只負責以 `__QUERYINTERFACE` 驗證並轉成 Module 所需的 typed interface。
+Module adapter 以 `M_RegisterModuleNode(Variable, Access)` 宣告完整 I/O surface；manager 會從變數位址與大小取得完整 ADS symbol，所有 declarations 都會寫入 registry。未被 configuration 使用的 nodes 仍占用 node-table 容量，但不會建立 link，也不增加 cyclic copy 或 configured-value read。初始化每個 Module instance 時，adapter 先以註冊完成後取得的 `ModuleSymbol` 呼叫 `M_SetModuleScope`，再透過 `M_TakeRequired(Port := 引腳變數)`／`M_TakeOptional(Port := 引腳變數)` 取得 reference；Context 使用引腳位址與大小反查 ADS symbol，驗證所屬 Module／Slot 並取出完整相對路徑；framework 統一處理 JSON lookup、source resolve、重複取用與未取用的 unknown key，adapter 只負責以 `__QUERYINTERFACE` 驗證並轉成 Module 所需的 typed interface。
 
 目前 schemaVersion 為 `4`。schema v3 與更早版本不再接受；舊版 `axisReferences`／`referenceBindings` 必須改為 `references` object。Config 不填 interface type，也不接觸 `GVL_Module` 內部 reference 儲存位置；required／optional 是各 Module adapter 的固定契約，JSON key 順序不影響綁定結果。
 
@@ -72,3 +72,41 @@ Module type 自己的 FB、Runtime、Control 與 reference arrays，以及 adapt
 ## Module 自訂 Hook
 
 Module 可覆寫 `H_UpdateAlarm()` 與 `H_UpdateVariable()`，直接讀取 Base Unit 狀態或發布計算值。JSON 整筆覆蓋同 ID 的 Hook 項目；SVID 每輪重建，Hook Alarm 沿用上層確認與鎖存機制。介面、完整範例、容量與狀態結構相容性請見 [Module Alarm 與 SVID Hook](module-hooks.md)。
+
+
+## 以引腳變數取用 Reference
+
+`I_ModuleReferenceBindings` 不再提供 `Name : STRING(80)` 取用入口。Adapter 必須傳入實際 Module 成員，不得先複製 interface 至區域變數再傳入。`Port : ANY` 只用於識別變數儲存位置；即使 interface 目前為 `0`，也不會被當成無效位址或遭到解參照。
+
+```iecst
+IF NOT ReferenceBindings.M_SetModuleScope(
+    ModuleSymbol := ModuleSymbol,
+    ErrorMessage => sReferenceError) THEN
+    ErrorMessage := sReferenceError;
+    RETURN;
+END_IF
+
+BaseUnit := ReferenceBindings.M_TakeRequired(
+    Port := GVL_Module.Chamber1[Slot].SpinAxis_BaseUnit,
+    PortName => sPortName,
+    ErrorMessage => sReferenceError);
+IF BaseUnit = 0 THEN
+    ErrorMessage := sReferenceError;
+    RETURN;
+END_IF
+SpinAxis := 0;
+IF NOT __QUERYINTERFACE(BaseUnit, SpinAxis) THEN
+    ErrorMessage := CONCAT(sPortName, ' requires I_Axis_BaseUnit.');
+    RETURN;
+END_IF
+// 其他引腳也完成取用及型別檢查後，才寫入對應 Slot 的 reference storage。
+```
+
+- `M_SetModuleScope` 每個 `M_Begin`／`M_End` session 只能設定一次；第一次 Take 前必須設定。沒有任何 references 的 Adapter 可省略。
+- `M_TakeRequired`：JSON 缺少該 key 時失敗。
+- `M_TakeOptional`：JSON 缺少該 key 時回傳 `0`、`Present = FALSE`、空 ErrorMessage。已配置但來源無效、名稱反查失敗或跨 scope 都是錯誤，不能視為省略。
+- 兩個 Take 均回傳 `PortName : STRING(80)`；成功解析後保留完整相對路徑，包括巢狀成員及陣列索引，供後續診斷使用。超過 80 字元會拒絕，不會截斷。
+- 名稱反查只在初始化期間執行，不寫入引腳、不快取引腳位址。取用相同來源不代表可以重複執行同一 BaseUnit 的 cyclic update，cyclic composition 仍由 Module 負責。
+- 現有 JSON key `SpinAxis_BaseUnit`、`LiftPinAxis_BaseUnit` 不變，schema 仍為 v4。未來重新命名引腳時，程式呼叫由編譯器檢查成員名稱，JSON key 也必須同步更新；舊 key 會因 required 缺少或 unknown key 而使初始化失敗。
+
+Configuration TcUnit 案例包含未綁定／已綁定引腳、不同 Slot、完整相對路徑、scope 時序、名稱長度、首錯保留與 Adapter 原子提交。XML 靜態檢查不代表編譯器與 Runtime 已驗證 `ANY` interface 傳遞或 ADS 名稱反查；部署前需在 TwinCAT 驗證這兩項行為。

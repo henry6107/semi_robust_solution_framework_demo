@@ -283,7 +283,7 @@ Runtime Configuration 與 Service Parameter 不同：前者定義 Module Instanc
 
 Module Type 對外宣告的一個具名 BaseUnit 依賴位置。每個 Reference Port 必須定義所接受的 Interface 型別，以及它是 required 或 optional。
 
-Reference Port 名稱是 runtime configuration 的公開值，不得把內部 array index 或 GVL storage path 當作其外部名稱。
+Reference Port 名稱取自實際引腳相對於 Module ADS root 的完整成員路徑，是 runtime configuration 的公開值。不得以 Module Slot index 或完整 GVL storage path 當作 key；巢狀成員及引腳陣列索引屬於相對路徑的一部分。重新命名引腳時必須同步遷移 JSON key。
 
 ### 2.3 資料與控制名詞
 
@@ -678,6 +678,7 @@ sequenceDiagram
     participant Registry as Module Type Registry
     participant Config as Configuration Manager
     participant Adapter as Module Configuration Adapter
+    participant Bindings as Module Reference Bindings
 
     Note over Task,LinkManager: MAIN attempts startup registration once
     Task->>LinkManager: M_BeginInfrastructureRegistration()
@@ -716,14 +717,20 @@ sequenceDiagram
         alt Module disabled
             Config->>Adapter: Apply disabled Runtime Configuration
         else Module enabled
-            Config->>Adapter: Declare Module resources
-            Adapter->>LinkManager: Declare referenced Module I/O nodes
-            Adapter->>Config: Declare named Reference Ports and tokens
+            Config->>Bindings: M_Begin with JSON references
+            Config->>Adapter: M_PrepareInstance
+            Adapter->>LinkManager: Register Module I/O and resolve ModuleSymbol
+            Adapter->>Bindings: M_SetModuleScope with ModuleSymbol
+            loop Every required or optional reference port
+                Adapter->>Bindings: Take with actual Port variable
+                Bindings->>Bindings: Resolve symbol and relative JSON key
+                Bindings->>Ref: Resolve configured BaseUnit source when present
+                Bindings-->>Adapter: BaseUnit and PortName
+                Adapter->>Adapter: Validate typed interface when present
+            end
+            Adapter->>Adapter: Commit references after all checks succeed
+            Config->>Bindings: M_End validates unconsumed JSON keys
             Config->>LinkManager: Add input and output mappings
-            Config->>Config: Resolve targetPort name to token
-            Config->>Ref: Resolve configured BaseUnit source
-            Config->>Adapter: Bind typed reference by port token
-            Config->>Config: Mark port bound and validate required ports
             Config->>LinkManager: Resolve Variable and Alarm sources
             Config->>Adapter: Apply valid Runtime Configuration
         end
@@ -1724,9 +1731,9 @@ Module 必須在任何 Service 或 BaseUnit invocation 前確認 required typed 
 
 Configuration Adapter 必須：
 
-- 宣告 Reference Port name、non-zero token 與 required flag。
+- 以解析出的 ModuleSymbol 設定 binding scope，並依 required／optional 契約傳入實際引腳變數取用 reference。
 - 將 `I_BaseUnit` 透過 `__QUERYINTERFACE` 驗證成正確 typed Interface。
-- 將成功轉型後的 Interface 寫入對應 Slot storage。
+- 所有引腳完成取用與轉型後，才將 Interface 寫入對應 Slot storage。
 
 Derived Module 的 runtime check 是最後防線，不得取代 initialization 的 Reference Port validation。
 
@@ -1805,7 +1812,7 @@ Derived Module 若要新增其他 publication，必須確認不會使用相同 I
 3. `GVL_Module` 中對齊 Slot 的 Module、Runtime、Control／Status 與 Reference Port arrays。
 4. 實作 `I_ModuleConfigurationAdapter` 的 Adapter。
 5. Module I/O node declarations。
-6. Reference Port enum、name、token、required flag 與 typed Interface binding。
+6. 實際 Reference Port 引腳、JSON 相對名稱、required／optional 取用契約與 typed Interface binding。
 7. `FB_ModuleTypeRegistry` registration。
 8. `MAIN` 或對應 System Orchestration 中的 cyclic invocation。
 9. JSON configuration 範例。
@@ -1832,8 +1839,7 @@ Module Type name 使用 `T_ModuleTypeName`，目前最大長度為 `STRING(16)`�
 | Method | 責任 |
 |---|---|
 | `M_IsSlotSupported` | 驗證 Module Type 是否支援指定 Slot |
-| `M_DeclareResources` | 開始 Module registration、宣告本次 config 所引用的 I/O node、宣告 Reference Port，並回傳 Module symbol |
-| `M_BindReference` | 依 non-zero port token 驗證 BaseUnit typed Interface 並寫入 Slot storage |
+| `M_PrepareInstance` | 註冊 Module I/O、取得 Module symbol、設定 Reference scope、由實際引腳取用並驗證 typed references，全部成功後提交 Slot storage |
 | `M_ApplyRuntimeConfig` | 驗證 Module Type 後將 Runtime Configuration 寫入對應 Slot |
 | `M_ClearAllSlots` | 清除該 Module Type 的所有 Runtime Configuration 與 bound references |
 
@@ -1841,32 +1847,61 @@ Adapter 必須回傳 `BOOL` 表示成功，並在失敗時提供可定位問題�
 
 ### 8.4 Resource declaration
 
-Adapter 的 `M_DeclareResources()` 必須使用通用 registration Interface，而不得要求 `FB_LinkVariableManager` 新增該 Module Type 的 concrete registration method。
-
-宣告順序：
+Adapter 的 `M_PrepareInstance()` 必須使用通用 registration Interface，不得要求 `FB_LinkVariableManager` 新增 Module Type 專用方法。
 
 1. 以 Module FB address、size 與本次 `ST_ModuleFileConfig` 開始 Module registration。
-2. 宣告可供 mapping、Variable 或 Alarm 使用的 relative I/O node。
-3. 每個 node 指定正確的 access mode 與 primitive data type metadata。
-4. 宣告 Reference Port name、token 及 required flag。
-5. 結束 Module registration 並取得完整 Module symbol。
-6. 檢查 Link Variable Manager 與 Reference Port Registry error。
+2. 以 `M_RegisterModuleNode(Variable, Access)` 宣告完整 I/O surface，包含未被本次 JSON 引用的節點。
+3. 結束 Module registration，取得完整 `ModuleSymbol`；任何 registration 錯誤都必須停止 preparation。
+4. 將 `ModuleSymbol` 傳入 ReferenceBindings 的 `M_SetModuleScope`。
+5. 依 required／optional 契約，傳入每個實際 interface 引腳取用來源，驗證 typed Interface。
+6. 所有引腳成功後才提交 references。Framework 在 `M_End()` 拒絕未被取用的 JSON key。
 
-Module Adapter 可以描述完整 I/O surface，但 Registry 只需保留本次 configuration 實際引用的 Module node，以控制 node capacity。
+沒有 reference 的 Adapter 可省略第 4 至 6 步的取用與提交。初始化完成後不保留引腳位址作為 cyclic 工作。
 
 ### 8.5 Reference Port contract
 
-每個 Module Type 應使用 qualified enum 定義 port token，並以 enum member 的 `TO_STRING()` 作為公開 port name。
+ReferenceBindings 使用 `Port : ANY` 接收實際引腳變數，以其儲存位址與大小反查完整 ADS symbol，驗證 `ModuleSymbol + '.'` 前綴後取出完整相對路徑。JSON `references` 的 key 必須與此相對路徑完全同名、大小寫一致；不再宣告 port token 或以硬編碼字串取用。
 
-- Port name 不得為空。
-- Port token 必須非零。
-- name 與 token 在同一 Module Instance 的 declaration 中都必須唯一。
-- 相同 port 不得重複 binding。
-- unknown targetPort 必須在呼叫 Adapter 前由 Framework 拒絕。
-- required port 未 binding 時，整個 configuration application 必須失敗。
-- optional port 可以未 binding，但 Derived Module 必須能在未綁定時安全運作。
-- Adapter 必須以 `__QUERYINTERFACE` 驗證 BaseUnit 實際型別。
-- JSON 不得提供 Interface type 或內部 GVL storage path。
+| 方法 | 契約 |
+|---|---|
+| `M_SetModuleScope(ModuleSymbol, ErrorMessage) : BOOL` | 在有效 binding session 中設定一次 Module ADS root；空名稱、重複設定或 session 未開始均失敗 |
+| `M_TakeRequired(Port, PortName, ErrorMessage) : I_BaseUnit` | JSON key 必須存在，否則回報錯誤 |
+| `M_TakeOptional(Port, Present, PortName, ErrorMessage) : I_BaseUnit` | JSON key 缺省時回傳 0、Present = FALSE、空 ErrorMessage；其他錯誤不得忽略 |
+
+`PortName` 是輸出參數，回傳解析成功的相對名稱供 Adapter 診斷；完整相對名稱必須為 1 至 80 字元，超長即失敗，不能截斷。巢狀成員與引腳陣列索引必須保留。
+
+```iecst
+IF NOT ReferenceBindings.M_SetModuleScope(
+    ModuleSymbol := ModuleSymbol,
+    ErrorMessage => sReferenceError) THEN
+    ErrorMessage := sReferenceError;
+    RETURN;
+END_IF
+BaseUnit := ReferenceBindings.M_TakeRequired(
+    Port := GVL_Module.Chamber1[Slot].SpinAxis_BaseUnit,
+    PortName => sPortName,
+    ErrorMessage => sReferenceError);
+IF BaseUnit = 0 THEN
+    ErrorMessage := sReferenceError;
+    RETURN;
+END_IF
+SpinAxis := 0;
+IF NOT __QUERYINTERFACE(BaseUnit, SpinAxis) THEN
+    ErrorMessage := CONCAT(sPortName, ' requires I_Axis_BaseUnit.');
+    RETURN;
+END_IF
+// 其他引腳亦驗證成功後，再提交全部 typed references。
+```
+
+- 引腳 interface 值可以是 0；反查的是引腳變數本身，不是它所指向的 BaseUnit。
+- Take 不解參照、不寫入或快取引腳儲存位址；只在初始化期間反查名稱。
+- 不得傳入其他 Module／Slot 或區域暫存變數；scope 比對必須包含完整 root 後的句點分隔。
+- 同一 configured key 不得重複取用；首次錯誤保留，`M_End()` 拒絕未消費的 unknown key。
+- 不同引腳可以查詢相同來源；實際 cyclic composition 仍須遵守 BaseUnit 更新與資源所有權契約。
+- Adapter 保留 `__QUERYINTERFACE` 驗證，所有引腳成功後才寫入 Slot storage，避免部分提交。
+- JSON 不提供 interface type 或 target 的完整 GVL storage path。
+- 舊 `Name : STRING(80)` 公開入口已移除。引腳重新命名需同步修改 JSON key；編譯器會檢查程式端的成員存取。
+- XML 驗證不能證明 interface 傳入 ANY 與未綁定引腳 ADS 反查的 Runtime 行為，兩者皆須列入 TwinCAT 驗收。
 
 ### 8.6 I/O node contract
 
@@ -1885,7 +1920,7 @@ Mapping source 不得是 write-only，target 不得是 read-only。Configured Va
 
 ### 8.7 JSON configuration contract
 
-目前 schema version 為 `3`。Root 必須包含：
+目前 schema version 為 `4`。本次取用介面調整未變更 JSON schema。Root 必須包含：
 
 - `schemaVersion`
 - `modules`
@@ -1900,11 +1935,11 @@ Mapping source 不得是 write-only，target 不得是 read-only。Configured Va
 | `id` | enabled 時必要 | 非零且跨所有 enabled Module 全域唯一 |
 | `inputMappings` | 選配 | 外部 source 至 Module target |
 | `outputMappings` | 選配 | Module source 至外部 target |
-| `referenceBindings` | 依 port 契約 | `source` 為已註冊 BaseUnit，`targetPort` 為 declared port name |
+| `references` | 依 port 契約 | object 的 key 為實際引腳相對名稱，value 為已註冊 BaseUnit source name |
 | `variableList` | 選配 | 宣告 configured Variable |
 | `alarmList` | 選配 | 宣告 configured Alarm 與 condition |
 
-schema v3 不接受 `adsPort`、舊 `axisReferences`，或 reference binding 中舊 `target` 欄位。
+schema v4 不接受 `adsPort`、舊 `axisReferences`／`referenceBindings` 格式；現有 Chamber1 key `SpinAxis_BaseUnit`、`LiftPinAxis_BaseUnit` 不變。
 
 ### 8.8 Mapping 驗證
 
@@ -2018,7 +2053,7 @@ _bInfrastructureRegistered := _bRegistrationOk;
 | `MaxTotalConfiguredModules` | 48 | config 中 enabled 與 disabled entry 總數 |
 | `MaxModuleMappings` | 256 | 每個 Module 各自的 input／output mapping capacity |
 | `MaxConfigVariableNodes` | 512 | shared node 與本次 config 引用的 distinct Module node |
-| `MaxModuleReferenceBindings` | 50 | 每個 Module 的 reference binding／port declaration capacity |
+| `MaxModuleReferences` | 50 | 每個 Module 的 JSON references member capacity |
 | `MaxConfigReferenceNodes` | 100 | BaseUnit reference registry capacity |
 | `MaxModuleVariable` | 100 | 每個 Module 的 configured Variable capacity |
 | `MaxConfiguredAlarmsPerModule` | 30 | 每個 Module 的 configured Alarm capacity |
@@ -2037,7 +2072,7 @@ _bInfrastructureRegistered := _bRegistrationOk;
 - [ ] I/O node 透過通用 registration Interface 宣告。
 - [ ] 共享 node 使用 Begin／逐點 Register／Seal，未使用已淘汰的端子專用 API；Begin 成功後即使 declaration 失敗也會執行 Seal。
 - [ ] 已驗證首錯保留、重複 node／Begin 拒絕、失敗 Seal 清除 nodes，以及成功 Seal 後禁止追加；全部 Infrastructure wiring 成功前 `Execute = FALSE`。
-- [ ] Reference Port name、token、required flag 唯一且可驗證。
+- [ ] Reference Port 由實際引腳取名，scope、required／optional、重複取用與 unknown key 均已驗證。
 - [ ] bound BaseUnit 使用 `__QUERYINTERFACE` 轉為 typed Interface。
 - [ ] disabled Slot 及 `M_ClearAllSlots()` 會清除 runtime 與 references。
 - [ ] Runtime Configuration 只在所有 enabled Module validation 成功後標記 valid。
@@ -2633,7 +2668,7 @@ flowchart LR
 ### 13.3 第二步：配置型別與 Identifier
 
 - 建立 Control、Parameter、Status、Context 或 descriptor type。
-- 配置 Service ID、Error ID、Data ID、Reference Port token 及其他 external identity。
+- 配置 Service ID、Error ID、Data ID、Reference Port 相對名稱及其他 external identity。
 - 確認 `0` 的語意與 uniqueness scope。
 - 確認 enum numeric value 與 string token 是否為 external contract。
 - 更新集中 registry 或 Module-specific ID 說明。
@@ -2699,7 +2734,7 @@ flowchart LR
 - [ ] Module Type name、Adapter 與 Registry registration 完成。
 - [ ] Slot-aligned GVL storage 完整。
 - [ ] I/O node access／type／size 正確。
-- [ ] Reference Port name、token、required flag 與 typed Interface 正確。
+- [ ] Reference Port 相對名稱、scope、required／optional 取用與 typed Interface 正確。
 - [ ] enabled／valid filtering 與 cyclic invocation 完成。
 - [ ] application failure 不留下 partially-applied state。
 
@@ -2754,7 +2789,7 @@ Framework 演進時，應讓既有 Module configuration、Control Source、Modul
 - Control、Status、Parameter、Context 與 publication struct layout。
 - enum member name 與 numeric value。
 - Module Type name。
-- Reference Port name 與 token。
+- Reference Port 相對名稱與 required／optional 契約。
 - Module ID、Service ID、Error ID、Variable ID、Data ID、Endpoint ID、Station ID。
 - JSON schema、欄位名稱、型別與 validation rule。
 - PackML command/state/mode policy 及 Error ID。

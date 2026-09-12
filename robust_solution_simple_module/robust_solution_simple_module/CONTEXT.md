@@ -56,3 +56,15 @@ A valid RuntimeConfig definition takes full precedence over the same Hook identi
 
 **Hook SVID**:
 A descriptor submitted by `M_AddVariable` within `H_UpdateVariable` for the current Module scan. It needs no configured node registration and disappears when omitted. JSON descriptors have priority within the shared 100-entry VariableList; the descriptor ID, not its array index, is the identity.
+
+
+## Reference Binding Language
+
+**Reference Port**:
+An actual Module member whose interface storage identifies a BaseUnit dependency. Its complete path relative to the resolved Module ADS symbol is the JSON references key; nested members and array indices are preserved. Renaming the member requires migrating the JSON key.
+
+**Module Reference Scope**:
+The resolved Module ADS symbol supplied once through `M_SetModuleScope` during a binding session. Every Take resolves the caller's `Port : ANY` storage address and size and verifies exact parent membership before dictionary lookup. An unbound interface value is allowed; Take neither dereferences nor assigns that value.
+
+**Required and Optional Reference**:
+Required means the JSON key must exist. Optional permits omission and returns `Present = FALSE` without error. Neither permits invalid symbols, wrong Module scope, invalid configured sources or repeated consumption of a configured key. The adapter owns typed-interface checks and commits references only after all checks succeed.
