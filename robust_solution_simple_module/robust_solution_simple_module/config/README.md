@@ -62,6 +62,7 @@ Module type 自己的 FB、Runtime、Control 與 reference arrays，以及 adapt
 | `MaxServiceAlarmsPerModule` | 40 | 彙整 Service Alarm lifecycle 容量。 |
 | `MaxModuleData` | 50 | 每個 Module 可發布的 DVID／ModuleDataList 數量。 |
 | `MaxServiceError` | 10 | 每個 Service 每輪可提供的 Error entry 數量。 |
+| `MaxServicesPerModule` | 100 | 每個 Module 可登錄至 `FB_ServiceCoordinator` 的 Service 數量。 |
 | `MaxModuleMappings` | 256 | 每個 Module 的 `inputMappings` 與 `outputMappings` 各自可配置的最大數量。 |
 | `MaxConfigVariableNodes` | 512 | eager registration 的 Beckhoff 實體 I/O，加上 enabled Module adapters 宣告的全部 Module nodes。現有 6 個 Chamber1 instances 與 Beckhoff hardware 最多使用 436 個。 |
 | `MaxModuleReferences` | 50 | 每個 Module 的 `references` member 最大數量。 |
@@ -72,6 +73,10 @@ Module type 自己的 FB、Runtime、Control 與 reference arrays，以及 adapt
 ## Module 自訂 Hook
 
 Module 可覆寫 `H_UpdateAlarm()` 與 `H_UpdateVariable()`，直接讀取 Base Unit 狀態或發布計算值。JSON 整筆覆蓋同 ID 的 Hook 項目；SVID 每輪重建，Hook Alarm 沿用上層確認與鎖存機制。介面、完整範例、容量與狀態結構相容性請見 [Module Alarm 與 SVID Hook](module-hooks.md)。
+
+## Service Coordinator
+
+受 `FB_ModuleBase` 管理的 Service 改以一次性登錄提供 Upper／Effective Ctrl、Param 與 Status 持久儲存區，不再使用 UNION 將具名結構轉成索引陣列。新增 Service 的登錄步驟、控制切換、Start 參數 snapshot 與排除規則請見 [Service Coordinator 登錄與循環](service-coordinator.md)。
 
 
 ## 以引腳變數取用 Reference

@@ -199,7 +199,13 @@
     <Compile Include="DUTs\ST_ServiceContext.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\ST_ServiceRegistrationEntry.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\E_ServiceCompletionBehavior.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_ServiceRegistrationError.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\ST_ServiceDataStatus.TcDUT">
@@ -358,21 +364,11 @@
     <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\ST_Chamber1_ServiceStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\U_Chamber1_ServiceCtrlView.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\U_Chamber1_ServiceStatusView.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\DUTs\ST_Chamber1_CtrlStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\FB_Chamber1_Module.TcPOU">
       <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\GVLs\GVL_Chamber1_Config.TcGVL">
-      <SubType>Code</SubType>
-      <LinkAlways>true</LinkAlways>
     </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1LiftPinAxisMoveAbsServices.TcPOU">
       <SubType>Code</SubType>
@@ -408,6 +404,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\FB_ServiceBase.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\FB_ServiceCoordinator.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\MAIN.TcPOU">

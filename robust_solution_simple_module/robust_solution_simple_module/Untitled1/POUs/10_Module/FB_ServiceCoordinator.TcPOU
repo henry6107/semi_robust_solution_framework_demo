@@ -1,0 +1,432 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ServiceCoordinator" Id="{171926d5-090b-42ae-b0a9-7529207a51ef}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ServiceCoordinator
+VAR
+	_Entries : ARRAY[1..Param_Config.MaxServicesPerModule] OF ST_ServiceRegistrationEntry;
+	_RegisteredCount : UINT;
+	_RegistrationStarted : BOOL;
+	_Sealed : BOOL;
+	_RegistrationError : E_ServiceRegistrationError;
+	_FailedServiceId : UDINT;
+
+	_AllIdle : BOOL;
+	_AllStopped : BOOL;
+	_AllAborted : BOOL;
+
+	_JsonDataType : FB_JsonReadWriteDataType;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="Private" Id="{41c64297-420e-48b6-8cae-210a04c38888}" />
+    <Method Name="M_BeginRegistration" Id="{a3da8ec9-556c-43d3-bb9a-a9b6e4d0bf86}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_BeginRegistration : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_BeginRegistration := FALSE;
+IF _RegistrationStarted THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.RegistrationAlreadyStarted,
+		ServiceId := 0);
+	RETURN;
+END_IF
+
+MEMSET(ADR(_Entries), 0, SIZEOF(_Entries));
+_RegisteredCount := 0;
+_Sealed := FALSE;
+_RegistrationError := E_ServiceRegistrationError.None;
+_FailedServiceId := 0;
+_AllIdle := FALSE;
+_AllStopped := FALSE;
+_AllAborted := FALSE;
+_RegistrationStarted := TRUE;
+M_BeginRegistration := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_GetServiceStatusByIndex" Id="{176b2ed0-0a15-49b9-b190-cb151edc1b5b}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_GetServiceStatusByIndex : BOOL
+VAR_INPUT
+	Index : UINT;
+END_VAR
+VAR_OUTPUT
+	Status : ST_ServiceStatus;
+END_VAR
+VAR
+	pStatus : POINTER TO ST_ServiceStatus;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_GetServiceStatusByIndex := FALSE;
+MEMSET(ADR(Status), 0, SIZEOF(Status));
+IF (Index = 0) OR (Index > _RegisteredCount) THEN
+	RETURN;
+END_IF
+IF NOT _Entries[Index].InUse OR (_Entries[Index].StatusAddress = 0) THEN
+	RETURN;
+END_IF
+
+pStatus := _Entries[Index].StatusAddress;
+Status := pStatus^;
+M_GetServiceStatusByIndex := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ObserveCycle" Id="{06254b09-a2a9-43f6-afc8-d414b7c2d5e1}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_ObserveCycle
+VAR
+	nIndex : UINT;
+	pStatus : POINTER TO ST_ServiceStatus;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_AllIdle := FALSE;
+_AllStopped := FALSE;
+_AllAborted := FALSE;
+IF NOT Ready OR (_RegisteredCount = 0) THEN
+	RETURN;
+END_IF
+
+_AllIdle := TRUE;
+_AllStopped := TRUE;
+_AllAborted := TRUE;
+FOR nIndex := 1 TO _RegisteredCount DO
+	pStatus := _Entries[nIndex].StatusAddress;
+	_AllIdle := _AllIdle
+		AND (pStatus^.PackMLOut.eStateCurrent = E_PackMLState.Idle);
+	_AllStopped := _AllStopped
+		AND (pStatus^.PackMLOut.eStateCurrent = E_PackMLState.Stopped);
+	_AllAborted := _AllAborted
+		AND (pStatus^.PackMLOut.eStateCurrent = E_PackMLState.Aborted);
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_PrepareCycle" Id="{fc403679-0324-4db5-ba8c-cc6111fc6a57}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_PrepareCycle
+VAR_INPUT
+	ModuleInExecute : BOOL;
+	ModuleCtrl : REFERENCE TO ST_ModuleCtrl;
+END_VAR
+VAR
+	nIndex : UINT;
+	pUpperCtrl : POINTER TO ST_ServiceCtrl;
+	pEffectiveCtrl : POINTER TO ST_ServiceCtrl;
+	bUpperCommandHigh : BOOL;
+	bUpperModeHigh : BOOL;
+	bNewStartRequest : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR nIndex := 1 TO _RegisteredCount DO
+	pUpperCtrl := _Entries[nIndex].UpperCtrlAddress;
+	pEffectiveCtrl := _Entries[nIndex].EffectiveCtrlAddress;
+
+	IF NOT Ready THEN
+		pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
+		pEffectiveCtrl^.PackMLIn.bModeChangeRequest := FALSE;
+		CONTINUE;
+	END_IF
+
+	bUpperCommandHigh := pUpperCtrl^.PackMLIn.bCommandChangeRequest;
+	bUpperModeHigh := pUpperCtrl^.PackMLIn.bModeChangeRequest;
+
+	IF NOT ModuleInExecute THEN
+		pEffectiveCtrl^.RequestId := ModuleCtrl.RequestId;
+		pEffectiveCtrl^.PackMLIn := ModuleCtrl.PackMLIn;
+
+		IF bUpperCommandHigh THEN
+			_Entries[nIndex].UpperCommandBlockedUntilFalse := TRUE;
+		END_IF
+		IF bUpperModeHigh THEN
+			_Entries[nIndex].UpperModeBlockedUntilFalse := TRUE;
+		END_IF
+
+		_Entries[nIndex].UpperCommandWasHigh := bUpperCommandHigh;
+		_Entries[nIndex].UpperModeWasHigh := bUpperModeHigh;
+		CONTINUE;
+	END_IF
+
+	IF NOT bUpperCommandHigh THEN
+		_Entries[nIndex].UpperCommandBlockedUntilFalse := FALSE;
+	END_IF
+	IF NOT bUpperModeHigh THEN
+		_Entries[nIndex].UpperModeBlockedUntilFalse := FALSE;
+	END_IF
+
+	pEffectiveCtrl^ := pUpperCtrl^;
+
+	IF _Entries[nIndex].UpperCommandBlockedUntilFalse THEN
+		pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
+	ELSE
+		bNewStartRequest := bUpperCommandHigh
+			AND NOT _Entries[nIndex].UpperCommandWasHigh
+			AND (pUpperCtrl^.PackMLIn.eCommand = E_PackMLCommand.Start);
+		IF bNewStartRequest THEN
+			MEMCPY(
+				destAddr := _Entries[nIndex].EffectiveParamAddress,
+				srcAddr := _Entries[nIndex].UpperParamAddress,
+				n := _Entries[nIndex].ParameterSize);
+		END_IF
+	END_IF
+
+	IF _Entries[nIndex].UpperModeBlockedUntilFalse THEN
+		pEffectiveCtrl^.PackMLIn.bModeChangeRequest := FALSE;
+	END_IF
+
+	_Entries[nIndex].UpperCommandWasHigh := bUpperCommandHigh;
+	_Entries[nIndex].UpperModeWasHigh := bUpperModeHigh;
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Register" Id="{79d5d19c-8935-4608-bc20-6f417a73eed9}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_Register : BOOL
+VAR_INPUT
+	ServiceId : UDINT;
+	UpperParam : ANY;
+	EffectiveParam : ANY;
+END_VAR
+VAR_IN_OUT
+	UpperCtrl : ST_ServiceCtrl;
+	EffectiveCtrl : ST_ServiceCtrl;
+	Status : ST_ServiceStatus;
+END_VAR
+VAR
+	nIndex : UINT;
+	nTargetIndex : UINT;
+	nUpperParamSize : UDINT;
+	nEffectiveParamSize : UDINT;
+	sUpperParamType : STRING(255);
+	sEffectiveParamType : STRING(255);
+	hrUpperParam : HRESULT;
+	hrEffectiveParam : HRESULT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_Register := FALSE;
+IF (_RegistrationError <> E_ServiceRegistrationError.None) OR NOT _RegistrationStarted THEN
+	RETURN;
+END_IF
+IF _Sealed THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.RegistryAlreadySealed,
+		ServiceId := ServiceId);
+	RETURN;
+END_IF
+IF ServiceId = 0 THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.InvalidServiceId,
+		ServiceId := ServiceId);
+	RETURN;
+END_IF
+
+FOR nIndex := 1 TO _RegisteredCount DO
+	IF _Entries[nIndex].ServiceId = ServiceId THEN
+		M_SetRegistrationError(
+			Error := E_ServiceRegistrationError.DuplicateServiceId,
+			ServiceId := ServiceId);
+		RETURN;
+	END_IF
+END_FOR
+
+IF _RegisteredCount >= Param_Config.MaxServicesPerModule THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.CapacityExceeded,
+		ServiceId := ServiceId);
+	RETURN;
+END_IF
+
+IF (ADR(UpperCtrl) = 0)
+	OR (ADR(EffectiveCtrl) = 0)
+	OR (ADR(Status) = 0)
+	OR (UpperParam.pValue = 0)
+	OR (EffectiveParam.pValue = 0)
+	OR (UpperParam.diSize <= 0)
+	OR (EffectiveParam.diSize <= 0) THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.InvalidStorage,
+		ServiceId := ServiceId);
+	RETURN;
+END_IF
+
+nUpperParamSize := DINT_TO_UDINT(UpperParam.diSize);
+nEffectiveParamSize := DINT_TO_UDINT(EffectiveParam.diSize);
+IF nUpperParamSize <> nEffectiveParamSize THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.ParameterSizeMismatch,
+		ServiceId := ServiceId);
+	RETURN;
+END_IF
+
+sUpperParamType := _JsonDataType.GetDataTypeNameByAddress(
+	nData := nUpperParamSize,
+	pData := UpperParam.pValue,
+	hrErrorCode => hrUpperParam);
+sEffectiveParamType := _JsonDataType.GetDataTypeNameByAddress(
+	nData := nEffectiveParamSize,
+	pData := EffectiveParam.pValue,
+	hrErrorCode => hrEffectiveParam);
+IF (hrUpperParam <> 0)
+	OR (hrEffectiveParam <> 0)
+	OR (sUpperParamType = '')
+	OR (sEffectiveParamType = '') THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.ParameterTypeResolutionFailed,
+		ServiceId := ServiceId);
+	RETURN;
+END_IF
+IF sUpperParamType <> sEffectiveParamType THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.ParameterTypeMismatch,
+		ServiceId := ServiceId);
+	RETURN;
+END_IF
+
+nTargetIndex := _RegisteredCount + 1;
+_Entries[nTargetIndex].InUse := TRUE;
+_Entries[nTargetIndex].ServiceId := ServiceId;
+_Entries[nTargetIndex].UpperCtrlAddress := ADR(UpperCtrl);
+_Entries[nTargetIndex].EffectiveCtrlAddress := ADR(EffectiveCtrl);
+_Entries[nTargetIndex].UpperParamAddress := UpperParam.pValue;
+_Entries[nTargetIndex].EffectiveParamAddress := EffectiveParam.pValue;
+_Entries[nTargetIndex].ParameterSize := nUpperParamSize;
+_Entries[nTargetIndex].ParameterTypeName := sUpperParamType;
+_Entries[nTargetIndex].StatusAddress := ADR(Status);
+_Entries[nTargetIndex].UpperCommandWasHigh := FALSE;
+_Entries[nTargetIndex].UpperModeWasHigh := FALSE;
+_Entries[nTargetIndex].UpperCommandBlockedUntilFalse := FALSE;
+_Entries[nTargetIndex].UpperModeBlockedUntilFalse := FALSE;
+_RegisteredCount := nTargetIndex;
+M_Register := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Seal" Id="{a8c3067f-1062-4ed0-86f8-2698a1a6668d}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_Seal : BOOL
+VAR
+	nIndex : UINT;
+	pEffectiveCtrl : POINTER TO ST_ServiceCtrl;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_Seal := FALSE;
+IF _RegistrationError <> E_ServiceRegistrationError.None THEN
+	RETURN;
+END_IF
+IF _Sealed THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.RegistryAlreadySealed,
+		ServiceId := 0);
+	RETURN;
+END_IF
+IF NOT _RegistrationStarted OR (_RegisteredCount = 0) THEN
+	M_SetRegistrationError(
+		Error := E_ServiceRegistrationError.EmptyRegistry,
+		ServiceId := 0);
+	RETURN;
+END_IF
+
+FOR nIndex := 1 TO _RegisteredCount DO
+	pEffectiveCtrl := _Entries[nIndex].EffectiveCtrlAddress;
+	pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
+	pEffectiveCtrl^.PackMLIn.bModeChangeRequest := FALSE;
+END_FOR
+
+_AllIdle := FALSE;
+_AllStopped := FALSE;
+_AllAborted := FALSE;
+_Sealed := TRUE;
+M_Seal := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetRegistrationError" Id="{636527e2-8342-4fd2-9e03-8a21bbcb767a}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_SetRegistrationError
+VAR_INPUT
+	Error : E_ServiceRegistrationError;
+	ServiceId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _RegistrationError <> E_ServiceRegistrationError.None THEN
+	RETURN;
+END_IF
+_RegistrationError := Error;
+_FailedServiceId := ServiceId;
+_Sealed := FALSE;
+_AllIdle := FALSE;
+_AllStopped := FALSE;
+_AllAborted := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="AllAborted" Id="{d1c5b85c-9a05-42e8-8c03-1783ea20aece}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL AllAborted : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{a584ca46-c4da-4232-8259-c4ed70f7985f}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AllAborted := _AllAborted;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AllIdle" Id="{5aca7645-c037-43f2-8404-100b8287f31c}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL AllIdle : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{59c1445a-5d3a-41dd-8c8c-f629fd08605c}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AllIdle := _AllIdle;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AllStopped" Id="{02291924-6c87-4931-b813-df0655037ef7}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL AllStopped : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{d1c05c84-7eee-42ad-bbca-43468907a1f4}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AllStopped := _AllStopped;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FailedServiceId" Id="{accd7e16-af3b-42de-8a9b-ca6209853271}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL FailedServiceId : UDINT
+]]></Declaration>
+      <Get Name="Get" Id="{f9671ced-b647-4af9-b208-1ab22f073609}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FailedServiceId := _FailedServiceId;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Ready" Id="{124c514e-70da-43b9-bb85-8ca9d8cf5c21}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL Ready : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{68d30c87-3544-406d-b2d4-1b9f86ddae5c}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Ready := _RegistrationStarted
+	AND _Sealed
+	AND (_RegistrationError = E_ServiceRegistrationError.None);]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="RegisteredCount" Id="{1e9f1fa2-b36d-403e-8859-40ea65344592}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL RegisteredCount : UINT
+]]></Declaration>
+      <Get Name="Get" Id="{e62774b7-f404-431b-823b-6599b59983e5}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[RegisteredCount := _RegisteredCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="RegistrationError" Id="{209b36a7-3232-4f63-8517-dd03eadf3ee3}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL RegistrationError : E_ServiceRegistrationError
+]]></Declaration>
+      <Get Name="Get" Id="{cb81f7f3-a445-4684-a825-83b5698b588f}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[RegistrationError := _RegistrationError;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>
