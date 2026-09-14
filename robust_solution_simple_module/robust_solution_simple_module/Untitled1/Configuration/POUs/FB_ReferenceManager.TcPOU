@@ -47,6 +47,7 @@ IF NOT __QUERYINTERFACE(BaseUnit, SymbolProvider) THEN
 	RETURN;
 END_IF
 
+// Get address & size
 IF NOT SymbolProvider.M_GetAdsSymbolMetadata(
 	Address => pData,
 	Size => nData) THEN
@@ -55,6 +56,7 @@ IF NOT SymbolProvider.M_GetAdsSymbolMetadata(
 	RETURN;
 END_IF
 
+// Get symbol name by address&size
 sName := _JsonDataType.GetSymbolNameByAddress(
 	nData := nData,
 	pData := pData,

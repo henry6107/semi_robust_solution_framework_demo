@@ -9,10 +9,13 @@ VAR_OUTPUT
 	ConfiguredLatchedCount : UINT;
 	ServiceLatchedCount : UINT;
 	Overflow : BOOL;
+	HookLatchedCount : UINT;
+	DuplicateId : UDINT;
 END_VAR
 VAR
 	_ConfiguredStates : ARRAY[1..Param_Config.MaxConfiguredAlarmsPerModule] OF ST_AlarmLifecycleState;
 	_ServiceStates : ARRAY[1..Param_Config.MaxServiceAlarmsPerModule] OF ST_AlarmLifecycleState;
+	_HookStates : ARRAY[1..Param_Config.MaxHookAlarmsPerModule] OF ST_AlarmLifecycleState;
 	_AckRequestOneShot : R_TRIG;
 	_LastAckRequestId : UDINT;
 	_ModuleId : UDINT;
@@ -49,19 +52,24 @@ END_VAR
         <ST><![CDATA[IF ModuleId <> _ModuleId THEN
 	MEMSET(ADR(_ConfiguredStates), 0, SIZEOF(_ConfiguredStates));
 	MEMSET(ADR(_ServiceStates), 0, SIZEOF(_ServiceStates));
+	MEMSET(ADR(_HookStates), 0, SIZEOF(_HookStates));
 	M_ResetAcknowledgement();
 	_ModuleId := ModuleId;
 	_ConfigurationRevision := ConfigurationRevision;
 
 ELSIF ConfigurationRevision <> _ConfigurationRevision THEN
-	// Configuration reload owns only configured alarm definitions. Service lifecycles survive it.
+	// Reset JSON lifecycles; the Module suppresses only Hook identities taken over by JSON.
 	MEMSET(ADR(_ConfiguredStates), 0, SIZEOF(_ConfiguredStates));
 	_ConfigurationRevision := ConfigurationRevision;
 END_IF
 
 Overflow := FALSE;
+DuplicateId := 0;
 FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
 	_ServiceStates[nIndex].SeenThisCycle := FALSE;
+END_FOR
+FOR nIndex := 1 TO Param_Config.MaxHookAlarmsPerModule DO
+	_HookStates[nIndex].SeenThisCycle := FALSE;
 END_FOR]]></ST>
       </Implementation>
     </Method>
@@ -84,6 +92,21 @@ END_VAR
 	IF NOT _ServiceStates[nIndex].Alarm.Active
 		AND _ServiceStates[nIndex].Alarm.Acknowledged THEN
 		MEMSET(ADR(_ServiceStates[nIndex]), 0, SIZEOF(_ServiceStates[nIndex]));
+	END_IF
+END_FOR
+
+FOR nIndex := 1 TO Param_Config.MaxHookAlarmsPerModule DO
+	IF NOT _HookStates[nIndex].Latched THEN
+		CONTINUE;
+	END_IF
+
+	IF NOT _HookStates[nIndex].SeenThisCycle THEN
+		_HookStates[nIndex].Alarm.Active := FALSE;
+	END_IF
+
+	IF NOT _HookStates[nIndex].Alarm.Active
+		AND _HookStates[nIndex].Alarm.Acknowledged THEN
+		MEMSET(ADR(_HookStates[nIndex]), 0, SIZEOF(_HookStates[nIndex]));
 	END_IF
 END_FOR]]></ST>
       </Implementation>
@@ -227,6 +250,16 @@ CASE Request.Command OF
 				END_IF
 			END_FOR
 
+			IF NOT bFound THEN
+				FOR nIndex := 1 TO Param_Config.MaxHookAlarmsPerModule DO
+					IF _HookStates[nIndex].Latched
+						AND (_HookStates[nIndex].Alarm.MainErrorId = Request.MainErrorId) THEN
+						M_AcknowledgeState(State := _HookStates[nIndex]);
+						bFound := TRUE;
+						EXIT;
+					END_IF
+				END_FOR
+			END_IF
 		ELSE
 			FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
 				IF _ServiceStates[nIndex].Latched
@@ -256,6 +289,11 @@ CASE Request.Command OF
 			END_IF
 		END_FOR
 
+		FOR nIndex := 1 TO Param_Config.MaxHookAlarmsPerModule DO
+			IF _HookStates[nIndex].Latched THEN
+				M_AcknowledgeState(State := _HookStates[nIndex]);
+			END_IF
+		END_FOR
 ELSE
 	AckError := E_AlarmAckError.InvalidCommand;
 	RETURN;
@@ -278,9 +316,10 @@ END_VAR
         <ST><![CDATA[MEMSET(ADR(AlarmList), 0, SIZEOF(AlarmList));
 ConfiguredLatchedCount := 0;
 ServiceLatchedCount := 0;
+HookLatchedCount := 0;
 nTarget := 1;
 
-// Preserve the existing public ordering: Service alarms first, configured alarms second.
+// Publish Service alarms first, configured alarms second, Hook alarms last.
 FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
 	IF NOT _ServiceStates[nIndex].Latched THEN
 		CONTINUE;
@@ -304,6 +343,19 @@ FOR nIndex := 1 TO Param_Config.MaxConfiguredAlarmsPerModule DO
 		CONTINUE;
 	END_IF
 	AlarmList[nTarget] := _ConfiguredStates[nIndex].Alarm;
+	nTarget := nTarget + 1;
+END_FOR
+
+FOR nIndex := 1 TO Param_Config.MaxHookAlarmsPerModule DO
+	IF NOT _HookStates[nIndex].Latched THEN
+		CONTINUE;
+	END_IF
+	HookLatchedCount := HookLatchedCount + 1;
+	IF nTarget > Param_Config.MaxPublishedModuleAlarms THEN
+		Overflow := TRUE;
+		CONTINUE;
+	END_IF
+	AlarmList[nTarget] := _HookStates[nIndex].Alarm;
 	nTarget := nTarget + 1;
 END_FOR]]></ST>
       </Implementation>
@@ -365,6 +417,87 @@ ELSE
 END_IF
 
 _ConfiguredStates[AlarmIndex].PreviousActive := ConditionMet;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ObserveHookAlarm" Id="{188f3f08-70ba-42a7-ae3b-bfd36fdbcc36}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ObserveHookAlarm : BOOL
+VAR_IN_OUT CONSTANT
+	Alarm : ST_ExtAlarm;
+END_VAR
+VAR
+	nIndex : UINT;
+	nFirstEmpty : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ObserveHookAlarm := FALSE;
+nFirstEmpty := 0;
+
+IF (Alarm.ServiceId <> 0) OR (Alarm.MainErrorId = 0) THEN
+	RETURN;
+END_IF
+
+FOR nIndex := 1 TO Param_Config.MaxHookAlarmsPerModule DO
+
+	IF _HookStates[nIndex].Latched THEN
+
+		IF (_HookStates[nIndex].Alarm.ServiceId = Alarm.ServiceId)
+			AND (_HookStates[nIndex].Alarm.MainErrorId = Alarm.MainErrorId) THEN
+			IF _HookStates[nIndex].SeenThisCycle THEN
+				IF DuplicateId = 0 THEN
+					DuplicateId := Alarm.MainErrorId;
+				END_IF
+				RETURN;
+			END_IF
+			_HookStates[nIndex].SeenThisCycle := TRUE;
+
+			// A recurrence keeps the first snapshot and requires a fresh acknowledgement.
+			IF NOT _HookStates[nIndex].Alarm.Active THEN
+				_HookStates[nIndex].Alarm.Active := TRUE;
+				_HookStates[nIndex].Alarm.Acknowledged := FALSE;
+				_HookStates[nIndex].Alarm.OccurrenceCount := _HookStates[nIndex].Alarm.OccurrenceCount + 1;
+			END_IF
+			M_ObserveHookAlarm := TRUE;
+			RETURN;
+		END_IF
+
+	// Reserve the first free slot without replacing a latched lifecycle.
+	ELSIF nFirstEmpty = 0 THEN
+		nFirstEmpty := nIndex;
+	END_IF
+END_FOR
+
+IF nFirstEmpty = 0 THEN
+	Overflow := TRUE;
+	RETURN;
+END_IF
+
+M_LatchState(
+	State := _HookStates[nFirstEmpty],
+	Snapshot := Alarm,
+	ServiceId := Alarm.ServiceId,
+	DateTime := Alarm.DateTime);
+_HookStates[nFirstEmpty].SeenThisCycle := TRUE;
+M_ObserveHookAlarm := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SuppressHookAlarm" Id="{be48ef5d-1aa5-497a-9b91-8a3be6869e79}">
+      <Declaration><![CDATA[METHOD PUBLIC M_SuppressHookAlarm
+VAR_INPUT
+	MainErrorId : UDINT;
+END_VAR
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Apply configuration ownership before acknowledgement, even when the source is invalid.
+FOR nIndex := 1 TO Param_Config.MaxHookAlarmsPerModule DO
+	IF _HookStates[nIndex].Latched AND (_HookStates[nIndex].Alarm.MainErrorId = MainErrorId) THEN
+		MEMSET(ADR(_HookStates[nIndex]), 0, SIZEOF(_HookStates[nIndex]));
+		RETURN;
+	END_IF
+END_FOR]]></ST>
       </Implementation>
     </Method>
   </POU>

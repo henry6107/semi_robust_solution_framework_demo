@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_MaterialService" Id="{27a75cf1-edc2-4d2c-b790-ee82654cc92e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_MaterialService EXTENDS FB_ServiceBase
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

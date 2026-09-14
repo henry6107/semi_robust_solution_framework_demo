@@ -8,15 +8,17 @@ VAR
 	_LinkVariableManager : FB_LinkVariableManager;
 	_ReferenceManager : FB_ReferenceManager;
 	_ModuleTypeRegistry : FB_ModuleTypeRegistry;
-	_GCModuleConfigurationAdapter : FB_GCModuleConfigurationAdapter;
+	_Chamber1ModuleConfigurationAdapter : FB_Chamber1ModuleConfigurationAdapter;
 	_ModuleConfigurationManager : FB_ModuleConfigurationManager;
+	_bInfrastructureRegistrationAttempted : BOOL;
 	_bInfrastructureRegistered : BOOL;
 	_bRegistrationOk : BOOL;
 	_nModule : UINT;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[IF NOT _bInfrastructureRegistered THEN
+      <ST><![CDATA[IF NOT _bInfrastructureRegistrationAttempted THEN
+	_bInfrastructureRegistrationAttempted := TRUE;
 	M_HwModuleRegister();
 END_IF
 
@@ -36,22 +38,22 @@ IF _ModuleConfigurationManager.Ready THEN
 	
 	// Call module instance
 	FOR _nModule := 1 TO Param_Config.MaxModulePerType DO
-		IF GVL_Module.GC_Runtime[_nModule].Enabled AND GVL_Module.GC_Runtime[_nModule].Valid THEN
-			GVL_Module.GC[_nModule](
-				HeartbeatIndex := GVL_Module.GC_Control[_nModule].HeartbeatIndex,
-				ModuleCtrl := GVL_Module.GC_Control[_nModule].ModuleCtrl,
-				ServiceCtrl := GVL_Module.GC_Control[_nModule].ServiceCtrl,
-				ServiceParam := GVL_Module.GC_Control[_nModule].ServiceParam,
+		IF GVL_Module.Chamber1_Runtime[_nModule].Enabled AND GVL_Module.Chamber1_Runtime[_nModule].Valid THEN
+			GVL_Module.Chamber1[_nModule](
+				HeartbeatIndex := GVL_Module.Chamber1_Control[_nModule].HeartbeatIndex,
+				ModuleCtrl := GVL_Module.Chamber1_Control[_nModule].ModuleCtrl,
+				ServiceCtrl := GVL_Module.Chamber1_Control[_nModule].ServiceCtrl,
+				ServiceParam := GVL_Module.Chamber1_Control[_nModule].ServiceParam,
 				SystemContext := _SystemContext,
-				RuntimeConfig := GVL_Module.GC_Runtime[_nModule],
+				RuntimeConfig := GVL_Module.Chamber1_Runtime[_nModule],
 				VariableNodeReader := _LinkVariableManager,
-				SpinAxis_BaseUnit := GVL_Module.GC_SpinAxis[_nModule],
-				LiftPinAxis_BaseUnit := GVL_Module.GC_LiftPinAxis[_nModule],
-				ModuleStatus => GVL_Module.GC_Control[_nModule].ModuleStatus,
-				ServiceStatus => GVL_Module.GC_Control[_nModule].ServiceStatus,
-				ModuleAlarmList => GVL_Module.GC_Control[_nModule].ModuleAlarmList,
-				ModuleDataList => GVL_Module.GC_Control[_nModule].ModuleDataList,
-				ModuleVariableList => GVL_Module.GC_Control[_nModule].ModuleVariableList);
+				SpinAxis_BaseUnit := GVL_Module.Chamber1_SpinAxis[_nModule],
+				LiftPinAxis_BaseUnit := GVL_Module.Chamber1_LiftPinAxis[_nModule],
+				ModuleStatus => GVL_Module.Chamber1_Control[_nModule].ModuleStatus,
+				ServiceStatus => GVL_Module.Chamber1_Control[_nModule].ServiceStatus,
+				ModuleAlarmList => GVL_Module.Chamber1_Control[_nModule].ModuleAlarmList,
+				ModuleDataList => GVL_Module.Chamber1_Control[_nModule].ModuleDataList,
+				ModuleVariableList => GVL_Module.Chamber1_Control[_nModule].ModuleVariableList);
 		END_IF
 	END_FOR
 	
@@ -61,25 +63,41 @@ END_IF]]></ST>
     </Implementation>
     <Method Name="M_HwModuleRegister" Id="{046a91b2-6210-4144-b43e-89faaf1ecae8}">
       <Declaration><![CDATA[METHOD PRIVATE M_HwModuleRegister
-VAR_INPUT
+VAR
+	nChannel : DINT;
 END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Register shared hardware terminals before loading configuration.
-_bRegistrationOk := _LinkVariableManager.M_RegisterEL1889(
-	Terminal := GVL_IO.Term4_EL1889);
+_bRegistrationOk := _LinkVariableManager.M_BeginInfrastructureRegistration();
 
 IF _bRegistrationOk THEN
-	_bRegistrationOk := _LinkVariableManager.M_RegisterEL3602(
-		Terminal := GVL_IO.Term2_EL3602);
+	FOR nChannel := LOWER_BOUND(GVL_IO.Term4_EL1889.Chl, 1)
+		TO UPPER_BOUND(GVL_IO.Term4_EL1889.Chl, 1) DO
+		_LinkVariableManager.M_RegisterInfrastructureNode(
+			Variable := GVL_IO.Term4_EL1889.Chl[nChannel],
+			Access := E_VariableAccess.ReadOnly);
+	END_FOR
+
+	FOR nChannel := LOWER_BOUND(GVL_IO.Term2_EL3602.Chl, 1)
+		TO UPPER_BOUND(GVL_IO.Term2_EL3602.Chl, 1) DO
+		_LinkVariableManager.M_RegisterInfrastructureNode(
+			Variable := GVL_IO.Term2_EL3602.Chl[nChannel],
+			Access := E_VariableAccess.ReadOnly);
+	END_FOR
+
+	FOR nChannel := LOWER_BOUND(GVL_IO.Term3_EL2809.Chl, 1)
+		TO UPPER_BOUND(GVL_IO.Term3_EL2809.Chl, 1) DO
+		_LinkVariableManager.M_RegisterInfrastructureNode(
+			Variable := GVL_IO.Term3_EL2809.Chl[nChannel],
+			Access := E_VariableAccess.WriteOnly);
+	END_FOR
+
+	// Seal decides whether the whole first-error-wins session succeeded.
+	_bRegistrationOk := _LinkVariableManager.M_SealInfrastructureRegistration();
 END_IF
 
-IF _bRegistrationOk THEN
-	_bRegistrationOk := _LinkVariableManager.M_RegisterEL2809(
-		Terminal := GVL_IO.Term3_EL2809);
-END_IF
-
-// Register BaseUnit references before loading configuration.
+// Register BaseUnit references before loading configuration. (Dictionary of source name & source instance)
 IF _bRegistrationOk THEN
 	_bRegistrationOk := _ReferenceManager.M_RegisterReference(
 		BaseUnit := GVL_IO.NC_Axis1);
@@ -92,8 +110,8 @@ END_IF
 // Register Module adapters before loading configuration.
 IF _bRegistrationOk THEN
 	_bRegistrationOk := _ModuleTypeRegistry.M_Register(
-		ModuleType := E_ModuleType.GC,
-		Adapter := _GCModuleConfigurationAdapter);
+		ModuleTypeName := 'Chamber1',
+		Adapter := _Chamber1ModuleConfigurationAdapter);
 END_IF
 _bInfrastructureRegistered := _bRegistrationOk;]]></ST>
       </Implementation>

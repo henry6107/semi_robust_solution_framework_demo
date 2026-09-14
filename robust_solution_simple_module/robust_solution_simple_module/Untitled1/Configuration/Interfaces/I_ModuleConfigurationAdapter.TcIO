@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_ModuleConfigurationAdapter" Id="{055bce4f-fb38-4c9f-b199-2f3782f87113}">
     <Declaration><![CDATA[INTERFACE I_ModuleConfigurationAdapter EXTENDS __SYSTEM.IQueryInterface
@@ -10,18 +10,6 @@ VAR_INPUT
 END_VAR
 VAR_IN_OUT CONSTANT
 	RuntimeConfig : ST_ModuleRuntimeConfig;
-END_VAR
-VAR_OUTPUT
-	ErrorMessage : STRING(255);
-END_VAR
-]]></Declaration>
-    </Method>
-    <Method Name="M_BindReference" Id="{633f42e5-d351-4476-a3cd-65a0e153027e}">
-      <Declaration><![CDATA[METHOD M_BindReference : BOOL
-VAR_INPUT
-	Slot : UINT;
-	TargetPort : STRING(80);
-	BaseUnit : I_BaseUnit;
 END_VAR
 VAR_OUTPUT
 	ErrorMessage : STRING(255);
@@ -42,26 +30,18 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Method Name="M_RegisterIo" Id="{73830a94-6f8e-4d69-9af6-a4f7c72cc99a}">
-      <Declaration><![CDATA[METHOD M_RegisterIo : BOOL
+    <Method Name="M_PrepareInstance" Id="{73830a94-6f8e-4d69-9af6-a4f7c72cc99a}">
+      <Declaration><![CDATA[METHOD M_PrepareInstance : BOOL
 VAR_INPUT
 	Slot : UINT;
+	ReferenceBindings : I_ModuleReferenceBindings;
 END_VAR
 VAR_IN_OUT
+	ModuleConfig : ST_ModuleFileConfig;
 	LinkVariableManager : FB_LinkVariableManager;
 END_VAR
 VAR_OUTPUT
 	ModuleSymbol : STRING(255);
-	ErrorMessage : STRING(255);
-END_VAR
-]]></Declaration>
-    </Method>
-    <Method Name="M_ValidateReferences" Id="{abbb786d-1b1a-4189-af7f-8bab1b0650ca}">
-      <Declaration><![CDATA[METHOD M_ValidateReferences : BOOL
-VAR_INPUT
-	Slot : UINT;
-END_VAR
-VAR_OUTPUT
 	ErrorMessage : STRING(255);
 END_VAR
 ]]></Declaration>

@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_TestableHookModule" Id="{aeddc6f5-5a8b-4c56-a34a-86f9abc036ef}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TestableHookModule EXTENDS FB_ModuleBase
+VAR_INPUT
+	Axis : I_Axis_BaseUnit;
+	AlarmId : UDINT := 9001;
+	VariableId : UDINT := 8001;
+	AlarmCount : UINT := 1;
+	VariableCount : UINT := 1;
+	DuplicateAlarm : BOOL;
+	DuplicateVariable : BOOL;
+	ProbeInvalidCalls : BOOL;
+END_VAR
+VAR_OUTPUT
+	BaseUnitScans : UDINT;
+	AlarmHookScans : UDINT;
+	VariableHookScans : UDINT;
+	AlarmObservedScan : UDINT;
+	VariableObservedScan : UDINT;
+	AlarmAccepted : BOOL;
+	VariableAccepted : BOOL;
+	DuplicateAlarmAccepted : BOOL;
+	DuplicateVariableAccepted : BOOL;
+	OutsideAlarmAccepted : BOOL;
+	OutsideVariableAccepted : BOOL;
+	CrossAlarmAccepted : BOOL;
+	CrossVariableAccepted : BOOL;
+	ZeroAlarmAccepted : BOOL;
+	ZeroVariableAccepted : BOOL;
+END_VAR
+VAR
+	_ServiceControls : ARRAY[1..1] OF ST_ServiceCtrl;
+	_ServiceStatuses : ARRAY[1..1] OF ST_ServiceStatus;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF ProbeInvalidCalls THEN
+	OutsideAlarmAccepted := M_AddAlarm(MainErrorId := AlarmId, SourceErrorId := 0, Message := 'Axis disabled', Path := 'Test.Axis', Severity := E_Severity.Alarm);
+	OutsideVariableAccepted := M_AddVariable(Id := VariableId, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := 'outside');
+END_IF
+M_UpdateModule(ServiceControls := _ServiceControls, ServiceStatuses := _ServiceStatuses);]]></ST>
+    </Implementation>
+    <Method Name="H_UpdateAlarm" Id="{64fbc36b-fa1b-445f-8357-177ea6c3b833}">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateAlarm
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AlarmHookScans := AlarmHookScans + 1;
+AlarmObservedScan := BaseUnitScans;
+AlarmAccepted := FALSE;
+DuplicateAlarmAccepted := FALSE;
+IF ProbeInvalidCalls THEN
+	CrossVariableAccepted := M_AddVariable(Id := VariableId, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := 'wrong hook');
+	ZeroAlarmAccepted := M_AddAlarm(MainErrorId := 0, SourceErrorId := 0, Message := 'Axis disabled', Path := 'Test.Axis', Severity := E_Severity.Alarm);
+END_IF
+IF Axis = 0 THEN RETURN; END_IF
+IF Axis.AxisIsDisabled THEN
+	FOR nIndex := 1 TO AlarmCount DO
+		AlarmAccepted := M_AddAlarm(MainErrorId := AlarmId + UINT_TO_UDINT(nIndex) - 1, SourceErrorId := 0, Message := 'Axis disabled', Path := 'Test.Axis', Severity := E_Severity.Alarm);
+	END_FOR
+	IF DuplicateAlarm THEN
+		DuplicateAlarmAccepted := M_AddAlarm(MainErrorId := AlarmId, SourceErrorId := 0, Message := 'Must not replace first', Path := 'Test.Axis', Severity := E_Severity.Alarm);
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateBaseUnit" Id="{7a1efb23-b9a5-427c-bac8-e392a0870288}">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateBaseUnit
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Axis <> 0 THEN
+	Axis.M_CyclicUpdate();
+END_IF
+BaseUnitScans := BaseUnitScans + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateVariable" Id="{28f21b3c-50a2-4fc5-a443-3c7109fb2e83}">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateVariable
+VAR
+	nIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[VariableHookScans := VariableHookScans + 1;
+VariableObservedScan := BaseUnitScans;
+VariableAccepted := FALSE;
+DuplicateVariableAccepted := FALSE;
+IF ProbeInvalidCalls THEN
+	CrossAlarmAccepted := M_AddAlarm(MainErrorId := AlarmId, SourceErrorId := 0, Message := 'Axis disabled', Path := 'Test.Axis', Severity := E_Severity.Alarm);
+	ZeroVariableAccepted := M_AddVariable(Id := 0, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := 'zero');
+END_IF
+IF Axis = 0 THEN RETURN; END_IF
+FOR nIndex := 1 TO VariableCount DO
+	VariableAccepted := M_AddVariable(Id := VariableId + UINT_TO_UDINT(nIndex) - 1, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := LREAL_TO_STRING(Axis.AxisActualPosition));
+END_FOR
+IF DuplicateVariable THEN
+	DuplicateVariableAccepted := M_AddVariable(Id := VariableId, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := 'must not replace first');
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

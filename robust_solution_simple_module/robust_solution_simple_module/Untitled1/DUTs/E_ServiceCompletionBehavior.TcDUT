@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="E_ServiceCompletionBehavior" Id="{c7b771f6-a892-4d21-b1f8-3ea15c10871b}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
@@ -8,7 +8,9 @@ TYPE E_ServiceCompletionBehavior :
 (
 	Unknown := 0,
 	NaturalCompletion := 1,
-	ExecuteUntilExternalStop := 2
+	ExecuteUntilExternalStop := 2,
+	SendWafer := 3,
+	ReceiveWafer := 4
 ) UDINT;
 END_TYPE
 ]]></Declaration>

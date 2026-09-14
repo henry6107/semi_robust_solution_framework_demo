@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="U_Chamber1_ServiceStatusView" Id="{a524a128-3a19-4b56-86da-a61829236df1}">
+    <Declaration><![CDATA[TYPE U_Chamber1_ServiceStatusView :
+UNION
+	ByName : ST_Chamber1_ServiceStatus;
+	ByIndex : ARRAY[1..GVL_Chamber1_Config.cServiceCount] OF ST_ServiceStatus;
+END_UNION
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

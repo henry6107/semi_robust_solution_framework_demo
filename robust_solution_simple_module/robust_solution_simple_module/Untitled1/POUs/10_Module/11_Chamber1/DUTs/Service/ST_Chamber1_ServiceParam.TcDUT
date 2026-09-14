@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_Chamber1_ServiceParam" Id="{9d771c70-165f-48ed-a888-a145a70861d4}">
+    <Declaration><![CDATA[TYPE ST_Chamber1_ServiceParam :
+STRUCT
+	SpinAxisJogCW : ST_Chamber1SpinAxisJogParam;
+	SpinAxisMoveAbs : ST_Chamber1SpinAxisMoveAbsParam;
+	SpinAxisMoveVelCW : ST_Chamber1SpinAxisMoveVelParam;
+	LiftPinAxisMoveVelCW : ST_Chamber1LiftPinAxisMoveVelParam;
+	LiftPinAxisMoveVelCCW : ST_Chamber1LiftPinAxisMoveVelParam;
+	LiftPinAxisMoveAbs : ST_Chamber1LiftPinAxisMoveAbsParam;
+	SingleProcess : ST_Chamber1SingleProcessParam;
+	WaferReceive : ST_WaferTransferParam;
+	WaferSend : ST_WaferTransferParam;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

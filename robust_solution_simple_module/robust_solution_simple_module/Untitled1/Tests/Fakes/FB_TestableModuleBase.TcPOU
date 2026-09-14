@@ -12,5 +12,15 @@ END_VAR
 	ServiceControls := _ServiceControls,
 	ServiceStatuses := _ServiceStatuses);]]></ST>
     </Implementation>
+    <Method Name="M_SetServiceStatus" Id="{5461878a-0ad3-4d4e-b67a-bcc6acdfcb40}">
+      <Declaration><![CDATA[METHOD PUBLIC M_SetServiceStatus
+VAR_IN_OUT CONSTANT
+	Status : ST_ServiceStatus;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_ServiceStatuses[1] := Status;]]></ST>
+      </Implementation>
+    </Method>
   </POU>
 </TcPlcObject>

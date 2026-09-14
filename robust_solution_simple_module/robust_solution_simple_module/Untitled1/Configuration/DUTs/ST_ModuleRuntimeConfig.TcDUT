@@ -6,7 +6,7 @@ STRUCT
 	Enabled : BOOL;
 	Valid : BOOL;
 	ModuleId : UDINT;
-	ModuleType : STRING(16);
+	ModuleType : T_ModuleTypeName;
 	Revision : UDINT;
 	VariableCount : UINT;
 	VariableBindings : ARRAY[1..Param_Config.MaxModuleVariable] OF ST_RuntimeVariableBinding;

@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ModuleReferenceBindingContext" Id="{7c687abe-a516-4907-99a9-0661f4a113f7}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleReferenceBindingContext IMPLEMENTS I_ModuleReferenceBindings
+VAR_OUTPUT
+	Error : BOOL;
+	ErrorMessage : STRING(255);
+END_VAR
+VAR
+	_Names : ARRAY[1..Param_Config.MaxModuleReferences] OF STRING(80);
+	_SourceNames : ARRAY[1..Param_Config.MaxModuleReferences] OF STRING(255);
+	_Consumed : ARRAY[1..Param_Config.MaxModuleReferences] OF BOOL;
+	_ReferenceManager : REFERENCE TO FB_ReferenceManager;
+	_Count : UINT;
+	_Active : BOOL;
+	_ModuleSymbol : STRING(255);
+	_JsonDataType : FB_JsonReadWriteDataType;
+END_VAR
+]]></Declaration>
+    <Implementation><ST><![CDATA[]]></ST></Implementation>
+    <Folder Name="Private" Id="{012137b3-b354-40b3-81b8-748ae6ac52f1}" />
+    <Method Name="M_Begin" Id="{d1d908f7-7116-4aa5-bd31-ad596ff3d464}">
+      <Declaration><![CDATA[METHOD PUBLIC M_Begin : BOOL
+VAR_IN_OUT CONSTANT
+	ModuleConfig : ST_ModuleFileConfig;
+END_VAR
+VAR_IN_OUT
+	ReferenceManager : FB_ReferenceManager;
+END_VAR
+VAR
+	nItem : UINT;
+	nOther : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_Begin := FALSE;
+M_Clear();
+
+IF ModuleConfig.ReferenceCount > Param_Config.MaxModuleReferences THEN
+	Error := TRUE;
+	ErrorMessage := 'Module reference capacity was exceeded.';
+	RETURN;
+END_IF
+
+FOR nItem := 1 TO ModuleConfig.ReferenceCount DO
+	IF (ModuleConfig.References[nItem].Name = '') OR (ModuleConfig.References[nItem].Source = '') THEN
+		Error := TRUE;
+		ErrorMessage := 'Every Module reference requires a name and source.';
+		RETURN;
+	END_IF
+
+	IF nItem > 1 THEN
+		FOR nOther := 1 TO nItem - 1 DO
+			IF ModuleConfig.References[nOther].Name = ModuleConfig.References[nItem].Name THEN
+				Error := TRUE;
+				ErrorMessage := CONCAT('Duplicate Module reference name: ', ModuleConfig.References[nItem].Name);
+				RETURN;
+			END_IF
+		END_FOR
+	END_IF
+
+	_Names[nItem] := ModuleConfig.References[nItem].Name;
+	_SourceNames[nItem] := ModuleConfig.References[nItem].Source;
+END_FOR
+
+_Count := ModuleConfig.ReferenceCount;
+_ReferenceManager REF= ReferenceManager;
+_Active := TRUE;
+M_Begin := TRUE;]]></ST></Implementation>
+    </Method>
+    <Method Name="M_Clear" Id="{9f5ed9e6-782a-49ae-8810-42d8923535b7}">
+      <Declaration><![CDATA[METHOD PUBLIC M_Clear
+VAR
+	nItem : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[FOR nItem := 1 TO Param_Config.MaxModuleReferences DO
+	_Names[nItem] := '';
+	_SourceNames[nItem] := '';
+	_Consumed[nItem] := FALSE;
+END_FOR
+_Count := 0;
+_Active := FALSE;
+_ModuleSymbol := '';
+Error := FALSE;
+ErrorMessage := '';]]></ST></Implementation>
+    </Method>
+    <Method Name="M_End" Id="{e65b0cba-cfb5-4d8f-a0c3-e59ec5e5f652}">
+      <Declaration><![CDATA[METHOD PUBLIC M_End : BOOL
+VAR
+	nItem : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_End := FALSE;
+IF Error THEN
+	RETURN;
+END_IF
+IF NOT _Active THEN
+	Error := TRUE;
+	ErrorMessage := 'No Module reference binding context is active.';
+	RETURN;
+END_IF
+
+FOR nItem := 1 TO _Count DO
+	IF NOT _Consumed[nItem] THEN
+		Error := TRUE;
+		ErrorMessage := CONCAT('Unknown Module reference name: ', _Names[nItem]);
+		RETURN;
+	END_IF
+END_FOR
+
+_Active := FALSE;
+M_End := TRUE;]]></ST></Implementation>
+    </Method>
+    <Method Name="M_Take" Id="{19807c50-ad7f-4d30-8dae-3aa0f1f66969}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_Take : I_BaseUnit
+VAR_INPUT
+	Name : STRING(80);
+	Required : BOOL;
+END_VAR
+VAR_OUTPUT
+	Present : BOOL;
+	TakeErrorMessage : STRING(255);
+END_VAR
+VAR
+	nItem : UINT;
+	BaseUnit : I_BaseUnit;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_Take := 0;
+Present := FALSE;
+TakeErrorMessage := '';
+IF Error THEN
+	TakeErrorMessage := ErrorMessage;
+	RETURN;
+END_IF
+IF NOT _Active THEN
+	Error := TRUE;
+	ErrorMessage := 'No Module reference binding context is active.';
+	TakeErrorMessage := ErrorMessage;
+	RETURN;
+END_IF
+IF Name = '' THEN
+	Error := TRUE;
+	ErrorMessage := 'A Module reference name is required.';
+	TakeErrorMessage := ErrorMessage;
+	RETURN;
+END_IF
+
+FOR nItem := 1 TO _Count DO
+	IF _Names[nItem] = Name THEN
+		IF _Consumed[nItem] THEN
+			Error := TRUE;
+			ErrorMessage := CONCAT('Module reference was taken more than once: ', Name);
+			TakeErrorMessage := ErrorMessage;
+			RETURN;
+		END_IF
+		IF NOT __ISVALIDREF(_ReferenceManager) THEN
+			Error := TRUE;
+			ErrorMessage := 'The Module reference source registry is unavailable.';
+			TakeErrorMessage := ErrorMessage;
+			RETURN;
+		END_IF
+		BaseUnit := _ReferenceManager.M_Resolve(Name := _SourceNames[nItem]);
+		IF BaseUnit = 0 THEN
+			Error := TRUE;
+			ErrorMessage := CONCAT('Module reference source was not registered: ', _SourceNames[nItem]);
+			TakeErrorMessage := ErrorMessage;
+			RETURN;
+		END_IF
+		_Consumed[nItem] := TRUE;
+		Present := TRUE;
+		M_Take := BaseUnit;
+		RETURN;
+	END_IF
+END_FOR
+
+IF Required THEN
+	Error := TRUE;
+	ErrorMessage := CONCAT('Missing required Module reference: ', Name);
+	TakeErrorMessage := ErrorMessage;
+END_IF]]></ST></Implementation>
+    </Method>
+    <Method Name="M_TakeOptional" Id="{c3a09870-d30e-44d5-a044-51ed5d29616d}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TakeOptional : I_BaseUnit
+VAR_INPUT
+	Port : ANY;
+END_VAR
+VAR_OUTPUT
+	PortName : STRING(80);
+	Present : BOOL;
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_TakeOptional := 0;
+Present := FALSE;
+IF NOT M_ResolvePortName(
+	Port := Port,
+	PortName => PortName,
+	ResolveErrorMessage => ErrorMessage) THEN
+	RETURN;
+END_IF
+M_TakeOptional := M_Take(
+	Name := PortName,
+	Required := FALSE,
+	Present => Present,
+	TakeErrorMessage => ErrorMessage);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_TakeRequired" Id="{d27284f7-cb21-485f-b2b5-2ebde4f660fc}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TakeRequired : I_BaseUnit
+VAR_INPUT
+	Port : ANY;
+END_VAR
+VAR_OUTPUT
+	PortName : STRING(80);
+	ErrorMessage : STRING(255);
+END_VAR
+VAR
+	bPresent : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_TakeRequired := 0;
+IF NOT M_ResolvePortName(
+	Port := Port,
+	PortName => PortName,
+	ResolveErrorMessage => ErrorMessage) THEN
+	RETURN;
+END_IF
+M_TakeRequired := M_Take(
+	Name := PortName,
+	Required := TRUE,
+	Present => bPresent,
+	TakeErrorMessage => ErrorMessage);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_SetModuleScope" Id="{aae445ec-495e-4389-9910-3398fb1bd26a}">
+      <Declaration><![CDATA[METHOD PUBLIC M_SetModuleScope : BOOL
+VAR_INPUT
+	ModuleSymbol : STRING(255);
+END_VAR
+VAR_OUTPUT
+	ErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_SetModuleScope := FALSE;
+ErrorMessage := '';
+IF Error THEN
+	ErrorMessage := THIS^.ErrorMessage;
+	RETURN;
+END_IF
+IF NOT _Active THEN
+	M_SetError(Message := 'No Module reference binding context is active.');
+ELSIF _ModuleSymbol <> '' THEN
+	M_SetError(Message := 'The Module reference scope was already set.');
+ELSIF ModuleSymbol = '' THEN
+	M_SetError(Message := 'A Module ADS symbol name is required for reference binding.');
+ELSE
+	_ModuleSymbol := ModuleSymbol;
+	M_SetModuleScope := TRUE;
+END_IF
+IF Error THEN
+	ErrorMessage := THIS^.ErrorMessage;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetError" Id="{621e72bc-684b-44d4-b492-1f71f3fb3900}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_SetError
+VAR_INPUT
+	Message : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Error THEN
+	Error := TRUE;
+	ErrorMessage := Message;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ResolvePortName" Id="{d84c7cfc-a913-44b7-ab08-b5db1eba41ff}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_ResolvePortName : BOOL
+VAR_INPUT
+	Port : ANY;
+END_VAR
+VAR_OUTPUT
+	PortName : STRING(80);
+	ResolveErrorMessage : STRING(255);
+END_VAR
+VAR
+	sSymbol : STRING(255);
+	nPrefixLength : INT;
+	nNameLength : INT;
+	hrErrorCode : HRESULT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_ResolvePortName := FALSE;
+PortName := '';
+ResolveErrorMessage := '';
+IF Error THEN
+	ResolveErrorMessage := ErrorMessage;
+	RETURN;
+END_IF
+IF NOT _Active THEN
+	M_SetError(Message := 'No Module reference binding context is active.');
+ELSIF _ModuleSymbol = '' THEN
+	M_SetError(Message := 'Set the Module reference scope before taking a port.');
+ELSIF (Port.pValue = 0) OR (Port.diSize <= 0) THEN
+	M_SetError(Message := 'A reference port requires a valid variable address and positive size.');
+END_IF
+IF Error THEN
+	ResolveErrorMessage := ErrorMessage;
+	RETURN;
+END_IF
+
+// Inspect the caller's interface storage, even when its current value is zero.
+// Never dereference Port.pValue or retain it after this initialization call.
+sSymbol := _JsonDataType.GetSymbolNameByAddress(
+	nData := DINT_TO_UDINT(Port.diSize),
+	pData := Port.pValue,
+	hrErrorCode => hrErrorCode);
+IF (hrErrorCode <> 0) OR (sSymbol = '') THEN
+	M_SetError(Message := 'Cannot resolve the reference port ADS symbol name.');
+ELSE
+	nPrefixLength := LEN(_ModuleSymbol) + 1;
+	IF LEN(sSymbol) <= nPrefixLength THEN
+		M_SetError(Message := 'The reference port must be a member of the active Module instance.');
+	ELSIF (LEFT(sSymbol, LEN(_ModuleSymbol)) <> _ModuleSymbol)
+		OR (MID(sSymbol, 1, nPrefixLength) <> '.') THEN
+		M_SetError(Message := CONCAT('Reference port belongs to a different Module scope: ', sSymbol));
+	ELSE
+		nNameLength := LEN(sSymbol) - nPrefixLength;
+		IF nNameLength > 80 THEN
+			M_SetError(Message := 'The relative reference port name exceeds 80 characters.');
+		ELSE
+			// Preserve the full relative path, including nested members and array indices.
+			PortName := RIGHT(sSymbol, nNameLength);
+			M_ResolvePortName := TRUE;
+		END_IF
+	END_IF
+END_IF
+IF Error THEN
+	ResolveErrorMessage := ErrorMessage;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

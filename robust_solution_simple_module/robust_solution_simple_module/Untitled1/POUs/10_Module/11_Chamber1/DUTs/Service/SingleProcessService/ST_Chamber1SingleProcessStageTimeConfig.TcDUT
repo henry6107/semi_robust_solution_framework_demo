@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_Chamber1SingleProcessStageTimeConfig" Id="{f84ff372-3046-4d7d-aeef-defe2126d07e}">
+    <Declaration><![CDATA[TYPE ST_Chamber1SingleProcessStageTimeConfig :
+STRUCT
+	TargetTime : TIME;
+	Timeout : TIME;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -6,11 +6,18 @@ STRUCT
 	ModuleId : UDINT;
 	Enabled : BOOL;
 	IsControlSourceAlive : BOOL;
-	Configuration : ST_ModuleConfigurationStatus;
+	ModuleType : STRING(16);
+	
 	ResponseId : UDINT;
 	PackMLOut : ST_PML_Base_Out;
+	
 	Alarm : ST_ModuleAlarmStatus;
+	
 	Data : ST_ModuleDataStatus;
+	Variable : ST_ModuleVariableStatus;
+	
+	// Array index is storage only; EndpointId is the external identity.
+	WaferTransferResponseList : ARRAY [1..Param_Config.MaxTransferEndpoint] OF ST_WaferTransferResponse;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

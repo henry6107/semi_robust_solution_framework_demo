@@ -7,8 +7,8 @@
 TYPE E_ModuleType :
 (
 	Unknown := 0,
-	// Gas Cabinet Module. The member name is the public config value.
-	GC := 1
+	// Chamber1 Module. The member name is the public config value.
+	Chamber1 := 1
 );
 END_TYPE
 ]]></Declaration>

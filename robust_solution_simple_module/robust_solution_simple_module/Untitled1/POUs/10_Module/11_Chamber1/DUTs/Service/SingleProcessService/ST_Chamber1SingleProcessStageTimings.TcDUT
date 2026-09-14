@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_Chamber1SingleProcessStageTimings" Id="{1154e4ac-02fd-42a5-8e48-5143d0c00986}">
+    <Declaration><![CDATA[TYPE ST_Chamber1SingleProcessStageTimings :
+STRUCT
+	Prepare : ST_Chamber1SingleProcessStageTiming;
+	LiftReady : ST_Chamber1SingleProcessStageTiming;
+	SpinAlign : ST_Chamber1SingleProcessStageTiming;
+	ConcurrentProcessEntry : ST_Chamber1SingleProcessStageTiming;
+	SpinRampUp : ST_Chamber1SingleProcessStageTiming;
+	ProcessHold : ST_Chamber1SingleProcessStageTiming;
+	ConcurrentProcessExit : ST_Chamber1SingleProcessStageTiming;
+	SpinStandby : ST_Chamber1SingleProcessStageTiming;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
