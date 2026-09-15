@@ -19,6 +19,7 @@ METHOD PROTECTED H_RegisterServices
 
 M_RegisterService(
     ServiceId := E_MyServiceId.Move,
+    AllowCompositeCall := TRUE,
     UpperCtrl := ServiceCtrl.Move,
     EffectiveCtrl := _EffectiveServiceCtrl.Move,
     UpperParam := ServiceParam.Move,
@@ -32,23 +33,42 @@ M_RegisterService(
 
 Module 不在 Execute 時，所有已登錄 Service 都接收 Module 的 PackML command、mode 與 RequestId。此期間上位維持為 TRUE 的 request 會被鎖住；Module 回到 Execute 後，必須先看到該 request 回到 FALSE，後續新上升沿才會送入 Service，避免舊命令延遲執行。
 
-Module 在 Execute 時，Coordinator 將上位 Ctrl 寫入 Effective Ctrl。只有新的 Start request 上升沿會將 Upper Param 複製到 Effective Param；request 維持 TRUE 期間的參數修改不會影響 Service 本次執行。
+Module 在 Execute 時，Coordinator 將上位 Ctrl 寫入 Effective Ctrl。只有新的 Start request 上升沿會將 Upper Param 複製到 Effective Param；request 維持 TRUE 期間的參數修改不會影響 Service 本次執行。若 Service 已被 Composite 擁有，Coordinator 改派送 Composite 的內部命令，並屏蔽上位 command 與 mode request；Coordinator 不代寫 ResponseId，因此上位會以 timeout 辨識未送達的命令。
 
 ```text
-Upper Ctrl ── Coordinator ──> Effective Ctrl ──> Service
-Upper Param ── Start 上升沿 ──> Effective Param ──> Service
-Service ──> Status Store ──> Coordinator 摘要／Alarm／Data
+Module Ctrl ───────────────┐
+Composite internal Ctrl ───┼── Coordinator ──> Effective Ctrl ──> Service
+Upper Ctrl ────────────────┘
+Upper／internal Param ── Start snapshot ──> Effective Param ──> Service
+Service ──> Status Store ──> Coordinator snapshot／摘要／Alarm／Data
 ```
 
-Coordinator 不修改 `ST_ServiceStatus`、`ResponseId` 或 `PackMLOut`。Composite ownership、內部 Service 呼叫與外部命令屏蔽不屬於本階段。
+控制優先序固定為 Module、Composite、上位。Coordinator 不修改 `ST_ServiceStatus`、`ResponseId` 或 `PackMLOut`。
+
+## Composite Service
+
+`FB_CompositeServiceBase` 本身是 `FB_ServiceBase` 與 PackML 狀態機。具體 Composite 透過 `H_DeclareServices()` 宣告最多 `Param_Config.MaxCompositeDependencies` 筆依賴，並在 `H_OnCompositeExecute()` 實作 Execute 步驟。依賴必須在一般 Service 登錄時設定 `AllowCompositeCall := TRUE`，且第一次取得 ownership 時回報 `NaturalCompletion`。
+
+Module 必須先登錄所有 Service，再於 Coordinator Seal 前登錄 Composite definition：
+
+```iecst
+_CompositeService.M_RegisterDefinition(
+    CompositeServiceId := E_MyServiceId.Composite,
+    Coordinator := _ServiceCoordinator);
+```
+
+ownership 一次取得整份依賴清單，不允許部分成功。不同 Composite 的依賴集合不重疊時可以並行；Coordinator 不追蹤 BaseUnit，因此不同 Service 共用底層資源時仍由各 Service 如實回報停止或中止。正常完成會先把依賴 Reset 至 Idle 再釋放；Stopped／Aborted 則保留 ownership，直到 Clear／Reset 後全部回到 Idle。
+
+`FB_ServiceCaller` 為每個 Composite 產生 instance-local、非零 RequestId。內部命令的 accepted／rejected 只表示 PackML 是否接受命令，實際執行結果由 Composite 讀取 Coordinator 保存的前一 scan snapshot 判斷。每筆 request 收到回覆後會強制回到 FALSE 一個 scan，才允許下一筆命令。
 
 ## 新增 Service 檢查清單
 
 1. 在 Module 的 Upper Ctrl／Param 與公開 Status DUT 增加具名欄位。
 2. 在 Module FB 增加對應 Effective Ctrl、Effective Param 與 Status Store 的持久欄位。
 3. 指派非零且不重複的 ServiceId。
-4. 在 `H_RegisterServices()` 呼叫一次 `M_RegisterService()`。
+4. 決定是否允許 Composite 呼叫，並在 `H_RegisterServices()` 呼叫一次 `M_RegisterService()`。
 5. 在 `H_UpdateService()` 只把 Effective Ctrl／Param 傳給受管理 Service，並把輸出寫入已登錄的 Status Store。
 6. Module scan 結束後再將 Status Store 複製至公開 Status。
+7. 若新增 Composite，先登錄 Composite 本身，再呼叫其 `M_RegisterDefinition()`；依賴數量上限為 10，且 v1 不允許巢狀 Composite。
 
 未登錄的 Service 不參與 Module 的 AllIdle／AllStopped／AllAborted、Alarm 或 Data 彙整。Chamber1 的 `SingleProcess` 目前刻意保留為未登錄的直接上位控制。

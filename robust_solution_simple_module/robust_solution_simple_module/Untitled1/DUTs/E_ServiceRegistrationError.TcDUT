@@ -16,7 +16,17 @@ TYPE E_ServiceRegistrationError :
 	InvalidStorage := 7,
 	ParameterSizeMismatch := 8,
 	ParameterTypeMismatch := 9,
-	ParameterTypeResolutionFailed := 10
+	ParameterTypeResolutionFailed := 10,
+	InvalidCompositeService := 11,
+	DuplicateCompositeDefinition := 12,
+	EmptyCompositeDependencyList := 13,
+	CompositeDependencyCapacityExceeded := 14,
+	InvalidCompositeDependencyId := 15,
+	UnknownCompositeDependency := 16,
+	SelfDependency := 17,
+	DuplicateCompositeDependency := 18,
+	CompositeDependencyNotAllowed := 19,
+	NestedCompositeNotSupported := 20
 ) UDINT;
 END_TYPE
 ]]></Declaration>

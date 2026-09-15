@@ -15,6 +15,20 @@ STRUCT
 	ParameterTypeName : STRING(255);
 
 	StatusAddress : PVOID;
+	AllowCompositeCall : BOOL;
+	IsComposite : BOOL;
+	CompositeOwnerServiceId : UDINT;
+
+	CompositeDependenciesAddress : PVOID;
+	CompositeDependencyCount : UINT;
+	OwnershipState : E_CompositeOwnershipState;
+
+	InternalRequestId : UDINT;
+	InternalCommand : E_PackMLCommand;
+	InternalCommandState : E_ServiceInternalCommandState;
+	InternalRequestMustGoLow : BOOL;
+
+	ObservedSnapshot : ST_ServiceExecutionSnapshot;
 
 	UpperCommandWasHigh : BOOL;
 	UpperModeWasHigh : BOOL;

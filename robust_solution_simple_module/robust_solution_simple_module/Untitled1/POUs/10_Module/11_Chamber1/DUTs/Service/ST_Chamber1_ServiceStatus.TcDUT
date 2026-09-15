@@ -12,6 +12,7 @@ STRUCT
 	SingleProcess : ST_ServiceStatus;
 	WaferSend : ST_ServiceStatus;
 	WaferReceive : ST_ServiceStatus;
+	PreparePosition : ST_ServiceStatus;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

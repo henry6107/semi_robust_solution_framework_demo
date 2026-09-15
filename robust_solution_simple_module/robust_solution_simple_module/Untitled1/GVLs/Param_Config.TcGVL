@@ -12,6 +12,7 @@ VAR_GLOBAL CONSTANT
 	MaxServiceError : UINT := 10;		// Num of Service Error per round
 	MaxServiceData : UINT := 30;		// Num of persistent Data descriptors per Service
 	MaxServicesPerModule : UINT := 100;	// Maximum number of Services registered by one Module.
+	MaxCompositeDependencies : UINT := 10;	// Maximum number of child Services declared by one Composite Service.
 	MaxModuleData : UINT := 50;			// Num of DVID
 	MaxTransferEndpoint : UINT := 2;	// Num of wafer transfer port
 	MaxProcessStation : UINT := 4;		// Num of wafer process station

@@ -199,10 +199,25 @@
     <Compile Include="DUTs\ST_ServiceContext.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ServiceRegistrationEntry.TcDUT">
+    <Compile Include="DUTs\E_ServiceCallSubmitResult.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_ServiceInternalCommandState.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_CompositeOwnershipState.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\E_ServiceCompletionBehavior.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ServiceExecutionSnapshot.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_CompositeServiceErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ServiceRegistrationEntry.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\E_ServiceRegistrationError.TcDUT">
@@ -352,6 +367,12 @@
     <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveAbsService\ST_Chamber1SpinAxisMoveAbsParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\ST_Chamber1PreparePositionParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\E_Chamber1PreparePositionStep.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveVelService\ST_Chamber1SpinAxisMoveVelParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -377,6 +398,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1LiftPinAxisMoveVelCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1PreparePositionService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SingleProcessService.TcPOU">
@@ -407,6 +431,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\FB_ServiceCoordinator.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\FB_ServiceCaller.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Module\FB_CompositeServiceBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\MAIN.TcPOU">

@@ -13,6 +13,7 @@ STRUCT
 	
 	WaferSend : ST_ServiceCtrl;
 	WaferReceive : ST_ServiceCtrl;
+	PreparePosition : ST_ServiceCtrl;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

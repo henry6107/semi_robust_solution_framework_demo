@@ -50,6 +50,7 @@ M_UpdateModule();]]></ST>
       <Implementation>
         <ST><![CDATA[M_RegisterService(
 	ServiceId := 1,
+	AllowCompositeCall := FALSE,
 	UpperCtrl := _UpperServiceCtrl,
 	EffectiveCtrl := _EffectiveServiceCtrl,
 	UpperParam := _UpperServiceParam,

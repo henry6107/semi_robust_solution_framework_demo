@@ -1,0 +1,190 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Chamber1PreparePositionService" Id="{f55e1f73-c8d6-46ee-9640-ea20d1d76a02}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1PreparePositionService EXTENDS FB_CompositeServiceBase
+VAR_INPUT
+	Param : ST_Chamber1PreparePositionParam;
+END_VAR
+VAR
+	_Step : E_Chamber1PreparePositionStep;
+	_CommandSubmitted : BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[M_UpdateCompositeService();]]></ST>
+    </Implementation>
+    <Folder Name="HookMethod" Id="{3c008d1b-265c-44d2-bfbf-6d83b0e4efea}" />
+    <Method Name="H_DeclareServices" Id="{4eea9533-ba80-4d26-ae40-98504c19c405}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_DeclareServices
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_AddDependency(ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs);
+M_AddDependency(ServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnCompositeExecute" Id="{d5a81cba-16cb-4e86-87ec-c5cb5717ffae}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnCompositeExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+VAR
+	SubmitResult : E_ServiceCallSubmitResult;
+	CommandState : E_ServiceInternalCommandState;
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnCompositeExecute := E_PackMLHookResult.Busy;
+
+IF bFirstScan THEN
+	_Step := E_Chamber1PreparePositionStep.LiftReady;
+	_CommandSubmitted := FALSE;
+END_IF
+
+CASE _Step OF
+	E_Chamber1PreparePositionStep.LiftReady:
+	
+		// Set command if not submitted
+		IF NOT _CommandSubmitted THEN
+			SubmitResult := M_StartDependency(
+				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				Parameters := Param.LiftReady);
+			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
+				_CommandSubmitted := TRUE;
+			ELSIF SubmitResult <> E_ServiceCallSubmitResult.Busy THEN
+				M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InternalCallSubmitFailed,
+					FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+					SourceErrorId := TO_UDINT(SubmitResult), Message := 'LiftReady Start could not be queued.');
+			END_IF
+			RETURN;
+		END_IF
+		
+		// Check command result
+		CommandState := M_GetDependencyCommandState(ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs);
+		IF CommandState = E_ServiceInternalCommandState.Rejected THEN
+			M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InternalCommandRejected,
+				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(E_PackMLCommand.Start), Message := 'LiftReady Start was rejected.');
+				
+		ELSIF (CommandState = E_ServiceInternalCommandState.Cancelled)
+			OR (CommandState = E_ServiceInternalCommandState.None) THEN
+			M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
+				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(CommandState), Message := 'LiftReady command state was lost.');
+				
+		ELSIF (CommandState = E_ServiceInternalCommandState.Accepted)
+			AND M_GetDependencyServiceSnapshot(
+				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs, Snapshot => Snapshot)
+			AND (Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Complete) THEN
+			_Step := E_Chamber1PreparePositionStep.SpinAlign;
+			_CommandSubmitted := FALSE;
+		END_IF
+
+	E_Chamber1PreparePositionStep.SpinAlign:
+		IF NOT _CommandSubmitted THEN
+			SubmitResult := M_StartDependency(
+				ServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs,
+				Parameters := Param.SpinAlign);
+			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
+				_CommandSubmitted := TRUE;
+			ELSIF SubmitResult <> E_ServiceCallSubmitResult.Busy THEN
+				M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InternalCallSubmitFailed,
+					FailedServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs,
+					SourceErrorId := TO_UDINT(SubmitResult), Message := 'SpinAlign Start could not be queued.');
+			END_IF
+			RETURN;
+		END_IF
+		CommandState := M_GetDependencyCommandState(ServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs);
+		IF CommandState = E_ServiceInternalCommandState.Rejected THEN
+			M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InternalCommandRejected,
+				FailedServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(E_PackMLCommand.Start), Message := 'SpinAlign Start was rejected.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Cancelled)
+			OR (CommandState = E_ServiceInternalCommandState.None) THEN
+			M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
+				FailedServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(CommandState), Message := 'SpinAlign command state was lost.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Accepted)
+			AND M_GetDependencyServiceSnapshot(
+				ServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs, Snapshot => Snapshot)
+			AND (Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Complete) THEN
+			_Step := E_Chamber1PreparePositionStep.ResetLift;
+			_CommandSubmitted := FALSE;
+		END_IF
+
+	E_Chamber1PreparePositionStep.ResetLift:
+		IF NOT _CommandSubmitted THEN
+			SubmitResult := M_CommandDependency(
+				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				Command := E_PackMLCommand.Reset);
+			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
+				_CommandSubmitted := TRUE;
+			ELSIF SubmitResult <> E_ServiceCallSubmitResult.Busy THEN
+				M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InternalCallSubmitFailed,
+					FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+					SourceErrorId := TO_UDINT(SubmitResult), Message := 'Lift Reset could not be queued.');
+			END_IF
+			RETURN;
+		END_IF
+		CommandState := M_GetDependencyCommandState(ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs);
+		IF CommandState = E_ServiceInternalCommandState.Rejected THEN
+			M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InternalCommandRejected,
+				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(E_PackMLCommand.Reset), Message := 'Lift Reset was rejected.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Cancelled)
+			OR (CommandState = E_ServiceInternalCommandState.None) THEN
+			M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
+				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(CommandState), Message := 'Lift Reset command state was lost.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Accepted)
+			AND M_GetDependencyServiceSnapshot(
+				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs, Snapshot => Snapshot)
+			AND (Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Idle) THEN
+			_Step := E_Chamber1PreparePositionStep.LiftWork;
+			_CommandSubmitted := FALSE;
+		END_IF
+
+	E_Chamber1PreparePositionStep.LiftWork:
+		IF NOT _CommandSubmitted THEN
+			SubmitResult := M_StartDependency(
+				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				Parameters := Param.LiftWork);
+			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
+				_CommandSubmitted := TRUE;
+			ELSIF SubmitResult <> E_ServiceCallSubmitResult.Busy THEN
+				M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InternalCallSubmitFailed,
+					FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+					SourceErrorId := TO_UDINT(SubmitResult), Message := 'LiftWork Start could not be queued.');
+			END_IF
+			RETURN;
+		END_IF
+		CommandState := M_GetDependencyCommandState(ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs);
+		IF CommandState = E_ServiceInternalCommandState.Rejected THEN
+			M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InternalCommandRejected,
+				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(E_PackMLCommand.Start), Message := 'LiftWork Start was rejected.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Cancelled)
+			OR (CommandState = E_ServiceInternalCommandState.None) THEN
+			M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
+				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(CommandState), Message := 'LiftWork command state was lost.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Accepted)
+			AND M_GetDependencyServiceSnapshot(
+				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs, Snapshot => Snapshot)
+			AND (Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Complete) THEN
+			_Step := E_Chamber1PreparePositionStep.Finish;
+			_CommandSubmitted := FALSE;
+		END_IF
+
+	E_Chamber1PreparePositionStep.Finish:
+		H_OnCompositeExecute := E_PackMLHookResult.Done;
+
+	ELSE
+		M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
+			FailedServiceId := ServiceId, SourceErrorId := TO_UDINT(_Step),
+			Message := 'PreparePosition entered an invalid sequence step.');
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,604 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_CompositeServiceBase" Id="{8cb8065a-227a-480b-9785-d54dcbf07a61}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_CompositeServiceBase EXTENDS FB_ServiceBase
+VAR
+	_Coordinator : REFERENCE TO FB_ServiceCoordinator;
+	_ServiceCaller : FB_ServiceCaller;
+	_DependencyServiceIds : ARRAY[1..Param_Config.MaxCompositeDependencies] OF UDINT;
+	_DependencyCount : UINT;
+	_Configured : BOOL;
+	_DefinitionAttempted : BOOL;
+	_DefinitionOpen : BOOL;
+	_DependencyOverflow : BOOL;
+	_OwnershipRequested : BOOL;
+	_OwnershipHeld : BOOL;
+	_SequenceFailed : BOOL;
+	_LifecycleCommandSubmitted : ARRAY[1..Param_Config.MaxCompositeDependencies] OF BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="HookMethod" Id="{6a9e851f-2bc6-49fa-9823-f935629370d0}" />
+    <Folder Name="Private" Id="{a5206d06-240b-4fed-858a-8d505ffa84d1}" />
+    <Folder Name="StateAction" Id="{3a37eaa6-fb24-4765-a3b4-ebe408b2bbf8}" />
+    <Method Name="H_DeclareServices" Id="{c2da1d85-d128-4bdd-9d58-eaceaef7eaf3}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_DeclareServices
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Derived Composite Services declare dependencies through M_AddDependency().]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnAborting" Id="{3b64ccbd-00ef-47b3-a710-20f7c0d431aa}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnAborting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+VAR
+	nDependency : UINT;
+	bAllSafe : BOOL;
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnAborting := E_PackMLHookResult.Busy;
+IF bFirstScan THEN M_ClearLifecycleRequests(); END_IF
+IF NOT _OwnershipHeld THEN
+	H_OnAborting := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+bAllSafe := TRUE;
+FOR nDependency := 1 TO _DependencyCount DO
+	IF NOT M_GetDependencySnapshot(DependencyIndex := nDependency, Snapshot => Snapshot) THEN
+		bAllSafe := FALSE;
+		CONTINUE;
+	END_IF
+	CASE Snapshot.PackMLOut.eStateCurrent OF
+		E_PackMLState.Idle, E_PackMLState.Stopped, E_PackMLState.Aborted:
+			;
+	ELSE
+		bAllSafe := FALSE;
+		M_EnsureLifecycleCommand(DependencyIndex := nDependency, Command := E_PackMLCommand.Abort);
+	END_CASE
+END_FOR
+IF bAllSafe THEN H_OnAborting := E_PackMLHookResult.Done; END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnClearing" Id="{a910ec87-6c47-4ad8-a032-fdc9e75c2eef}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnClearing : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+VAR
+	nDependency : UINT;
+	bAllSafe : BOOL;
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Busy;
+IF bFirstScan THEN M_ClearLifecycleRequests(); END_IF
+IF NOT _OwnershipHeld THEN
+	H_OnClearing := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+bAllSafe := TRUE;
+FOR nDependency := 1 TO _DependencyCount DO
+	IF NOT M_GetDependencySnapshot(DependencyIndex := nDependency, Snapshot => Snapshot) THEN
+		bAllSafe := FALSE;
+		CONTINUE;
+	END_IF
+	CASE Snapshot.PackMLOut.eStateCurrent OF
+		E_PackMLState.Idle, E_PackMLState.Stopped:
+			;
+		E_PackMLState.Aborted:
+			bAllSafe := FALSE;
+			M_EnsureLifecycleCommand(DependencyIndex := nDependency, Command := E_PackMLCommand.Clear);
+	ELSE
+		bAllSafe := FALSE;
+	END_CASE
+END_FOR
+IF bAllSafe THEN H_OnClearing := E_PackMLHookResult.Done; END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnComplete" Id="{feb33163-1d69-464e-a85d-a71446a7336d}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnComplete
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Normal completion releases ownership in H_OnCompleting.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnCompleting" Id="{482de7ca-cbd5-44bd-848c-f81155891f99}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnCompleting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+VAR
+	nDependency : UINT;
+	bAllIdle : BOOL;
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnCompleting := E_PackMLHookResult.Busy;
+IF bFirstScan THEN M_ClearLifecycleRequests(); END_IF
+IF NOT _OwnershipHeld THEN
+	H_OnCompleting := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+bAllIdle := TRUE;
+FOR nDependency := 1 TO _DependencyCount DO
+	IF NOT M_GetDependencySnapshot(DependencyIndex := nDependency, Snapshot => Snapshot) THEN
+		bAllIdle := FALSE;
+		CONTINUE;
+	END_IF
+	CASE Snapshot.PackMLOut.eStateCurrent OF
+		E_PackMLState.Idle:
+			;
+		E_PackMLState.Complete:
+			bAllIdle := FALSE;
+			M_EnsureLifecycleCommand(DependencyIndex := nDependency, Command := E_PackMLCommand.Reset);
+		E_PackMLState.Stopped:
+			M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.ChildStoppedUnexpectedly),
+				SourceErrorId := TO_UDINT(Snapshot.PackMLOut.eStateErrorID),
+				Message := 'A Composite dependency stopped while completing.');
+			RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+			RETURN;
+		E_PackMLState.Aborted:
+			M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.ChildAbortedUnexpectedly),
+				SourceErrorId := TO_UDINT(Snapshot.PackMLOut.eStateErrorID),
+				Message := 'A Composite dependency aborted while completing.');
+			RequestCommand(eTargetCmd := E_PackMLCommand.Abort);
+			RETURN;
+	ELSE
+		bAllIdle := FALSE;
+	END_CASE
+END_FOR
+IF bAllIdle THEN
+	_Coordinator.M_ReleaseCompositeOwnership(CompositeServiceId := ServiceId);
+	_OwnershipHeld := FALSE;
+	_OwnershipRequested := FALSE;
+	H_OnCompleting := E_PackMLHookResult.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnCompositeExecute" Id="{39c49381-209f-42d5-9751-860aeab63fdc}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnCompositeExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Derived Composite Services implement their ordered process here.
+H_OnCompositeExecute := E_PackMLHookResult.Busy;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnExecute" Id="{764c79e9-f038-427b-9a1f-fdbb3efd0c13}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+VAR
+	nDependency : UINT;
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
+IF bFirstScan THEN _SequenceFailed := FALSE; END_IF
+FOR nDependency := 1 TO _DependencyCount DO
+	IF NOT M_GetDependencySnapshot(DependencyIndex := nDependency, Snapshot => Snapshot) THEN
+		M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
+			FailedServiceId := _DependencyServiceIds[nDependency], SourceErrorId := 0,
+			Message := 'A Composite dependency snapshot is unavailable.');
+		EXIT;
+	END_IF
+	IF Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Aborted THEN
+		M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.ChildAbortedUnexpectedly),
+			SourceErrorId := TO_UDINT(Snapshot.PackMLOut.eStateErrorID),
+			Message := 'A Composite dependency aborted during Execute.');
+		RequestCommand(eTargetCmd := E_PackMLCommand.Abort);
+		RETURN;
+	ELSIF Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Stopped THEN
+		M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.ChildStoppedUnexpectedly),
+			SourceErrorId := TO_UDINT(Snapshot.PackMLOut.eStateErrorID),
+			Message := 'A Composite dependency stopped during Execute.');
+		RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+		RETURN;
+	END_IF
+END_FOR
+IF NOT _SequenceFailed THEN
+	H_OnExecute := H_OnCompositeExecute(bFirstScan := bFirstScan);
+END_IF
+IF _SequenceFailed THEN
+	RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+	H_OnExecute := E_PackMLHookResult.Busy;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnIdle" Id="{4ccea287-1540-44b6-bc62-57b0ea3a7b9d}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnIdle
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF bFirstScan THEN
+	_SequenceFailed := FALSE;
+	IF _OwnershipHeld AND __ISVALIDREF(_Coordinator) THEN
+		_Coordinator.M_ReleaseCompositeOwnership(CompositeServiceId := ServiceId);
+		_OwnershipHeld := FALSE;
+	END_IF
+	_OwnershipRequested := FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnResetting" Id="{9e598a85-478e-4ee1-b757-121a0633e9ef}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnResetting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+VAR
+	nDependency : UINT;
+	bAllIdle : BOOL;
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Busy;
+IF bFirstScan THEN
+	M_ClearLifecycleRequests();
+	MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
+END_IF
+IF NOT _OwnershipHeld THEN
+	H_OnResetting := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+bAllIdle := TRUE;
+FOR nDependency := 1 TO _DependencyCount DO
+	IF NOT M_GetDependencySnapshot(DependencyIndex := nDependency, Snapshot => Snapshot) THEN
+		bAllIdle := FALSE;
+		CONTINUE;
+	END_IF
+	CASE Snapshot.PackMLOut.eStateCurrent OF
+		E_PackMLState.Idle:
+			;
+		E_PackMLState.Stopped, E_PackMLState.Complete:
+			bAllIdle := FALSE;
+			M_EnsureLifecycleCommand(DependencyIndex := nDependency, Command := E_PackMLCommand.Reset);
+		E_PackMLState.Aborted:
+			bAllIdle := FALSE;
+			M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.ChildAbortedUnexpectedly),
+				SourceErrorId := TO_UDINT(Snapshot.PackMLOut.eStateErrorID),
+				Message := 'A Composite dependency aborted while resetting.');
+			RequestCommand(eTargetCmd := E_PackMLCommand.Abort);
+	ELSE
+		bAllIdle := FALSE;
+	END_CASE
+END_FOR
+IF bAllIdle THEN
+	_Coordinator.M_ReleaseCompositeOwnership(CompositeServiceId := ServiceId);
+	_OwnershipHeld := FALSE;
+	_OwnershipRequested := FALSE;
+	H_OnResetting := E_PackMLHookResult.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStarting" Id="{124c9b4b-b949-4698-97d8-00234b2014c4}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnStarting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+VAR
+	OwnershipState : E_CompositeOwnershipState;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
+IF NOT _Configured OR NOT __ISVALIDREF(_Coordinator) THEN
+	M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.NotConfigured), SourceErrorId := 0,
+		Message := 'Composite Service definition is not configured.');
+	RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+IF bFirstScan THEN
+	_SequenceFailed := FALSE;
+	_OwnershipRequested := _Coordinator.M_RequestCompositeOwnership(CompositeServiceId := ServiceId);
+	IF NOT _OwnershipRequested THEN
+		M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.NotConfigured), SourceErrorId := 0,
+			Message := 'Composite ownership request could not be submitted.');
+		RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+		RETURN;
+	END_IF
+END_IF
+OwnershipState := _Coordinator.M_GetCompositeOwnershipState(CompositeServiceId := ServiceId);
+CASE OwnershipState OF
+	E_CompositeOwnershipState.Pending:
+		;
+	E_CompositeOwnershipState.Owned:
+		_OwnershipHeld := TRUE;
+		H_OnStarting := E_PackMLHookResult.Done;
+	E_CompositeOwnershipState.RejectedConflict:
+		M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.OwnershipConflict),
+			SourceErrorId := TO_UDINT(OwnershipState), Message := 'A Composite dependency is owned by another Composite.');
+		RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+	E_CompositeOwnershipState.RejectedDependencyNotIdle:
+		M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.DependencyNotIdle),
+			SourceErrorId := TO_UDINT(OwnershipState), Message := 'A Composite dependency is not Idle.');
+		RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+	E_CompositeOwnershipState.RejectedUnsupportedCompletionBehavior:
+		M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.UnsupportedCompletionBehavior),
+			SourceErrorId := TO_UDINT(OwnershipState), Message := 'A Composite dependency is not NaturalCompletion.');
+		RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+	E_CompositeOwnershipState.Cancelled:
+		RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+ELSE
+	IF _OwnershipRequested THEN
+		M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.NotConfigured), SourceErrorId := 0,
+			Message := 'Composite ownership state is unavailable.');
+		RequestCommand(eTargetCmd := E_PackMLCommand.Stop);
+	END_IF
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopped" Id="{0266f459-1489-4be0-a388-f82c5ccf34af}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnStopped
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Ownership is intentionally retained until Reset returns every dependency to Idle.]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStopping" Id="{86aa8315-f99a-44b7-a43c-d81b4888e674}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL H_OnStopping : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+VAR
+	nDependency : UINT;
+	bAllSafe : BOOL;
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnStopping := E_PackMLHookResult.Busy;
+IF bFirstScan THEN M_ClearLifecycleRequests(); END_IF
+IF NOT _OwnershipHeld THEN
+	H_OnStopping := E_PackMLHookResult.Done;
+	RETURN;
+END_IF
+bAllSafe := TRUE;
+FOR nDependency := 1 TO _DependencyCount DO
+	IF NOT M_GetDependencySnapshot(DependencyIndex := nDependency, Snapshot => Snapshot) THEN
+		bAllSafe := FALSE;
+		CONTINUE;
+	END_IF
+	CASE Snapshot.PackMLOut.eStateCurrent OF
+		E_PackMLState.Idle, E_PackMLState.Stopped:
+			;
+		E_PackMLState.Aborted:
+			M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.ChildAbortedUnexpectedly),
+				SourceErrorId := TO_UDINT(Snapshot.PackMLOut.eStateErrorID),
+				Message := 'A Composite dependency aborted while stopping.');
+			RequestCommand(eTargetCmd := E_PackMLCommand.Abort);
+			RETURN;
+	ELSE
+		bAllSafe := FALSE;
+		M_EnsureLifecycleCommand(DependencyIndex := nDependency, Command := E_PackMLCommand.Stop);
+	END_CASE
+END_FOR
+IF bAllSafe THEN H_OnStopping := E_PackMLHookResult.Done; END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_AddDependency" Id="{39971c9c-db28-4310-af6c-f18b442cd52b}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_AddDependency : BOOL
+VAR_INPUT
+	ServiceId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_AddDependency := FALSE;
+IF NOT _DefinitionOpen THEN RETURN; END_IF
+IF _DependencyCount >= Param_Config.MaxCompositeDependencies THEN
+	_DependencyOverflow := TRUE;
+	RETURN;
+END_IF
+_DependencyCount := _DependencyCount + 1;
+_DependencyServiceIds[_DependencyCount] := ServiceId;
+M_AddDependency := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearLifecycleRequests" Id="{db23dd12-12f1-405d-a99e-fc6e208c7078}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_ClearLifecycleRequests
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(_LifecycleCommandSubmitted), 0, SIZEOF(_LifecycleCommandSubmitted));]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_CommandDependency" Id="{17f4bed9-2211-4865-b441-0b9dd63fc1e2}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_CommandDependency : E_ServiceCallSubmitResult
+VAR_INPUT
+	ServiceId : UDINT;
+	Command : E_PackMLCommand;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_CommandDependency := _ServiceCaller.M_Command(ServiceId := ServiceId, Command := Command);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_EnsureLifecycleCommand" Id="{af0f1cdc-9009-47c1-a811-9d87e9cc02ec}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_EnsureLifecycleCommand
+VAR_INPUT
+	DependencyIndex : UINT;
+	Command : E_PackMLCommand;
+END_VAR
+VAR
+	SubmitResult : E_ServiceCallSubmitResult;
+	CommandState : E_ServiceInternalCommandState;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF (DependencyIndex = 0) OR (DependencyIndex > _DependencyCount) THEN RETURN; END_IF
+IF NOT _LifecycleCommandSubmitted[DependencyIndex] THEN
+	SubmitResult := M_CommandDependency(ServiceId := _DependencyServiceIds[DependencyIndex], Command := Command);
+	IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
+		_LifecycleCommandSubmitted[DependencyIndex] := TRUE;
+	ELSIF SubmitResult <> E_ServiceCallSubmitResult.Busy THEN
+		_LifecycleCommandSubmitted[DependencyIndex] := TRUE;
+		M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.InternalCallSubmitFailed),
+			SourceErrorId := TO_UDINT(SubmitResult), Message := 'A Composite cleanup command could not be queued.');
+	END_IF
+	RETURN;
+END_IF
+CommandState := M_GetDependencyCommandState(ServiceId := _DependencyServiceIds[DependencyIndex]);
+IF CommandState = E_ServiceInternalCommandState.Rejected THEN
+	M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.InternalCommandRejected),
+		SourceErrorId := TO_UDINT(Command), Message := 'A Composite cleanup command was rejected.');
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_FailSequence" Id="{0a261c99-bd87-4509-b807-9e69393a52e5}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_FailSequence
+VAR_INPUT
+	ErrorCode : E_CompositeServiceErrorCode;
+	FailedServiceId : UDINT;
+	SourceErrorId : UDINT;
+	Message : STRING;
+END_VAR
+VAR
+	EffectiveErrorCode : E_CompositeServiceErrorCode;
+	EffectiveSourceErrorId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SequenceFailed := TRUE;
+EffectiveErrorCode := ErrorCode;
+EffectiveSourceErrorId := SourceErrorId;
+IF EffectiveErrorCode = E_CompositeServiceErrorCode.None THEN
+	EffectiveErrorCode := E_CompositeServiceErrorCode.SequenceFailed;
+END_IF
+IF EffectiveSourceErrorId = 0 THEN
+	EffectiveSourceErrorId := FailedServiceId;
+END_IF
+M_AddError(MainErrorId := TO_UDINT(EffectiveErrorCode),
+	SourceErrorId := EffectiveSourceErrorId, Message := Message);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_GetDependencyCommandState" Id="{777baf1a-b855-4371-857b-3dad44b40182}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_GetDependencyCommandState : E_ServiceInternalCommandState
+VAR_INPUT
+	ServiceId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_GetDependencyCommandState := _ServiceCaller.M_GetCommandState(ServiceId := ServiceId);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_GetDependencyServiceSnapshot" Id="{044b0619-bcd1-4089-9401-4b0b51354444}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_GetDependencyServiceSnapshot : BOOL
+VAR_INPUT
+	ServiceId : UDINT;
+END_VAR
+VAR_OUTPUT
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_GetDependencyServiceSnapshot := _ServiceCaller.M_GetServiceSnapshot(
+	ServiceId := ServiceId, Snapshot => Snapshot);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_GetDependencySnapshot" Id="{c2023cfa-5a0c-4da8-82ef-1d05a77c351e}" FolderPath="Private\">
+      <Declaration><![CDATA[METHOD PRIVATE M_GetDependencySnapshot : BOOL
+VAR_INPUT
+	DependencyIndex : UINT;
+END_VAR
+VAR_OUTPUT
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_GetDependencySnapshot := FALSE;
+MEMSET(ADR(Snapshot), 0, SIZEOF(Snapshot));
+IF (DependencyIndex = 0) OR (DependencyIndex > _DependencyCount) THEN RETURN; END_IF
+M_GetDependencySnapshot := M_GetDependencyServiceSnapshot(
+	ServiceId := _DependencyServiceIds[DependencyIndex], Snapshot => Snapshot);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RegisterDefinition" Id="{a6e4c174-57ec-4a2d-ad76-6f2017b68413}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_RegisterDefinition : BOOL
+VAR_INPUT
+	CompositeServiceId : UDINT;
+END_VAR
+VAR_IN_OUT
+	Coordinator : FB_ServiceCoordinator;
+END_VAR
+VAR
+	nDependencyCount : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterDefinition := FALSE;
+
+IF _DefinitionAttempted THEN
+	RETURN;
+END_IF
+
+_DefinitionAttempted := TRUE;
+
+// Clear dependency services
+MEMSET(ADR(_DependencyServiceIds), 0, SIZEOF(_DependencyServiceIds));
+_DependencyCount := 0;
+_DependencyOverflow := FALSE;
+
+// Add dependency services
+_DefinitionOpen := TRUE;
+H_DeclareServices();
+_DefinitionOpen := FALSE;
+
+// Check the amount of dependency services
+nDependencyCount := _DependencyCount;
+IF _DependencyOverflow THEN
+	nDependencyCount := Param_Config.MaxCompositeDependencies + 1;
+END_IF
+
+IF NOT Coordinator.M_RegisterCompositeDefinition(
+	CompositeServiceId := CompositeServiceId,
+	DependencyCount := nDependencyCount,
+	DependencyIds := _DependencyServiceIds) THEN RETURN; END_IF
+
+IF NOT _ServiceCaller.M_Configure(
+	CallerServiceId := CompositeServiceId,
+	Coordinator := Coordinator) THEN RETURN; END_IF
+
+_Coordinator REF= Coordinator;
+_Configured := TRUE;
+M_RegisterDefinition := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_StartDependency" Id="{82e93f7f-b3ad-48b1-8ca5-1fbdf28b212d}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_StartDependency : E_ServiceCallSubmitResult
+VAR_INPUT
+	ServiceId : UDINT;
+	Parameters : ANY;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_StartDependency := _ServiceCaller.M_Start(ServiceId := ServiceId, Parameters := Parameters);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_UpdateCompositeService" Id="{bfb14b0d-2ff4-48e2-8228-d901c0c54a93}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateCompositeService
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -32,6 +32,7 @@ VAR
 	_SingleProcessService : FB_Chamber1SingleProcessService;
 	_WaferSendService : FB_Chamber1WaferSendService;
 	_WaferReceiveService : FB_Chamber1WaferReceiveService;
+	_PreparePositionService : FB_Chamber1PreparePositionService;
 
 END_VAR
 ]]></Declaration>
@@ -68,6 +69,7 @@ ModuleStatus.WaferTransferResponseList[1].ReceiveReady := _ServiceCoordinator.Al
       <Implementation>
         <ST><![CDATA[M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.SpinAxisJogCW,
+	AllowCompositeCall := TRUE,
 	UpperCtrl := ServiceCtrl.SpinAxisJogCW,
 	EffectiveCtrl := _EffectiveServiceCtrl.SpinAxisJogCW,
 	UpperParam := ServiceParam.SpinAxisJogCW,
@@ -75,6 +77,7 @@ ModuleStatus.WaferTransferResponseList[1].ReceiveReady := _ServiceCoordinator.Al
 	Status := _ServiceStatusStore.SpinAxisJogCW);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs,
+	AllowCompositeCall := TRUE,
 	UpperCtrl := ServiceCtrl.SpinAxisMoveAbs,
 	EffectiveCtrl := _EffectiveServiceCtrl.SpinAxisMoveAbs,
 	UpperParam := ServiceParam.SpinAxisMoveAbs,
@@ -82,6 +85,7 @@ M_RegisterService(
 	Status := _ServiceStatusStore.SpinAxisMoveAbs);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.SpinAxisMoveVelCW,
+	AllowCompositeCall := TRUE,
 	UpperCtrl := ServiceCtrl.SpinAxisMoveVelCW,
 	EffectiveCtrl := _EffectiveServiceCtrl.SpinAxisMoveVelCW,
 	UpperParam := ServiceParam.SpinAxisMoveVelCW,
@@ -89,6 +93,7 @@ M_RegisterService(
 	Status := _ServiceStatusStore.SpinAxisMoveVelCW);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveVelCW,
+	AllowCompositeCall := TRUE,
 	UpperCtrl := ServiceCtrl.LiftPinAxisMoveVelCW,
 	EffectiveCtrl := _EffectiveServiceCtrl.LiftPinAxisMoveVelCW,
 	UpperParam := ServiceParam.LiftPinAxisMoveVelCW,
@@ -96,6 +101,7 @@ M_RegisterService(
 	Status := _ServiceStatusStore.LiftPinAxisMoveVelCW);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveVelCCW,
+	AllowCompositeCall := TRUE,
 	UpperCtrl := ServiceCtrl.LiftPinAxisMoveVelCCW,
 	EffectiveCtrl := _EffectiveServiceCtrl.LiftPinAxisMoveVelCCW,
 	UpperParam := ServiceParam.LiftPinAxisMoveVelCCW,
@@ -103,6 +109,7 @@ M_RegisterService(
 	Status := _ServiceStatusStore.LiftPinAxisMoveVelCCW);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+	AllowCompositeCall := TRUE,
 	UpperCtrl := ServiceCtrl.LiftPinAxisMoveAbs,
 	EffectiveCtrl := _EffectiveServiceCtrl.LiftPinAxisMoveAbs,
 	UpperParam := ServiceParam.LiftPinAxisMoveAbs,
@@ -110,6 +117,7 @@ M_RegisterService(
 	Status := _ServiceStatusStore.LiftPinAxisMoveAbs);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.WaferSend,
+	AllowCompositeCall := FALSE,
 	UpperCtrl := ServiceCtrl.WaferSend,
 	EffectiveCtrl := _EffectiveServiceCtrl.WaferSend,
 	UpperParam := ServiceParam.WaferSend,
@@ -117,11 +125,23 @@ M_RegisterService(
 	Status := _ServiceStatusStore.WaferSend);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.WaferReceive,
+	AllowCompositeCall := FALSE,
 	UpperCtrl := ServiceCtrl.WaferReceive,
 	EffectiveCtrl := _EffectiveServiceCtrl.WaferReceive,
 	UpperParam := ServiceParam.WaferReceive,
 	EffectiveParam := _EffectiveServiceParam.WaferReceive,
-	Status := _ServiceStatusStore.WaferReceive);]]></ST>
+	Status := _ServiceStatusStore.WaferReceive);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.PreparePosition,
+	AllowCompositeCall := FALSE,
+	UpperCtrl := ServiceCtrl.PreparePosition,
+	EffectiveCtrl := _EffectiveServiceCtrl.PreparePosition,
+	UpperParam := ServiceParam.PreparePosition,
+	EffectiveParam := _EffectiveServiceParam.PreparePosition,
+	Status := _ServiceStatusStore.PreparePosition);
+_PreparePositionService.M_RegisterDefinition(
+	CompositeServiceId := E_Chamber1ServiceId.PreparePosition,
+	Coordinator := _ServiceCoordinator);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_UpdateBaseUnit" Id="{23db425b-9082-4959-8f76-43820da7ead4}" FolderPath="ModuleUpdate\">
@@ -188,6 +208,13 @@ _LiftPinAxisMoveAbsService(
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveAbs,
 	Status=> _ServiceStatusStore.LiftPinAxisMoveAbs);
+
+_PreparePositionService(
+	Ctrl := _EffectiveServiceCtrl.PreparePosition,
+	Param := _EffectiveServiceParam.PreparePosition,
+	Context := _ServiceContext,
+	ServiceId := E_Chamber1ServiceId.PreparePosition,
+	Status => _ServiceStatusStore.PreparePosition);
 
 _SingleProcessService(
 	Ctrl := ServiceCtrl.SingleProcess,

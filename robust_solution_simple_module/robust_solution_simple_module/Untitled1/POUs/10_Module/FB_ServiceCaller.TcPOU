@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ServiceCaller" Id="{e9b9f931-38ea-443d-a279-342f929759fd}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ServiceCaller
+VAR
+	_Coordinator : REFERENCE TO FB_ServiceCoordinator;
+	_CallerServiceId : UDINT;
+	_NextRequestId : UDINT;
+	_Configured : BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation><ST><![CDATA[]]></ST></Implementation>
+    <Method Name="M_Command" Id="{f61d1b6d-a479-496c-94bd-cf500dfa62b2}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_Command : E_ServiceCallSubmitResult
+VAR_INPUT
+	ServiceId : UDINT;
+	Command : E_PackMLCommand;
+END_VAR
+VAR
+	nRequestId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[IF NOT _Configured OR NOT __ISVALIDREF(_Coordinator) THEN
+	M_Command := E_ServiceCallSubmitResult.CallerNotConfigured;
+	RETURN;
+END_IF
+nRequestId := _NextRequestId + 1;
+IF nRequestId = 0 THEN nRequestId := 1; END_IF
+M_Command := _Coordinator.M_SubmitInternalCommand(
+	CallerServiceId := _CallerServiceId,
+	TargetServiceId := ServiceId,
+	RequestId := nRequestId,
+	Command := Command);
+IF M_Command = E_ServiceCallSubmitResult.Queued THEN
+	_NextRequestId := nRequestId;
+END_IF]]></ST></Implementation>
+    </Method>
+    <Method Name="M_Configure" Id="{4849d5af-52b0-45ac-85b7-c79d461eb386}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_Configure : BOOL
+VAR_INPUT
+	CallerServiceId : UDINT;
+END_VAR
+VAR_IN_OUT
+	Coordinator : FB_ServiceCoordinator;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_Configure := FALSE;
+IF CallerServiceId = 0 THEN RETURN; END_IF
+_Coordinator REF= Coordinator;
+_CallerServiceId := CallerServiceId;
+_NextRequestId := 0;
+_Configured := TRUE;
+M_Configure := TRUE;]]></ST></Implementation>
+    </Method>
+    <Method Name="M_GetCommandState" Id="{ed8d42cb-69d4-49a6-81d0-fd7cb21e6836}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_GetCommandState : E_ServiceInternalCommandState
+VAR_INPUT
+	ServiceId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_GetCommandState := E_ServiceInternalCommandState.None;
+IF NOT _Configured OR NOT __ISVALIDREF(_Coordinator) THEN RETURN; END_IF
+M_GetCommandState := _Coordinator.M_GetInternalCommandState(
+	CallerServiceId := _CallerServiceId,
+	TargetServiceId := ServiceId);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_GetServiceSnapshot" Id="{820deb79-cff4-48b0-a1d7-5ac47f8d383e}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_GetServiceSnapshot : BOOL
+VAR_INPUT
+	ServiceId : UDINT;
+END_VAR
+VAR_OUTPUT
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_GetServiceSnapshot := FALSE;
+MEMSET(ADR(Snapshot), 0, SIZEOF(Snapshot));
+IF NOT _Configured OR NOT __ISVALIDREF(_Coordinator) THEN RETURN; END_IF
+M_GetServiceSnapshot := _Coordinator.M_GetServiceSnapshotById(
+	ServiceId := ServiceId,
+	Snapshot => Snapshot);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_Start" Id="{bf0a5146-fe5a-44ca-948c-e3f621ec7cf9}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL M_Start : E_ServiceCallSubmitResult
+VAR_INPUT
+	ServiceId : UDINT;
+	Parameters : ANY;
+END_VAR
+VAR
+	nRequestId : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[IF NOT _Configured OR NOT __ISVALIDREF(_Coordinator) THEN
+	M_Start := E_ServiceCallSubmitResult.CallerNotConfigured;
+	RETURN;
+END_IF
+nRequestId := _NextRequestId + 1;
+IF nRequestId = 0 THEN nRequestId := 1; END_IF
+M_Start := _Coordinator.M_SubmitInternalStart(
+	CallerServiceId := _CallerServiceId,
+	TargetServiceId := ServiceId,
+	RequestId := nRequestId,
+	Parameters := Parameters);
+IF M_Start = E_ServiceCallSubmitResult.Queued THEN
+	_NextRequestId := nRequestId;
+END_IF]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
