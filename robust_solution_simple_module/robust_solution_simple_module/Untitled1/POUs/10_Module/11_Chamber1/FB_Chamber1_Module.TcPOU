@@ -29,7 +29,6 @@ VAR
 	_LiftPinAxisMoveVelCWService : FB_Chamber1LiftPinAxisMoveVelCWServices;
 	_LiftPinAxisMoveVelCCWService : FB_Chamber1LiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_Chamber1LiftPinAxisMoveAbsServices;
-	_SingleProcessService : FB_Chamber1SingleProcessService;
 	_WaferSendService : FB_Chamber1WaferSendService;
 	_WaferReceiveService : FB_Chamber1WaferReceiveService;
 	_PreparePositionService : FB_Chamber1PreparePositionService;
@@ -215,15 +214,6 @@ _PreparePositionService(
 	Context := _ServiceContext,
 	ServiceId := E_Chamber1ServiceId.PreparePosition,
 	Status => _ServiceStatusStore.PreparePosition);
-
-_SingleProcessService(
-	Ctrl := ServiceCtrl.SingleProcess,
-	Param:= ServiceParam.SingleProcess,
-	Context := _ServiceContext,
-	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
-	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
-	ServiceId := E_Chamber1ServiceId.SingleProcess,
-	Status => _ServiceStatusStore.SingleProcess);
 
 // Both directions share Station material and hardware storage.
 // TODO: Coordinate Send/Receive access when implementing the transfer sequences.

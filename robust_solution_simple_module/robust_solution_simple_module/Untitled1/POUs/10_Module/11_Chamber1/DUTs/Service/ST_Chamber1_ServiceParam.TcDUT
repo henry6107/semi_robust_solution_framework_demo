@@ -9,7 +9,6 @@ STRUCT
 	LiftPinAxisMoveVelCW : ST_Chamber1LiftPinAxisMoveVelParam;
 	LiftPinAxisMoveVelCCW : ST_Chamber1LiftPinAxisMoveVelParam;
 	LiftPinAxisMoveAbs : ST_Chamber1LiftPinAxisMoveAbsParam;
-	SingleProcess : ST_Chamber1SingleProcessParam;
 	WaferReceive : ST_WaferTransferParam;
 	WaferSend : ST_WaferTransferParam;
 	PreparePosition : ST_Chamber1PreparePositionParam;

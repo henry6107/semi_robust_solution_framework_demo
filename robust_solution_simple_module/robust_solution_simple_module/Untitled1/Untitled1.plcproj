@@ -310,9 +310,6 @@
     <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Hardware\ST_Chamber1_Signal_Out.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\E_Chamber1DataId.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\DUTs\E_Chamber1ErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -320,45 +317,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveVelService\ST_Chamber1LiftPinAxisMoveVelParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\E_Chamber1SingleProcessAbortPhase.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\E_Chamber1SingleProcessAxis.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\E_Chamber1SingleProcessResult.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\E_Chamber1SingleProcessStage.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessCycleRecord.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStageTimeConfig.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStageTimeConfigs.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStageTiming.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStageTimings.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\ST_Chamber1SingleProcessStatus.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\U_Chamber1SingleProcessStageTimeConfigView.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService\U_Chamber1SingleProcessStageTimingView.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisJogService\ST_Chamber1SpinAxisJogParam.TcDUT">
@@ -401,9 +359,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1PreparePositionService.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SingleProcessService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SpinAxisJogCWServices.TcPOU">
@@ -535,6 +490,9 @@
     <Compile Include="Tests\Suites\Services\FB_Chamber1SpinAxisMoveAbsServiceTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Suites\Services\FB_Chamber1MoveVelServiceTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Suites\Services\FB_ServiceBaseTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -562,7 +520,6 @@
     <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service" />
     <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveAbsService" />
     <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveVelService" />
-    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SingleProcessService" />
     <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisJogService" />
     <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveAbsService" />
     <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveVelService" />

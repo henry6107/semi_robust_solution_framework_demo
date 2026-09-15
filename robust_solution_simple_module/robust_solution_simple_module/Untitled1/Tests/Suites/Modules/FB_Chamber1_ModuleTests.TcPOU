@@ -19,17 +19,13 @@ VAR
 	StoppingSpinFake : FB_FakeAxis_BaseUnit;
 	StoppingLiftFake : FB_FakeAxis_BaseUnit;
 
-	AlarmModule : FB_Chamber1_Module;
-	AlarmSpinFake : FB_FakeAxis_BaseUnit;
-	AlarmLiftFake : FB_FakeAxis_BaseUnit;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[MissingAxisPreventsModuleUpdate();
 ModuleClearResetAndAutoStartSynchronizesAllServices();
 ExecuteRoutesSelectedServiceControlAndParameters();
-ModuleStopOverridesServiceControlAndWaitsForCleanup();
-SingleProcessFailureUsesUnifiedModuleAlarmLifecycle();]]></ST>
+ModuleStopOverridesServiceControlAndWaitsForCleanup();]]></ST>
     </Implementation>
     <Method Name="ExecuteRoutesSelectedServiceControlAndParameters" Id="{b62fdc5d-8b55-4c68-93ae-3ba6effe2911}">
       <Declaration><![CDATA[METHOD ExecuteRoutesSelectedServiceControlAndParameters
@@ -78,14 +74,14 @@ CASE nPhase OF
 		AssertTrue(
 			Condition := (RoutingModule.ServiceStatus.SpinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
 				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
-				AND (RoutingModule.ServiceStatus.SingleProcess.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion),
+				AND (RoutingModule.ServiceStatus.SpinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCCW.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.PreparePosition.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion),
 			Message := 'Finite Chamber1 Services must publish NaturalCompletion on their first cyclic update.');
 		AssertTrue(
-			Condition := (RoutingModule.ServiceStatus.SpinAxisJogCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
-				AND (RoutingModule.ServiceStatus.SpinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
-				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
-				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop),
-			Message := 'Continuous Chamber1 Services must publish ExecuteUntilExternalStop on their first cyclic update.');
+			Condition := RoutingModule.ServiceStatus.SpinAxisJogCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop,
+			Message := 'SpinAxisJogCW must remain the continuous Chamber1 Service.');
 		nPhase := 1;
 
 	1:
@@ -202,19 +198,18 @@ CASE nPhase OF
 		AssertTrue(
 			Condition := (RoutingModule.ServiceStatus.SpinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
 				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
-				AND (RoutingModule.ServiceStatus.SingleProcess.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
-				AND (RoutingModule.ServiceStatus.SpinAxisJogCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
-				AND (RoutingModule.ServiceStatus.SpinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
-				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop)
-				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop),
+				AND (RoutingModule.ServiceStatus.SpinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCCW.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.PreparePosition.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+				AND (RoutingModule.ServiceStatus.SpinAxisJogCW.CompletionBehavior = E_ServiceCompletionBehavior.ExecuteUntilExternalStop),
 			Message := 'Completion behavior must remain stable after Module and Service state transitions.');
 		AssertTrue(
 			Condition := (RoutingModule.ServiceStatus.SpinAxisJogCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
 				AND (RoutingModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
 				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
 				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveVelCCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
-				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Idle)
-				AND (RoutingModule.ServiceStatus.SingleProcess.PackMLOut.eStateCurrent = E_PackMLState.Idle),
+				AND (RoutingModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Idle),
 			Message := 'Unselected Services must remain Idle.');
 		AssertTrue(Condition := RoutingLiftFake.HistoryCount = 0, Message := 'Selected Spin Service must not issue a LiftPin Axis command.');
 		nPhase := 8;
@@ -299,8 +294,7 @@ CASE nPhase OF
 				AND (MissingAxisModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Undefined)
 				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Undefined)
 				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveVelCCW.PackMLOut.eStateCurrent = E_PackMLState.Undefined)
-				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Undefined)
-				AND (MissingAxisModule.ServiceStatus.SingleProcess.PackMLOut.eStateCurrent = E_PackMLState.Undefined),
+				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Undefined),
 			Message := 'Missing LiftPin Axis must prevent every Service update.');
 		AssertTrue(
 			Condition := (MissingAxisModule.ServiceStatus.SpinAxisJogCW.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
@@ -308,8 +302,7 @@ CASE nPhase OF
 				AND (MissingAxisModule.ServiceStatus.SpinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
 				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveVelCW.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
 				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveVelCCW.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
-				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.Unknown)
-				AND (MissingAxisModule.ServiceStatus.SingleProcess.CompletionBehavior = E_ServiceCompletionBehavior.Unknown),
+				AND (MissingAxisModule.ServiceStatus.LiftPinAxisMoveAbs.CompletionBehavior = E_ServiceCompletionBehavior.Unknown),
 			Message := 'Services that have not run a cyclic update must keep Unknown completion behavior.');
 		nPhase := 1;
 
@@ -387,8 +380,7 @@ CASE nPhase OF
 				AND (LifecycleModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Aborted)
 				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Aborted)
 				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveVelCCW.PackMLOut.eStateCurrent = E_PackMLState.Aborted)
-				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Aborted)
-				AND (LifecycleModule.ServiceStatus.SingleProcess.PackMLOut.eStateCurrent = E_PackMLState.Aborted),
+				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Aborted),
 			Message := 'Initial scan must route every Service to Aborted.');
 		AssertTrue(Condition := (LifecycleSpinFake.CurrentCycle = 1) AND (LifecycleLiftFake.CurrentCycle = 1), Message := 'Module must update each BaseUnit exactly once per scan.');
 		nPhase := 1;
@@ -419,8 +411,7 @@ CASE nPhase OF
 				AND (LifecycleModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
 				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
 				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveVelCCW.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
-				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
-				AND (LifecycleModule.ServiceStatus.SingleProcess.PackMLOut.eStateCurrent = E_PackMLState.Stopped),
+				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Stopped),
 			Message := 'Module Clear must route every Service to Stopped.');
 		AssertTrue(Condition := LifecycleModule.ModuleStatus.ResponseId = 1001, Message := 'Module must acknowledge the Clear RequestId.');
 		nPhase := 2;
@@ -471,8 +462,7 @@ CASE nPhase OF
 				AND (LifecycleModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
 				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
 				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveVelCCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
-				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Idle)
-				AND (LifecycleModule.ServiceStatus.SingleProcess.PackMLOut.eStateCurrent = E_PackMLState.Idle),
+				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Idle),
 			Message := 'Module Reset must route every Service to Idle.');
 		AssertTrue(Condition := LifecycleModule.ModuleStatus.ResponseId = 1002, Message := 'Module must acknowledge the Reset RequestId.');
 		nPhase := 4;
@@ -534,8 +524,7 @@ CASE nPhase OF
 				AND (LifecycleModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
 				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
 				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveVelCCW.PackMLOut.eStateCurrent = E_PackMLState.Idle)
-				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Idle)
-				AND (LifecycleModule.ServiceStatus.SingleProcess.PackMLOut.eStateCurrent = E_PackMLState.Idle),
+				AND (LifecycleModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Idle),
 			Message := 'Module Execute must leave Services under external control in Idle.');
 		AssertTrue(Condition := (LifecycleSpinFake.CurrentCycle = 7) AND (LifecycleLiftFake.CurrentCycle = 7), Message := 'Seven Module scans must update each BaseUnit exactly seven times.');
 		nPhase := 0;
@@ -821,112 +810,12 @@ CASE nPhase OF
 				AND (StoppingModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
 				AND (StoppingModule.ServiceStatus.LiftPinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
 				AND (StoppingModule.ServiceStatus.LiftPinAxisMoveVelCCW.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
-				AND (StoppingModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
-				AND (StoppingModule.ServiceStatus.SingleProcess.PackMLOut.eStateCurrent = E_PackMLState.Stopped),
+				AND (StoppingModule.ServiceStatus.LiftPinAxisMoveAbs.PackMLOut.eStateCurrent = E_PackMLState.Stopped),
 			Message := 'Module Stopped requires every Service Stopped.');
 		AssertFalse(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_Chamber1ServiceId.SpinAxisMoveAbs), Message := 'Stopped Module must not retain Spin Axis ownership.');
 		AssertFalse(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_Chamber1ServiceId.SpinAxisJogCW), Message := 'Ignored external Jog Start must not acquire ownership later.');
 		nPhase := 0;
 
-		TEST_FINISHED();
-END_CASE]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="SingleProcessFailureUsesUnifiedModuleAlarmLifecycle" Id="{f9468e9f-4d68-4786-8d2b-f286d682c729}">
-      <Declaration><![CDATA[METHOD SingleProcessFailureUsesUnifiedModuleAlarmLifecycle
-VAR_INST
-	SpinAxis : I_Axis_BaseUnit;
-	LiftAxis : I_Axis_BaseUnit;
-	RuntimeConfig : ST_ModuleRuntimeConfig;
-	VariableNodeReader : FB_LinkVariableManager;
-	ModuleCtrl : ST_ModuleCtrl;
-	ServiceCtrl : ST_Chamber1_ServiceCtrl;
-	ServiceParam : ST_Chamber1_ServiceParam;
-	SystemContext : ST_SystemContext;
-	nPhase : UINT;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[TEST('SingleProcessFailureUsesUnifiedModuleAlarmLifecycle');
-
-CASE nPhase OF
-	0:
-		AlarmSpinFake.M_ResetScenario();
-		AlarmLiftFake.M_ResetScenario();
-		SpinAxis := AlarmSpinFake;
-		LiftAxis := AlarmLiftFake;
-		RuntimeConfig.ModuleId := 77;
-		SystemContext.UtcDateTime := '20260828130000000';
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		nPhase := 1;
-
-	1:
-		ModuleCtrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
-		ModuleCtrl.PackMLIn.bCommandChangeRequest := TRUE;
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		nPhase := 2;
-
-	2:
-		ModuleCtrl.PackMLIn.bCommandChangeRequest := FALSE;
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		nPhase := 3;
-
-	3:
-		ModuleCtrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
-		ModuleCtrl.PackMLIn.bCommandChangeRequest := TRUE;
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		nPhase := 4;
-
-	4:
-		ModuleCtrl.PackMLIn.bCommandChangeRequest := FALSE;
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		nPhase := 5;
-
-	5:
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		nPhase := 6;
-
-	6:
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		AssertTrue(Condition := AlarmModule.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Test setup must bring the Module to Execute.');
-		nPhase := 7;
-
-	7:
-		// Default SingleProcess parameters are invalid and fail during Starting.
-		ServiceCtrl.SingleProcess.RequestId := 7001;
-		ServiceCtrl.SingleProcess.PackMLIn.eCommand := E_PackMLCommand.Start;
-		ServiceCtrl.SingleProcess.PackMLIn.bCommandChangeRequest := TRUE;
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		AssertTrue(Condition := AlarmModule.ServiceStatus.SingleProcess.ErrorList[1].MainErrorId = E_Chamber1ErrorCode.Invalid_Param, Message := 'SingleProcess first failure must enter its Service ErrorList.');
-		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].ModuleId = 77, Message := 'The unified manager must normalize the Module identity.');
-		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].ServiceId = E_Chamber1ServiceId.SingleProcess, Message := 'The Chamber1 Module must submit the SingleProcess Service identity.');
-		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].MainErrorId = E_Chamber1ErrorCode.Invalid_Param, Message := 'The Chamber1 Module must publish the Service failure.');
-		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].Active AND (AlarmModule.ModuleAlarmList[1].OccurrenceCount = 1), Message := 'First Service failure must publish active with one occurrence.');
-		AssertTrue(Condition := FIND(AlarmModule.ModuleAlarmList[1].Message, 'Axis=None') > 0, Message := 'SingleProcess alarm message must identify the failed axis.');
-		AssertTrue(Condition := FIND(AlarmModule.ModuleAlarmList[1].Message, 'Stage=Prepare') > 0, Message := 'SingleProcess alarm message must identify the failed stage.');
-		nPhase := 8;
-
-	8:
-		ServiceCtrl.SingleProcess.PackMLIn.bCommandChangeRequest := FALSE;
-		ModuleCtrl.AlarmAckRequest.RequestId := 9001;
-		ModuleCtrl.AlarmAckRequest.Command := E_AlarmAckCommand.AcknowledgeOne;
-		ModuleCtrl.AlarmAckRequest.MainErrorId := E_Chamber1ErrorCode.Invalid_Param;
-		ModuleCtrl.AlarmAckRequest.bChangeRequest := TRUE;
-		ModuleCtrl.AlarmAckRequest.ServiceId := E_Chamber1ServiceId.SingleProcess;
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		AssertTrue(Condition := AlarmModule.ModuleStatus.Alarm.AckAccepted AND (AlarmModule.ModuleStatus.Alarm.AckResponseId = 9001), Message := 'Module Ack response must confirm the exact Service alarm.');
-		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].Active AND AlarmModule.ModuleAlarmList[1].Acknowledged, Message := 'Ack-before-reset must retain the active lifecycle.');
-		nPhase := 9;
-
-	9:
-		ModuleCtrl.AlarmAckRequest.bChangeRequest := FALSE;
-		ServiceCtrl.SingleProcess.PackMLIn.eCommand := E_PackMLCommand.Reset;
-		ServiceCtrl.SingleProcess.PackMLIn.bCommandChangeRequest := TRUE;
-		AlarmModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
-		AssertTrue(Condition := AlarmModule.ServiceStatus.SingleProcess.ErrorList[1].MainErrorId = 0, Message := 'SingleProcess Resetting must clear its Service ErrorList.');
-		AssertTrue(Condition := AlarmModule.ModuleAlarmList[1].MainErrorId = 0, Message := 'Inactive and acknowledged Service alarm must be removed in the reset scan.');
-		AssertTrue(Condition := AlarmModule.ModuleStatus.Alarm.ServiceLatchedCount = 0, Message := 'Service latched count must follow same-scan removal.');
-		nPhase := 0;
 		TEST_FINISHED();
 END_CASE]]></ST>
       </Implementation>

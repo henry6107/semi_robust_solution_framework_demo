@@ -45,6 +45,12 @@ Service ──> Status Store ──> Coordinator snapshot／摘要／Alarm／Dat
 
 控制優先序固定為 Module、Composite、上位。Coordinator 不修改 `ST_ServiceStatus`、`ResponseId` 或 `PackMLOut`。
 
+### MoveVel 執行語意
+
+Chamber1 的 Spin CW、Lift CW 與 Lift CCW MoveVel Service 均採 `NaturalCompletion`。Start 被接受時會鎖存 Velocity、Acceleration 與 Deceleration；Execute 期間修改上位 Param 不會改變當次命令，也不會以降沿／升沿重新觸發 MoveVel。Axis 回報 `InVelocity` 後，Service 即由 Execute 進入 Completing。
+
+Completing 只將 MoveVel request 拉回 FALSE 並釋放 Axis ownership，不會另送 Stop，因此 Service 進入 Complete 時 Axis 仍可能依底層運動控制行為保持目標速度。若需要停止運動，呼叫端必須另外啟動負責停止或改變運動狀態的流程；PackML Stop／Abort 仍會走各 Service 既有的停止／中止處理。
+
 ## Composite Service
 
 `FB_CompositeServiceBase` 本身是 `FB_ServiceBase` 與 PackML 狀態機。具體 Composite 透過 `H_DeclareServices()` 宣告最多 `Param_Config.MaxCompositeDependencies` 筆依賴，並在 `H_OnCompositeExecute()` 實作 Execute 步驟。依賴必須在一般 Service 登錄時設定 `AllowCompositeCall := TRUE`，且第一次取得 ownership 時回報 `NaturalCompletion`。
@@ -88,4 +94,4 @@ H_GetExecuteSubState := TO_UDINT(_Step);
 7. 若新增 Composite，先登錄 Composite 本身，再呼叫其 `M_RegisterDefinition()`；依賴數量上限為 10，且 v1 不允許巢狀 Composite。
 8. 若需揭露 Execute 子狀態，覆寫 `H_GetExecuteSubState()`，並確保對應 enum 的 `0` 為 `None`。
 
-未登錄的 Service 不參與 Module 的 AllIdle／AllStopped／AllAborted、Alarm 或 Data 彙整。Chamber1 的 `SingleProcess` 目前刻意保留為未登錄的直接上位控制。
+未登錄的 Service 不參與 Module 的 AllIdle／AllStopped／AllAborted、Alarm 或 Data 彙整。
