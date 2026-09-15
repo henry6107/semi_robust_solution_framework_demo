@@ -109,8 +109,8 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Completing normally releases first; this is an idempotent safety net.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);]]></ST>
+        <ST><![CDATA[// Reaching Complete means target velocity was reached; the Axis is still moving,
+// so this Service must retain ownership until Stop or Abort cleanup finishes.]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnCompleting" Id="{3864e1ba-9360-45a8-9d26-f1e180c8fbe5}" FolderPath="StateAction\">
@@ -128,8 +128,8 @@ END_VAR
 	Acceleration := _LatchedParam.Acceleration,
 	Deceleration := _LatchedParam.Deceleration);
 
-// Release only after the active MoveVelocity request has been withdrawn.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
+// Lowering Execute only withdraws the FB request; it does not stop the Axis.
+// Keep ownership so a later Stop from Complete or Idle can control the motion.
 H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
@@ -198,8 +198,8 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Idle Services must not retain a Resource from an earlier operation.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);]]></ST>
+        <ST><![CDATA[// Reset changes only the PackML state. A MoveVel that completed naturally may
+// still be moving, so Idle intentionally retains any existing Axis ownership.]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{0680bc64-d1f9-407b-b6ca-83882b900618}" FolderPath="StateAction\">

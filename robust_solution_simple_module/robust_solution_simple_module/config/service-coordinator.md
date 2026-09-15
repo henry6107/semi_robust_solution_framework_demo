@@ -49,7 +49,9 @@ Service ──> Status Store ──> Coordinator snapshot／摘要／Alarm／Dat
 
 Chamber1 的 Spin CW、Lift CW 與 Lift CCW MoveVel Service 均採 `NaturalCompletion`。Start 被接受時會鎖存 Velocity、Acceleration 與 Deceleration；Execute 期間修改上位 Param 不會改變當次命令，也不會以降沿／升沿重新觸發 MoveVel。Axis 回報 `InVelocity` 後，Service 即由 Execute 進入 Completing。
 
-Completing 只將 MoveVel request 拉回 FALSE 並釋放 Axis ownership，不會另送 Stop，因此 Service 進入 Complete 時 Axis 仍可能依底層運動控制行為保持目標速度。若需要停止運動，呼叫端必須另外啟動負責停止或改變運動狀態的流程；PackML Stop／Abort 仍會走各 Service 既有的停止／中止處理。
+Completing 只將 MoveVel request 拉回 FALSE，不會另送 Stop，也不會釋放 Axis ownership。Complete 表示已到達目標速度，不代表軸已停止；即使 Reset 回到 Idle，只要尚未完成 Stop 或 Abort 清理，MoveVel Service 仍持有 Axis，避免其他 Service 接管仍在運轉的資源。改速必須依序執行 `Stop → Reset → Start`。
+
+三個 MoveVel 目前仍允許成為 Composite 依賴。Composite 正常收尾將 Complete 子 Service Reset 至 Idle 後，軸可能繼續運轉且 BaseUnit 仍由該 MoveVel Service 持有；後續必須再對 MoveVel 下達 Stop、由 Composite 明確執行停止步驟，或透過 Module Stop 廣播完成實體停止與 ownership 釋放。
 
 ## Composite Service
 

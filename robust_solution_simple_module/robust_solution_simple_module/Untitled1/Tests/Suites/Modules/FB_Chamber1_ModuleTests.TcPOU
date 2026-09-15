@@ -19,13 +19,18 @@ VAR
 	StoppingSpinFake : FB_FakeAxis_BaseUnit;
 	StoppingLiftFake : FB_FakeAxis_BaseUnit;
 
+	MoveVelStopModule : FB_Chamber1_Module;
+	MoveVelStopSpinFake : FB_FakeAxis_BaseUnit;
+	MoveVelStopLiftFake : FB_FakeAxis_BaseUnit;
+
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[MissingAxisPreventsModuleUpdate();
 ModuleClearResetAndAutoStartSynchronizesAllServices();
 ExecuteRoutesSelectedServiceControlAndParameters();
-ModuleStopOverridesServiceControlAndWaitsForCleanup();]]></ST>
+ModuleStopOverridesServiceControlAndWaitsForCleanup();
+CoordinatorRoutesStopToCompletedMoveVel();]]></ST>
     </Implementation>
     <Method Name="ExecuteRoutesSelectedServiceControlAndParameters" Id="{b62fdc5d-8b55-4c68-93ae-3ba6effe2911}">
       <Declaration><![CDATA[METHOD ExecuteRoutesSelectedServiceControlAndParameters
@@ -240,6 +245,117 @@ CASE nPhase OF
 		AssertTrue(Condition := RoutingLiftFake.HistoryCount = 0, Message := 'Routing selected Spin Service must leave LiftPin Axis untouched.');
 		nPhase := 0;
 
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CoordinatorRoutesStopToCompletedMoveVel" Id="{f36b02cf-21eb-41ca-aa11-a522e654ce91}">
+      <Declaration><![CDATA[METHOD CoordinatorRoutesStopToCompletedMoveVel
+VAR_INST
+	SpinAxis : I_Axis_BaseUnit;
+	LiftAxis : I_Axis_BaseUnit;
+	RuntimeConfig : ST_ModuleRuntimeConfig;
+	VariableNodeReader : FB_LinkVariableManager;
+	ModuleCtrl : ST_ModuleCtrl;
+	ServiceCtrl : ST_Chamber1_ServiceCtrl;
+	ServiceParam : ST_Chamber1_ServiceParam;
+	SystemContext : ST_SystemContext;
+	StopCall : ST_FakeAxisCall;
+	nHistoryBeforeStop : UINT;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('CoordinatorRoutesStopToCompletedMoveVel');
+
+CASE nPhase OF
+	0:
+		MoveVelStopSpinFake.M_ResetScenario();
+		MoveVelStopLiftFake.M_ResetScenario();
+		SpinAxis := MoveVelStopSpinFake;
+		LiftAxis := MoveVelStopLiftFake;
+		ServiceParam.SpinAxisMoveVelCW.Velocity := 51;
+		ServiceParam.SpinAxisMoveVelCW.Acceleration := 52;
+		ServiceParam.SpinAxisMoveVelCW.Deceleration := 53;
+		AssertTrue(Condition := MoveVelStopSpinFake.M_QueueResult(Operation := E_FakeAxisOperation.MoveVel, AfterActiveCycles := 1, Done := FALSE, InVelocity := TRUE, Error := FALSE, ErrorId := 0), Message := 'Module MoveVel script must be accepted.');
+		AssertTrue(Condition := MoveVelStopSpinFake.M_QueueResult(Operation := E_FakeAxisOperation.Stop, AfterActiveCycles := 1, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0), Message := 'Module Stop script must be accepted.');
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 1;
+
+	1:
+		ModuleCtrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		ModuleCtrl.PackMLIn.bCommandChangeRequest := TRUE;
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 2;
+
+	2:
+		ModuleCtrl.PackMLIn.bCommandChangeRequest := FALSE;
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 3;
+
+	3:
+		ModuleCtrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		ModuleCtrl.PackMLIn.bCommandChangeRequest := TRUE;
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 4;
+
+	4:
+		ModuleCtrl.PackMLIn.bCommandChangeRequest := FALSE;
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 5;
+
+	5:
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 6;
+
+	6:
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := MoveVelStopModule.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Test setup must bring Module to Execute.');
+		nPhase := 7;
+
+	7:
+		ServiceCtrl.SpinAxisMoveVelCW.RequestId := 5101;
+		ServiceCtrl.SpinAxisMoveVelCW.PackMLIn.eCommand := E_PackMLCommand.Start;
+		ServiceCtrl.SpinAxisMoveVelCW.PackMLIn.bCommandChangeRequest := TRUE;
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := MoveVelStopModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Coordinator must route upper Start to MoveVel.');
+		AssertTrue(Condition := MoveVelStopModule.ServiceStatus.SpinAxisMoveVelCW.ResponseId = 5101, Message := 'MoveVel must acknowledge upper Start RequestId.');
+		nPhase := 8;
+
+	8:
+		ServiceCtrl.SpinAxisMoveVelCW.PackMLIn.bCommandChangeRequest := FALSE;
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		nPhase := 9;
+
+	9:
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := MoveVelStopModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Completing, Message := 'InVelocity must move the routed Service to Completing.');
+		nPhase := 10;
+
+	10:
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := MoveVelStopModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Complete, Message := 'MoveVel must reach Complete after withdrawing its request.');
+		AssertTrue(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_Chamber1ServiceId.SpinAxisMoveVelCW), Message := 'Completed MoveVel must still own Spin Axis.');
+		nHistoryBeforeStop := MoveVelStopSpinFake.HistoryCount;
+		nPhase := 11;
+
+	11:
+		ServiceCtrl.SpinAxisMoveVelCW.RequestId := 5102;
+		ServiceCtrl.SpinAxisMoveVelCW.PackMLIn.eCommand := E_PackMLCommand.Stop;
+		ServiceCtrl.SpinAxisMoveVelCW.PackMLIn.bCommandChangeRequest := TRUE;
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := MoveVelStopModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Stopping, Message := 'Coordinator must route upper Stop from Complete.');
+		AssertTrue(Condition := MoveVelStopModule.ServiceStatus.SpinAxisMoveVelCW.ResponseId = 5102, Message := 'MoveVel must acknowledge upper Stop RequestId.');
+		AssertTrue(Condition := MoveVelStopSpinFake.M_GetCall(Index := nHistoryBeforeStop + 2, CallRecord => StopCall), Message := 'Routed physical Stop must be recorded.');
+		AssertTrue(Condition := (StopCall.Operation = E_FakeAxisOperation.Stop) AND StopCall.Accepted AND StopCall.Execute AND (StopCall.Deceleration = 53), Message := 'Routed Stop must execute with the latched Deceleration.');
+		nPhase := 12;
+
+	12:
+		ServiceCtrl.SpinAxisMoveVelCW.PackMLIn.bCommandChangeRequest := FALSE;
+		MoveVelStopModule(ModuleCtrl := ModuleCtrl, SystemContext := SystemContext, HeartbeatIndex := , RuntimeConfig := RuntimeConfig, VariableNodeReader := VariableNodeReader, ServiceCtrl := ServiceCtrl, ServiceParam := ServiceParam, SpinAxis_BaseUnit := SpinAxis, LiftPinAxis_BaseUnit := LiftAxis);
+		AssertTrue(Condition := MoveVelStopModule.ServiceStatus.SpinAxisMoveVelCW.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Physical Stop Done must reach Stopped through Coordinator.');
+		AssertFalse(Condition := SpinAxis.M_IsResourceOwner(OwnerId := E_Chamber1ServiceId.SpinAxisMoveVelCW), Message := 'Routed Stop completion must release Spin Axis.');
+		nPhase := 0;
 		TEST_FINISHED();
 END_CASE]]></ST>
       </Implementation>
