@@ -159,6 +159,13 @@ Status.Data.DataList[nTargetIndex].Value := Value;
 M_UpdateData := TRUE;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="H_GetExecuteSubState" Id="{df111ed2-37f4-49f9-90f4-999a15583353}">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubState : UDINT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_GetExecuteSubState := 0;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_UpdateService" Id="{8ae05b1d-81f7-4b0b-9f3f-42116c68a842}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateService
 VAR_INPUT
@@ -173,6 +180,11 @@ _CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
 
 // Updata status
 Status.PackMLOut := PackMLOut;
+IF Status.PackMLOut.eStateCurrent = E_PackMLState.Execute THEN
+	Status.ExecuteSubState := H_GetExecuteSubState();
+ELSE
+	Status.ExecuteSubState := 0;
+END_IF
 Status.CompletionBehavior := CompletionBehavior;
 Status.ServiceId := ServiceId;
 IF _CmdRequestOneShot.Q THEN // Acknowledge to upper controller that command received

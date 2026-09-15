@@ -61,6 +61,22 @@ ownership 一次取得整份依賴清單，不允許部分成功。不同 Compos
 
 `FB_ServiceCaller` 為每個 Composite 產生 instance-local、非零 RequestId。內部命令的 accepted／rejected 只表示 PackML 是否接受命令，實際執行結果由 Composite 讀取 Coordinator 保存的前一 scan snapshot 判斷。每筆 request 收到回覆後會強制回到 FALSE 一個 scan，才允許下一筆命令。
 
+## Execute 子狀態
+
+`ST_ServiceStatus.ExecuteSubState` 讓 Service 以 `UDINT` 揭露 Execute 內部的子狀態。此欄位只在 `PackMLOut.eStateCurrent = E_PackMLState.Execute` 時有效；其他 PackML 狀態由 `FB_ServiceBase` 統一清為 `0`。未覆寫 hook 的 Service 也固定回傳 `0`。
+
+需要揭露子狀態的 Service 覆寫 `H_GetExecuteSubState()`，將自己的 enum 轉為 `UDINT`：
+
+```iecst
+METHOD PROTECTED H_GetExecuteSubState : UDINT
+
+H_GetExecuteSubState := TO_UDINT(_Step);
+```
+
+每個子狀態 enum 都必須保留 `0` 表示 `None` 或未揭露。不同 Service 的數值不要求共用語意；上位或 HMI 必須依 `ServiceId` 使用對應的 enum mapping。Coordinator 會將此值複製到前一 scan 的 `ST_ServiceExecutionSnapshot`，讓 Composite 仍透過既有 snapshot 介面觀察子 Service。
+
+新增欄位會改變 `ST_ServiceStatus` 的記憶體配置；實際部署後，上位與 HMI 必須重新載入產生的 PLC symbols，不得沿用舊版結構配置。
+
 ## 新增 Service 檢查清單
 
 1. 在 Module 的 Upper Ctrl／Param 與公開 Status DUT 增加具名欄位。
@@ -70,5 +86,6 @@ ownership 一次取得整份依賴清單，不允許部分成功。不同 Compos
 5. 在 `H_UpdateService()` 只把 Effective Ctrl／Param 傳給受管理 Service，並把輸出寫入已登錄的 Status Store。
 6. Module scan 結束後再將 Status Store 複製至公開 Status。
 7. 若新增 Composite，先登錄 Composite 本身，再呼叫其 `M_RegisterDefinition()`；依賴數量上限為 10，且 v1 不允許巢狀 Composite。
+8. 若需揭露 Execute 子狀態，覆寫 `H_GetExecuteSubState()`，並確保對應 enum 的 `0` 為 `None`。
 
 未登錄的 Service 不參與 Module 的 AllIdle／AllStopped／AllAborted、Alarm 或 Data 彙整。Chamber1 的 `SingleProcess` 目前刻意保留為未登錄的直接上位控制。

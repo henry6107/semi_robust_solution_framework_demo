@@ -7,6 +7,7 @@ STRUCT
 	ServiceId : UDINT;
 	ResponseId : UDINT;
 	PackMLOut : ST_PML_Base_Out;
+	ExecuteSubState : UDINT;
 	CompletionBehavior : E_ServiceCompletionBehavior;
 END_STRUCT
 END_TYPE
