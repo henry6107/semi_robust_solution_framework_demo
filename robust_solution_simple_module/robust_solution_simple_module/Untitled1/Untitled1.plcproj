@@ -431,9 +431,6 @@
     <Compile Include="Tests\Suites\Services\FB_ServiceExecuteSubStateTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="TestTask.TcTTO">
-      <SubType>Code</SubType>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Configuration" />
