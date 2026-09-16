@@ -18,10 +18,10 @@
     <LibraryReferences>{aad4cebc-a342-45e7-bdf7-a255f00dc573}</LibraryReferences>
     <Released>false</Released>
     <Title>RobustSolution</Title>
-    <ProjectVersion>1.0.0.0</ProjectVersion>
+    <ProjectVersion>1.0.0.1</ProjectVersion>
     <Company>BATW</Company>
-    <DefaultNamespace>RobustSolution</DefaultNamespace>
-    <Placeholder>RobustSolution</Placeholder>
+    <DefaultNamespace>RobustSolution_BATW</DefaultNamespace>
+    <Placeholder>RobustSolution_BATW</Placeholder>
     <Author>BATW</Author>
   </PropertyGroup>
   <ItemGroup>
@@ -119,9 +119,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\POUs\FB_ConfigValueSnapshotReader.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Configuration\POUs\FB_Chamber1ModuleConfigurationAdapter.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Configuration\POUs\FB_ModuleTypeRegistry.TcPOU">
@@ -277,14 +274,6 @@
     <Compile Include="DUTs\Wafer Transfer\ST_WaferTransferRequest.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="GVLs\GVL_IO.TcGVL">
-      <SubType>Code</SubType>
-      <LinkAlways>true</LinkAlways>
-    </Compile>
-    <Compile Include="GVLs\GVL_Module.TcGVL">
-      <SubType>Code</SubType>
-      <LinkAlways>true</LinkAlways>
-    </Compile>
     <Compile Include="GVLs\Param_Config.TcGVL">
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
@@ -310,81 +299,6 @@
     <Compile Include="POUs\00_BaseUnit\T_ResourceOwnerId.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\E_Chamber1ServiceId.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Hardware\ST_Chamber1_Signal_In.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Hardware\ST_Chamber1_Signal_Out.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\E_Chamber1ErrorCode.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveAbsService\ST_Chamber1LiftPinAxisMoveAbsParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveVelService\ST_Chamber1LiftPinAxisMoveVelParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisJogService\ST_Chamber1SpinAxisJogParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveAbsService\ST_Chamber1SpinAxisMoveAbsParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\ST_Chamber1PreparePositionParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\E_Chamber1PreparePositionStep.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveVelService\ST_Chamber1SpinAxisMoveVelParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\ST_Chamber1_ServiceCtrl.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\ST_Chamber1_ServiceParam.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\Service\ST_Chamber1_ServiceStatus.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\DUTs\ST_Chamber1_CtrlStatus.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\FB_Chamber1_Module.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1LiftPinAxisMoveAbsServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1LiftPinAxisMoveVelCCWServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1LiftPinAxisMoveVelCWServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1PreparePositionService.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SpinAxisJogCWServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SpinAxisMoveAbsServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1SpinAxisMoveVelCWServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1WaferSendService.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\11_Chamber1\Services\FB_Chamber1WaferReceiveService.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\FB_ModuleAlarmManager.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -401,9 +315,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\FB_CompositeServiceBase.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\FB_ConfigRoot.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\MAIN.TcPOU">
@@ -538,17 +449,6 @@
     <Folder Include="POUs\00_BaseUnit" />
     <Folder Include="POUs\00_BaseUnit\Interfaces" />
     <Folder Include="POUs\10_Module" />
-    <Folder Include="POUs\10_Module\11_Chamber1" />
-    <Folder Include="POUs\10_Module\11_Chamber1\DUTs" />
-    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Hardware" />
-    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service" />
-    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveAbsService" />
-    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\LiftPinAxisMoveVelService" />
-    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisJogService" />
-    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveAbsService" />
-    <Folder Include="POUs\10_Module\11_Chamber1\DUTs\Service\SpinAxisMoveVelService" />
-    <Folder Include="POUs\10_Module\11_Chamber1\GVLs" />
-    <Folder Include="POUs\10_Module\11_Chamber1\Services" />
     <Folder Include="POUs\PackML_Base" />
     <Folder Include="POUs\PackML_Base\DUTs" />
     <Folder Include="POUs\PackML_Base\Utilities" />
@@ -604,11 +504,40 @@
       <SubType>Content</SubType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <PlaceholderResolution Include="SysDir">
+      <Resolution>SysDir, 3.5.17.0 (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysFile">
+      <Resolution>SysFile, 3.5.17.0 (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_Math">
+      <Resolution>Tc2_Math, 3.5.3.0 (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_MC2">
+      <Resolution>Tc2_MC2, 3.3.73.0 (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_Standard">
+      <Resolution>Tc2_Standard, 3.4.7.0 (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_System">
+      <Resolution>Tc2_System, 3.10.2.0 (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_Utilities">
+      <Resolution>Tc2_Utilities, 3.10.6.0 (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc3_JsonXml">
+      <Resolution>Tc3_JsonXml, 3.4.9.0 (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc3_Module">
+      <Resolution>Tc3_Module, 3.4.7.0 (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+  </ItemGroup>
   <ProjectExtensions>
     <PlcProjectOptions>
       <XmlArchive>
-  <Data>
-    <o xml:space="preserve" t="OptionKey">
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
       <v n="Name">"&lt;ProjectRoot&gt;"</v>
       <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
         <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
@@ -684,14 +613,14 @@
       </d>
       <d n="Values" t="Hashtable" />
     </o>
-  </Data>
-  <TypeList>
-    <Type n="Boolean">System.Boolean</Type>
-    <Type n="Hashtable">System.Collections.Hashtable</Type>
-    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
-    <Type n="String">System.String</Type>
-  </TypeList>
-</XmlArchive>
+        </Data>
+        <TypeList>
+          <Type n="Boolean">System.Boolean</Type>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
     </PlcProjectOptions>
   </ProjectExtensions>
 </Project>
