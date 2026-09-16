@@ -49,7 +49,18 @@ FOR nChannel := LOWER_BOUND(GVL_IO.Term3_EL2809.Chl, 1)
 		Access := E_VariableAccess.WriteOnly) THEN
 		RETURN;
 	END_IF
-END_FOR]]></ST>
+END_FOR
+
+// Register share memory data
+M_RegisterIoNode(
+		Variable := GVL_ShareMemory.bChamber1_Endpoint1_DoorClosed,
+		Access := E_VariableAccess.ReadWrite);
+M_RegisterIoNode(
+		Variable := GVL_ShareMemory.bChamber1_VacuumOn,
+		Access := E_VariableAccess.ReadWrite);
+M_RegisterIoNode(
+		Variable := GVL_ShareMemory.bRobotIsInChamber1,
+		Access := E_VariableAccess.ReadWrite);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_RegisterModuleTypes" Id="{0b2fdbc4-2028-47e2-8aa0-1b8af190b2d4}">

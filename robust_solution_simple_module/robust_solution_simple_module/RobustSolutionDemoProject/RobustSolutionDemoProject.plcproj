@@ -63,6 +63,9 @@
     <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Door\ST_Chamber1DoorOpenParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareSendWafer\E_Chamber1Endpoint1PrepareSendWaferStep.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareSendWafer\ST_Chamber1Endpoint1PrepardSendWaferParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>

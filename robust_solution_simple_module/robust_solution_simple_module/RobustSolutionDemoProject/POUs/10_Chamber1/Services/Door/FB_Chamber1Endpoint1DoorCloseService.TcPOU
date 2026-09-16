@@ -2,11 +2,9 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_Chamber1Endpoint1DoorCloseService" Id="{d8f384c9-dbfe-48a0-a93a-0c4f93ef162b}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1Endpoint1DoorCloseService EXTENDS FB_ServiceBase
-VAR_INPUT
+VAR_IN_OUT
 	IsDoorClose : BOOL;
 	IsRobotInChamber : BOOL;
-END_VAR
-VAR_IN_OUT
 	DoorCloseCtrl : BOOL;
 END_VAR
 
@@ -38,10 +36,13 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF IsRobotInChamber THEN
+        <ST><![CDATA[H_OnStarting := RobustSolution_BATW.E_PackMLHookResult.Busy;
+IF IsRobotInChamber THEN
 	M_AddError( MainErrorId:= E_Chamber1ErrorCode.Close_Door_While_Robot_In_Chamber, SourceErrorId:= 0, Message:= 'Close door while robot in chamber.');
 	RequestCommand(E_PackMLCommand.Stop);
-END_IF]]></ST>
+END_IF
+
+H_OnStarting := RobustSolution_BATW.E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
   </POU>

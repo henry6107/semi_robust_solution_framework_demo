@@ -1,9 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_Chamber1Endpoint1PrepareSendWafer" Id="{31c0f8a3-2bb7-4853-987f-7b1795d30426}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1Endpoint1PrepareSendWafer EXTENDS FB_CompositeServiceBase]]></Declaration>
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1Endpoint1PrepareSendWafer EXTENDS FB_CompositeServiceBase
+VAR
+	_Step : E_Chamber1Endpoint1PrepareSendWaferStep;
+	_CommandSubmitted : BOOL;
+	_LiftPinMoveParam : ST_Chamber1LiftPinAxisMoveAbsParam;
+	_VacuumOffParam : ST_EmptyServiceParam;
+END_VAR
+]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
+      <ST><![CDATA[M_UpdateCompositeService();]]></ST>
     </Implementation>
     <Folder Name="HookMethod" Id="{858d5fe9-2c92-497c-8c1b-6833d260548b}" />
     <Method Name="H_DeclareServices" Id="{1979dc54-f44c-43aa-9c15-89ebd2fc31b9}" FolderPath="HookMethod\">
@@ -18,14 +25,14 @@ M_AddDependency(ServiceId := E_Chamber1ServiceId.VacuumOff);]]></ST>
       <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubState : UDINT
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[H_GetExecuteSubState := TO_UDINT(_Step);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_GetExecuteSubStateName" Id="{35243858-965b-4837-a7ce-4e8151da400b}" FolderPath="HookMethod\">
       <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubStateName : STRING(80)
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[H_GetExecuteSubStateName := TO_STRING(_Step);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnCompositeExecute" Id="{6e0866a2-2b89-4e5d-a7f0-96d53557ce83}" FolderPath="HookMethod\">
@@ -33,9 +40,120 @@ M_AddDependency(ServiceId := E_Chamber1ServiceId.VacuumOff);]]></ST>
 VAR_INPUT
 	bFirstScan	: BOOL;
 END_VAR
+VAR
+	SubmitResult : E_ServiceCallSubmitResult;
+	CommandState : E_ServiceInternalCommandState;
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[H_OnCompositeExecute := E_PackMLHookResult.Busy;
+
+IF bFirstScan THEN
+	_Step := E_Chamber1Endpoint1PrepareSendWaferStep.MoveLiftPinAxis;
+	_CommandSubmitted := FALSE;
+
+	_LiftPinMoveParam.Position := 70.0;
+	_LiftPinMoveParam.Velocity := 20.0;
+	_LiftPinMoveParam.Acceleration := 0.0;
+	_LiftPinMoveParam.Deceleration := 0.0;
+END_IF
+
+CASE _Step OF
+	E_Chamber1Endpoint1PrepareSendWaferStep.MoveLiftPinAxis:
+		IF NOT _CommandSubmitted THEN
+			SubmitResult := M_StartDependency(
+				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				Parameters := _LiftPinMoveParam);
+
+			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
+				_CommandSubmitted := TRUE;
+			ELSIF SubmitResult <> E_ServiceCallSubmitResult.Busy THEN
+				M_FailSequence(
+					ErrorCode := E_CompositeServiceErrorCode.InternalCallSubmitFailed,
+					FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+					SourceErrorId := TO_UDINT(SubmitResult),
+					Message := 'LiftPinAxis MoveAbs Start could not be queued.');
+			END_IF
+			RETURN;
+		END_IF
+
+		CommandState := M_GetDependencyCommandState(
+			ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs);
+		IF CommandState = E_ServiceInternalCommandState.Rejected THEN
+			M_FailSequence(
+				ErrorCode := E_CompositeServiceErrorCode.InternalCommandRejected,
+				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(E_PackMLCommand.Start),
+				Message := 'LiftPinAxis MoveAbs Start was rejected.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Cancelled)
+			OR (CommandState = E_ServiceInternalCommandState.None) THEN
+			M_FailSequence(
+				ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
+				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				SourceErrorId := TO_UDINT(CommandState),
+				Message := 'LiftPinAxis MoveAbs command state was lost.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Accepted)
+			AND M_GetDependencyServiceSnapshot(
+				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+				Snapshot => Snapshot)
+			AND (Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Complete) THEN
+			_Step := E_Chamber1Endpoint1PrepareSendWaferStep.VacuumOff;
+			_CommandSubmitted := FALSE;
+		END_IF
+
+	E_Chamber1Endpoint1PrepareSendWaferStep.VacuumOff:
+		IF NOT _CommandSubmitted THEN
+			SubmitResult := M_StartDependency(
+				ServiceId := E_Chamber1ServiceId.VacuumOff,
+				Parameters := _VacuumOffParam);
+
+			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
+				_CommandSubmitted := TRUE;
+			ELSIF SubmitResult <> E_ServiceCallSubmitResult.Busy THEN
+				M_FailSequence(
+					ErrorCode := E_CompositeServiceErrorCode.InternalCallSubmitFailed,
+					FailedServiceId := E_Chamber1ServiceId.VacuumOff,
+					SourceErrorId := TO_UDINT(SubmitResult),
+					Message := 'VacuumOff Start could not be queued.');
+			END_IF
+			RETURN;
+		END_IF
+
+		CommandState := M_GetDependencyCommandState(
+			ServiceId := E_Chamber1ServiceId.VacuumOff);
+		IF CommandState = E_ServiceInternalCommandState.Rejected THEN
+			M_FailSequence(
+				ErrorCode := E_CompositeServiceErrorCode.InternalCommandRejected,
+				FailedServiceId := E_Chamber1ServiceId.VacuumOff,
+				SourceErrorId := TO_UDINT(E_PackMLCommand.Start),
+				Message := 'VacuumOff Start was rejected.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Cancelled)
+			OR (CommandState = E_ServiceInternalCommandState.None) THEN
+			M_FailSequence(
+				ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
+				FailedServiceId := E_Chamber1ServiceId.VacuumOff,
+				SourceErrorId := TO_UDINT(CommandState),
+				Message := 'VacuumOff command state was lost.');
+		ELSIF (CommandState = E_ServiceInternalCommandState.Accepted)
+			AND M_GetDependencyServiceSnapshot(
+				ServiceId := E_Chamber1ServiceId.VacuumOff,
+				Snapshot => Snapshot)
+			AND (Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Complete) THEN
+			_Step := E_Chamber1Endpoint1PrepareSendWaferStep.Finish;
+			_CommandSubmitted := FALSE;
+		END_IF
+
+	E_Chamber1Endpoint1PrepareSendWaferStep.Finish:
+		H_OnCompositeExecute := E_PackMLHookResult.Done;
+
+	ELSE
+		M_FailSequence(
+			ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
+			FailedServiceId := ServiceId,
+			SourceErrorId := TO_UDINT(_Step),
+			Message := 'Endpoint1PrepareSendWafer entered an invalid sequence step.');
+END_CASE]]></ST>
       </Implementation>
     </Method>
   </POU>

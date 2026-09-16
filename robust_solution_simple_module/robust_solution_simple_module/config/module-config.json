@@ -8,8 +8,14 @@
       "id": 1,
       "inputMappings": [
         {
-          "source": "GVL_IO.Term4_EL1889.Chl[1]",
+          "source": "GVL_ShareMemory.bChamber1_Endpoint1_DoorClosed",
           "target": "HwInput.bDoorClosed",
+          "sourceDataType": "BOOL",
+          "targetDataType": "BOOL"
+        },
+        {
+          "source": "GVL_ShareMemory.bChamber1_VacuumOn",
+          "target": "HwInput.bVacuumOn",
           "sourceDataType": "BOOL",
           "targetDataType": "BOOL"
         },
@@ -22,12 +28,30 @@
             "scale": 0.01,
             "offset": 50.0
           }
+        },
+        {
+          "source": "GVL_ShareMemory.bRobotIsInChamber1",
+          "target": "HwInput.bRobotInChamber",
+          "sourceDataType": "BOOL",
+          "targetDataType": "BOOL"
         }
       ],
       "outputMappings": [
         {
           "source": "HwOutput.bVaccumOn",
           "target": "GVL_IO.Term3_EL2809.Chl[1]",
+          "sourceDataType": "BOOL",
+          "targetDataType": "BOOL"
+        },
+        {
+          "source": "HwOutput.bVaccumOn",
+          "target": "GVL_ShareMemory.bChamber1_VacuumOn",
+          "sourceDataType": "BOOL",
+          "targetDataType": "BOOL"
+        },
+        {
+          "source": "HwOutput.bDoorClosed",
+          "target": "GVL_ShareMemory.bChamber1_Endpoint1_DoorClosed",
           "sourceDataType": "BOOL",
           "targetDataType": "BOOL"
         }

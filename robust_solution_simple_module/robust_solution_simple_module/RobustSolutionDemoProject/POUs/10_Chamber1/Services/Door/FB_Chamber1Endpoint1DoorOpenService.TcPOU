@@ -2,10 +2,8 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_Chamber1Endpoint1DoorOpenService" Id="{4daeed7c-3826-41bd-bf92-bfd659122874}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1Endpoint1DoorOpenService EXTENDS FB_ServiceBase
-VAR_INPUT
-	IsDoorClose : BOOL;
-END_VAR
 VAR_IN_OUT
+	IsDoorClose : BOOL;
 	DoorCloseCtrl : BOOL;
 END_VAR
 ]]></Declaration>

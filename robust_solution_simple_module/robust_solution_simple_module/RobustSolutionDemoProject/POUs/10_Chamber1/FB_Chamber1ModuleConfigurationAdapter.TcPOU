@@ -106,6 +106,12 @@ bDeclared := LinkVariableManager.M_RegisterModuleNode(
 	Variable := GVL_Module.Chamber1[Slot].HwInput.bDoorClosed,
 	Access := E_VariableAccess.ReadWrite);
 bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[Slot].HwInput.bVacuumOn,
+	Access := E_VariableAccess.ReadWrite);
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[Slot].HwInput.bRobotInChamber,
+	Access := E_VariableAccess.ReadWrite);
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
 	Variable := GVL_Module.Chamber1[Slot].HwInput.rTemperature,
 	Access := E_VariableAccess.ReadWrite);
 
@@ -125,6 +131,10 @@ END_FOR
 bDeclared := LinkVariableManager.M_RegisterModuleNode(
 	Variable := GVL_Module.Chamber1[Slot].HwOutput.bVaccumOn,
 	Access := E_VariableAccess.ReadOnly);
+bDeclared := LinkVariableManager.M_RegisterModuleNode(
+	Variable := GVL_Module.Chamber1[Slot].HwOutput.bDoorClosed,
+	Access := E_VariableAccess.ReadOnly);
+	
 FOR nIndex := LOWER_BOUND(GVL_Module.Chamber1[Slot].HwOutput.bDOs, 1)
 	TO UPPER_BOUND(GVL_Module.Chamber1[Slot].HwOutput.bDOs, 1) DO
 	bDeclared := LinkVariableManager.M_RegisterModuleNode(

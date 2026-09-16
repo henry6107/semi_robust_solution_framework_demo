@@ -2,10 +2,8 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_Chamber1VacuumOnService" Id="{0becf4f6-2fcb-4aec-8991-e0fa8a14cc25}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1VacuumOnService EXTENDS FB_ServiceBase
-VAR_INPUT
-	IsVacuumOn : BOOL;
-END_VAR
 VAR_IN_OUT
+	IsVacuumOn : BOOL;
 	VacuumOnCtrl : BOOL;
 END_VAR
 
