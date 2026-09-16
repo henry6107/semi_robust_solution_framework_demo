@@ -149,7 +149,7 @@ M_RegisterService(
 	EffectiveCtrl := _EffectiveServiceCtrl.VacuumOff,
 	UpperParam := ServiceParam.VacuumOff,
 	EffectiveParam := _EffectiveServiceParam.VacuumOff,
-	Status := _ServiceStatusStore.DoorClose);
+	Status := _ServiceStatusStore.VacuumOff);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.VacuumOn,
 	AllowCompositeCall := TRUE,
