@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_IO" Id="{86bd72bc-4b73-48a0-a8c4-78c9d56c7a18}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	Term3_EL2809 : ST_EL2809Ex;
+	Term4_EL1889 : ST_EL1889Ex;
+	Term2_EL3602 : ST_EL3602Ex;
+	
+	NC_Axis1 : FB_Axis_BaseUnit;
+	NC_Axis2 : FB_Axis_BaseUnit;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>
