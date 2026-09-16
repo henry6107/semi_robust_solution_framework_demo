@@ -19,9 +19,9 @@ VAR_OUTPUT
 END_VAR
 
 VAR
-	// 有需要特殊操作的需求，所以建立一個 ST_Chamber1_ServiceCtrl 變數，讓程式內部可以過一手處理
-	_ServiceCtrlView : U_Chamber1_ServiceCtrlView;
-	_ServiceStatusView : U_Chamber1_ServiceStatusView;
+	_EffectiveServiceCtrl : ST_Chamber1_ServiceCtrl;
+	_EffectiveServiceParam : ST_Chamber1_ServiceParam;
+	_ServiceStatusStore : ST_Chamber1_ServiceStatus;
 
 	_SpinAxisJogCWService : FB_Chamber1SpinAxisJogCWServices;
 	_SpinAxisMoveAbsService : FB_Chamber1SpinAxisMoveAbsServices;
@@ -29,9 +29,9 @@ VAR
 	_LiftPinAxisMoveVelCWService : FB_Chamber1LiftPinAxisMoveVelCWServices;
 	_LiftPinAxisMoveVelCCWService : FB_Chamber1LiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_Chamber1LiftPinAxisMoveAbsServices;
-	_SingleProcessService : FB_Chamber1SingleProcessService;
 	_WaferSendService : FB_Chamber1WaferSendService;
 	_WaferReceiveService : FB_Chamber1WaferReceiveService;
+	_PreparePositionService : FB_Chamber1PreparePositionService;
 
 END_VAR
 ]]></Declaration>
@@ -48,23 +48,101 @@ ModuleStatus.WaferTransferResponseList[1].Capability := E_TransferCapability.Bid
 ModuleStatus.WaferTransferResponseList[1].SendServiceId := E_Chamber1ServiceId.WaferSend;
 ModuleStatus.WaferTransferResponseList[1].ReceiveServiceId := E_Chamber1ServiceId.WaferReceive;
 
-_ServiceCtrlView.ByName := ServiceCtrl;
-M_UpdateModule(
-	ServiceControls := _ServiceCtrlView.ByIndex,
-	ServiceStatuses := _ServiceStatusView.ByIndex);
+M_UpdateModule();
 
 // Update status
-ServiceStatus := _ServiceStatusView.ByName;
+ServiceStatus := _ServiceStatusStore;
 
 // Link status to module
 ModuleStatus.WaferTransferResponseList[1].Send.Status := ServiceStatus.WaferSend;
 ModuleStatus.WaferTransferResponseList[1].Send.Signal := _WaferSendService.SignalOut;
-ModuleStatus.WaferTransferResponseList[1].SendReady := _AllServicesIdle;
+ModuleStatus.WaferTransferResponseList[1].SendReady := _ServiceCoordinator.AllIdle;
 ModuleStatus.WaferTransferResponseList[1].Receive.Status := ServiceStatus.WaferReceive;
 ModuleStatus.WaferTransferResponseList[1].Receive.Signal := _WaferReceiveService.SignalOut;
-ModuleStatus.WaferTransferResponseList[1].ReceiveReady := _AllServicesIdle;]]></ST>
+ModuleStatus.WaferTransferResponseList[1].ReceiveReady := _ServiceCoordinator.AllIdle;]]></ST>
     </Implementation>
     <Folder Name="ModuleUpdate" Id="{a9f2fa3e-34f5-43fc-8823-0e0dbffba0ff}" />
+    <Method Name="H_RegisterServices" Id="{3d094774-a05b-4729-a18a-320af51f821a}" FolderPath="ModuleUpdate\">
+      <Declaration><![CDATA[METHOD PROTECTED H_RegisterServices
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.SpinAxisJogCW,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.SpinAxisJogCW,
+	EffectiveCtrl := _EffectiveServiceCtrl.SpinAxisJogCW,
+	UpperParam := ServiceParam.SpinAxisJogCW,
+	EffectiveParam := _EffectiveServiceParam.SpinAxisJogCW,
+	Status := _ServiceStatusStore.SpinAxisJogCW);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.SpinAxisMoveAbs,
+	EffectiveCtrl := _EffectiveServiceCtrl.SpinAxisMoveAbs,
+	UpperParam := ServiceParam.SpinAxisMoveAbs,
+	EffectiveParam := _EffectiveServiceParam.SpinAxisMoveAbs,
+	Status := _ServiceStatusStore.SpinAxisMoveAbs);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.SpinAxisMoveVelCW,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.SpinAxisMoveVelCW,
+	EffectiveCtrl := _EffectiveServiceCtrl.SpinAxisMoveVelCW,
+	UpperParam := ServiceParam.SpinAxisMoveVelCW,
+	EffectiveParam := _EffectiveServiceParam.SpinAxisMoveVelCW,
+	Status := _ServiceStatusStore.SpinAxisMoveVelCW);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveVelCW,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.LiftPinAxisMoveVelCW,
+	EffectiveCtrl := _EffectiveServiceCtrl.LiftPinAxisMoveVelCW,
+	UpperParam := ServiceParam.LiftPinAxisMoveVelCW,
+	EffectiveParam := _EffectiveServiceParam.LiftPinAxisMoveVelCW,
+	Status := _ServiceStatusStore.LiftPinAxisMoveVelCW);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveVelCCW,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.LiftPinAxisMoveVelCCW,
+	EffectiveCtrl := _EffectiveServiceCtrl.LiftPinAxisMoveVelCCW,
+	UpperParam := ServiceParam.LiftPinAxisMoveVelCCW,
+	EffectiveParam := _EffectiveServiceParam.LiftPinAxisMoveVelCCW,
+	Status := _ServiceStatusStore.LiftPinAxisMoveVelCCW);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.LiftPinAxisMoveAbs,
+	EffectiveCtrl := _EffectiveServiceCtrl.LiftPinAxisMoveAbs,
+	UpperParam := ServiceParam.LiftPinAxisMoveAbs,
+	EffectiveParam := _EffectiveServiceParam.LiftPinAxisMoveAbs,
+	Status := _ServiceStatusStore.LiftPinAxisMoveAbs);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.WaferSend,
+	AllowCompositeCall := FALSE,
+	UpperCtrl := ServiceCtrl.WaferSend,
+	EffectiveCtrl := _EffectiveServiceCtrl.WaferSend,
+	UpperParam := ServiceParam.WaferSend,
+	EffectiveParam := _EffectiveServiceParam.WaferSend,
+	Status := _ServiceStatusStore.WaferSend);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.WaferReceive,
+	AllowCompositeCall := FALSE,
+	UpperCtrl := ServiceCtrl.WaferReceive,
+	EffectiveCtrl := _EffectiveServiceCtrl.WaferReceive,
+	UpperParam := ServiceParam.WaferReceive,
+	EffectiveParam := _EffectiveServiceParam.WaferReceive,
+	Status := _ServiceStatusStore.WaferReceive);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.PreparePosition,
+	AllowCompositeCall := FALSE,
+	UpperCtrl := ServiceCtrl.PreparePosition,
+	EffectiveCtrl := _EffectiveServiceCtrl.PreparePosition,
+	UpperParam := ServiceParam.PreparePosition,
+	EffectiveParam := _EffectiveServiceParam.PreparePosition,
+	Status := _ServiceStatusStore.PreparePosition);
+_PreparePositionService.M_RegisterDefinition(
+	CompositeServiceId := E_Chamber1ServiceId.PreparePosition,
+	Coordinator := _ServiceCoordinator);]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="H_UpdateBaseUnit" Id="{23db425b-9082-4959-8f76-43820da7ead4}" FolderPath="ModuleUpdate\">
       <Declaration><![CDATA[METHOD PROTECTED H_UpdateBaseUnit
 VAR_INPUT
@@ -82,84 +160,82 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[_SpinAxisJogCWService(
-	Ctrl:= _ServiceCtrlView.ByName.SpinAxisJogCW,
-	Param:= ServiceParam.SpinAxisJogCW,
+	Ctrl:= _EffectiveServiceCtrl.SpinAxisJogCW,
+	Param:= _EffectiveServiceParam.SpinAxisJogCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	// Owner IDs are assigned by the Module so each Service instance is unique.
 	ServiceId:= E_Chamber1ServiceId.SpinAxisJogCW,
-	Status=> _ServiceStatusView.ByName.SpinAxisJogCW);
+	Status=> _ServiceStatusStore.SpinAxisJogCW);
 
 _SpinAxisMoveAbsService(
-	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveAbs,
-	Param:= ServiceParam.SpinAxisMoveAbs,
+	Ctrl:= _EffectiveServiceCtrl.SpinAxisMoveAbs,
+	Param:= _EffectiveServiceParam.SpinAxisMoveAbs,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.SpinAxisMoveAbs,
-	Status=> _ServiceStatusView.ByName.SpinAxisMoveAbs);
+	Status=> _ServiceStatusStore.SpinAxisMoveAbs);
 
 _SpinAxisMoveVelCWService(
-	Ctrl:= _ServiceCtrlView.ByName.SpinAxisMoveVelCW,
-	Param:= ServiceParam.SpinAxisMoveVelCW,
+	Ctrl:= _EffectiveServiceCtrl.SpinAxisMoveVelCW,
+	Param:= _EffectiveServiceParam.SpinAxisMoveVelCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= SpinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.SpinAxisMoveVelCW,
-	Status=> _ServiceStatusView.ByName.SpinAxisMoveVelCW);
+	Status=> _ServiceStatusStore.SpinAxisMoveVelCW);
 
 _LiftPinAxisMoveVelCWService(
-	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCW,
-	Param:= ServiceParam.LiftPinAxisMoveVelCW,
+	Ctrl:= _EffectiveServiceCtrl.LiftPinAxisMoveVelCW,
+	Param:= _EffectiveServiceParam.LiftPinAxisMoveVelCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveVelCW,
-	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCW);
+	Status=> _ServiceStatusStore.LiftPinAxisMoveVelCW);
 
 _LiftPinAxisMoveVelCCWService(
-	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveVelCCW,
-	Param:= ServiceParam.LiftPinAxisMoveVelCCW,
+	Ctrl:= _EffectiveServiceCtrl.LiftPinAxisMoveVelCCW,
+	Param:= _EffectiveServiceParam.LiftPinAxisMoveVelCCW,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveVelCCW,
-	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveVelCCW);
+	Status=> _ServiceStatusStore.LiftPinAxisMoveVelCCW);
 
 _LiftPinAxisMoveAbsService(
-	Ctrl:= _ServiceCtrlView.ByName.LiftPinAxisMoveAbs,
-	Param:= ServiceParam.LiftPinAxisMoveAbs,
+	Ctrl:= _EffectiveServiceCtrl.LiftPinAxisMoveAbs,
+	Param:= _EffectiveServiceParam.LiftPinAxisMoveAbs,
 	Context:= _ServiceContext,
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveAbs,
-	Status=> _ServiceStatusView.ByName.LiftPinAxisMoveAbs);
+	Status=> _ServiceStatusStore.LiftPinAxisMoveAbs);
 
-_SingleProcessService(
-	Ctrl := _ServiceCtrlView.ByName.SingleProcess,
-	Param:= ServiceParam.SingleProcess,
+_PreparePositionService(
+	Ctrl := _EffectiveServiceCtrl.PreparePosition,
+	Param := _EffectiveServiceParam.PreparePosition,
 	Context := _ServiceContext,
-	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
-	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
-	ServiceId := E_Chamber1ServiceId.SingleProcess,
-	Status => _ServiceStatusView.ByName.SingleProcess);
+	ServiceId := E_Chamber1ServiceId.PreparePosition,
+	Status => _ServiceStatusStore.PreparePosition);
 
 // Both directions share Station material and hardware storage.
 // TODO: Coordinate Send/Receive access when implementing the transfer sequences.
 _WaferSendService(
-	Ctrl := _ServiceCtrlView.ByName.WaferSend,
-	Param := ServiceParam.WaferSend,
+	Ctrl := _EffectiveServiceCtrl.WaferSend,
+	Param := _EffectiveServiceParam.WaferSend,
 	Context := _ServiceContext,
 	ServiceId := E_Chamber1ServiceId.WaferSend,
 	MaterialInfo := ModuleStatus.WaferTransferResponseList[1].MaterialInfo,
 	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
 	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
-	Status => _ServiceStatusView.ByName.WaferSend);
+	Status => _ServiceStatusStore.WaferSend);
 
 _WaferReceiveService(
-	Ctrl := _ServiceCtrlView.ByName.WaferReceive,
-	Param := ServiceParam.WaferReceive,
+	Ctrl := _EffectiveServiceCtrl.WaferReceive,
+	Param := _EffectiveServiceParam.WaferReceive,
 	Context := _ServiceContext,
 	ServiceId := E_Chamber1ServiceId.WaferReceive,
 	MaterialInfo := ModuleStatus.WaferTransferResponseList[1].MaterialInfo,
 	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
 	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
-	Status => _ServiceStatusView.ByName.WaferReceive);
+	Status => _ServiceStatusStore.WaferReceive);
 ]]></ST>
       </Implementation>
     </Method>

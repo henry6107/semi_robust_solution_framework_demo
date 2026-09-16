@@ -13,9 +13,9 @@ TYPE E_Chamber1ServiceId :
 	LiftPinAxisMoveVelCW := 4,
 	LiftPinAxisMoveVelCCW := 5,
 	LiftPinAxisMoveAbs := 6,
-	SingleProcess := 7,
 	WaferSend := 8,
-	WaferReceive := 9
+	WaferReceive := 9,
+	PreparePosition := 10
 ) UDINT;
 END_TYPE
 ]]></Declaration>

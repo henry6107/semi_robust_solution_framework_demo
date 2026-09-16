@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ApplicationConfigRootTests" Id="{939c8839-6b26-4777-95b0-59a092b43ca0}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ApplicationConfigRootTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	_ConfigRoot : FB_TestApplicationConfigRoot;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RegistrationHooksRunOnceInOrderAndLatchFailure();]]></ST>
+    </Implementation>
+    <Method Name="RegistrationHooksRunOnceInOrderAndLatchFailure" Id="{a8d9f959-15b2-4f7e-9de7-06bf40a17bdc}">
+      <Declaration><![CDATA[METHOD RegistrationHooksRunOnceInOrderAndLatchFailure
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('RegistrationHooksRunOnceInOrderAndLatchFailure');
+
+_ConfigRoot.Run();
+
+AssertTrue(
+	Condition := (_ConfigRoot.IoRegistrationCalls = 1)
+		AND (_ConfigRoot.BaseUnitRegistrationCalls = 1)
+		AND (_ConfigRoot.ModuleTypeRegistrationCalls = 1),
+	Message := 'The three application registration hooks must each run once.');
+AssertTrue(
+	Condition := _ConfigRoot.RegistrationOrderValid,
+	Message := 'Registration hooks must run in IO, BaseUnit, Module Type order.');
+AssertTrue(
+	Condition := _ConfigRoot.Error
+		AND NOT _ConfigRoot.Ready
+		AND (_ConfigRoot.ErrorCode = 0)
+		AND (_ConfigRoot.ErrorMessage = 'A Module Type name and adapter are required.'),
+	Message := 'The first registration failure must be exposed by the ConfigRoot properties.');
+
+// A second cycle must neither retry registration nor enter configuration loading.
+_ConfigRoot.Run();
+AssertTrue(
+	Condition := (_ConfigRoot.IoRegistrationCalls = 1)
+		AND (_ConfigRoot.BaseUnitRegistrationCalls = 1)
+		AND (_ConfigRoot.ModuleTypeRegistrationCalls = 1),
+	Message := 'A latched startup failure must not retry application registration.');
+
+// The public Run seam is gated by Ready.
+AssertTrue(
+	Condition := _ConfigRoot.ModuleCycleCalls = 0,
+	Message := 'Module polling must remain disabled after configuration initialization fails.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

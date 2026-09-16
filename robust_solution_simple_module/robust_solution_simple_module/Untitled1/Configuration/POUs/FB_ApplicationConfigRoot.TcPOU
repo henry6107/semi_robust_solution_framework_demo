@@ -1,0 +1,269 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ApplicationConfigRoot" Id="{ac023e93-0e8c-4841-9092-5acf2380946d}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK ABSTRACT FB_ApplicationConfigRoot
+VAR
+	_LinkVariableManager : FB_LinkVariableManager;
+	_ReferenceManager : FB_ReferenceManager;
+	_ModuleTypeRegistry : FB_ModuleTypeRegistry;
+	_ModuleConfigurationManager : FB_ModuleConfigurationManager;
+	_UtcClock : FB_UtcClock;
+	_SystemContext : ST_SystemContext;
+	_bRegistrationAttempted : BOOL;
+	_bRegistered : BOOL;
+	_bError : BOOL;
+	_hrErrorCode : HRESULT;
+	_sErrorMessage : STRING(255);
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="Hook Method" Id="{36eef1a3-3ffe-4697-afea-6d6c4afaf709}" />
+    <Property Name="Busy" Id="{92192890-fd81-4d3b-9bea-ca078aa01c09}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL Busy : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{43c4e7f2-3690-429f-a433-7d60e1316c5c}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Busy := _bRegistered AND NOT _bError AND _ModuleConfigurationManager.Busy;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Error" Id="{948f0dda-5a32-41b8-b963-ec63c7a801e9}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL Error : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{22ad876d-8540-456c-a6e9-8eede70a7eb5}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Error := _bError;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ErrorCode" Id="{0889f68d-3e5f-4161-ad59-544a8a8bfdab}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL ErrorCode : HRESULT
+]]></Declaration>
+      <Get Name="Get" Id="{8d802ab3-d105-4e20-8583-2cef7d00b43f}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ErrorCode := _hrErrorCode;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ErrorMessage" Id="{031b9a1c-934b-488e-87d8-d824b0526ca4}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL ErrorMessage : STRING(255)
+]]></Declaration>
+      <Get Name="Get" Id="{aacab3bd-a53f-44c0-9dbd-e0758a727ce1}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ErrorMessage := _sErrorMessage;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="H_RegisterBaseUnits" Id="{d75fd37d-b59c-48ec-8ca8-3b1db41eb01a}" FolderPath="Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_RegisterBaseUnits
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_RegisterIo" Id="{e1e2f45f-84f1-49a2-af6e-e2551f0bdaac}" FolderPath="Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_RegisterIo
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_RegisterModuleTypes" Id="{c08dab9f-dbd2-46bf-ab82-4ee25f82d6a9}" FolderPath="Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_RegisterModuleTypes
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_RunModules" Id="{c9048f6b-9da6-4292-8e8f-f3456e44a81c}" FolderPath="Hook Method\">
+      <Declaration><![CDATA[METHOD PROTECTED H_RunModules
+VAR_INPUT
+	VariableNodeReader : I_VariableNodeReader;
+END_VAR
+VAR_IN_OUT CONSTANT
+	SystemContext : ST_SystemContext;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Run" Id="{bdd61f85-631c-46ea-9b9e-021c6badf010}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL Run
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_PollConfiguration();
+
+_UtcClock(UtcDateTime => _SystemContext.UtcDateTime);
+_SystemContext.ModuleHeartbeatTimeout := Param_Config.ModuleHeartbeat_Timeout;
+
+IF Ready THEN
+	_LinkVariableManager.M_CyclicInput();
+	H_RunModules(
+		SystemContext := _SystemContext,
+		VariableNodeReader := _LinkVariableManager);
+	_LinkVariableManager.M_CyclicOutput();
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_PollConfiguration" Id="{3afd629d-8905-4d8b-9a7e-d84357b3398c}">
+      <Declaration><![CDATA[METHOD PRIVATE M_PollConfiguration
+VAR
+	bRegistrationSessionStarted : BOOL;
+	bRegistrationSealed : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT _bRegistrationAttempted THEN
+	_bRegistrationAttempted := TRUE;
+
+	// The base class owns the Infrastructure registration session.
+	bRegistrationSessionStarted := _LinkVariableManager.M_BeginInfrastructureRegistration();
+	IF NOT bRegistrationSessionStarted THEN
+		M_SetError(
+			Message := _LinkVariableManager.ErrorMessage,
+			ErrorCode := 0);
+	ELSE
+		H_RegisterIo();
+
+		// Always seal an opened session. On a registration error this also rolls
+		// back every Infrastructure node declared during this attempt.
+		bRegistrationSealed := _LinkVariableManager.M_SealInfrastructureRegistration();
+		IF NOT bRegistrationSealed THEN
+			M_SetError(
+				Message := _LinkVariableManager.ErrorMessage,
+				ErrorCode := 0);
+		END_IF
+	END_IF
+
+	IF NOT _bError THEN
+		H_RegisterBaseUnits();
+	END_IF
+	IF NOT _bError THEN
+		H_RegisterModuleTypes();
+	END_IF
+
+	_bRegistered := NOT _bError;
+END_IF
+
+IF NOT _bRegistered OR _bError THEN
+	RETURN;
+END_IF
+
+_ModuleConfigurationManager(
+	Execute := TRUE,
+	FilePath := Param_Config.ModuleConfigFilePath,
+	LinkVariableManager := _LinkVariableManager,
+	ReferenceManager := _ReferenceManager,
+	ModuleTypeRegistry := _ModuleTypeRegistry);
+
+IF _ModuleConfigurationManager.Error THEN
+	M_SetError(
+		Message := _ModuleConfigurationManager.ErrorMessage,
+		ErrorCode := _ModuleConfigurationManager.ErrorCode);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RegisterBaseUnit" Id="{88aa0f03-12da-42fb-8adf-a837e6fa3d7d}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_RegisterBaseUnit : BOOL
+VAR_INPUT
+	BaseUnit : I_BaseUnit;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterBaseUnit := FALSE;
+IF _bError THEN
+	RETURN;
+END_IF
+
+M_RegisterBaseUnit := _ReferenceManager.M_RegisterReference(BaseUnit := BaseUnit);
+IF NOT M_RegisterBaseUnit THEN
+	M_SetError(
+		Message := _ReferenceManager.ErrorMessage,
+		ErrorCode := 0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RegisterIoNode" Id="{3de1be0c-87c0-481c-9f44-089699215ef2}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_RegisterIoNode : BOOL
+VAR_INPUT
+	Variable : ANY;
+	Access : E_VariableAccess;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterIoNode := FALSE;
+IF _bError THEN
+	RETURN;
+END_IF
+
+M_RegisterIoNode := _LinkVariableManager.M_RegisterInfrastructureNode(
+	Variable := Variable,
+	Access := Access);
+IF NOT M_RegisterIoNode THEN
+	M_SetError(
+		Message := _LinkVariableManager.ErrorMessage,
+		ErrorCode := 0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_RegisterModuleType" Id="{0e519d82-3126-4b92-a042-9bee77d06d8a}">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_RegisterModuleType : BOOL
+VAR_INPUT
+	ModuleTypeName : T_ModuleTypeName;
+	Adapter : I_ModuleConfigurationAdapter;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterModuleType := FALSE;
+IF _bError THEN
+	RETURN;
+END_IF
+
+M_RegisterModuleType := _ModuleTypeRegistry.M_Register(
+	ModuleTypeName := ModuleTypeName,
+	Adapter := Adapter);
+IF NOT M_RegisterModuleType THEN
+	M_SetError(
+		Message := _ModuleTypeRegistry.ErrorMessage,
+		ErrorCode := 0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetError" Id="{bb8fedaf-e4d5-4b3c-ab9f-9246cc78fb7e}">
+      <Declaration><![CDATA[METHOD PRIVATE M_SetError
+VAR_INPUT
+	Message : STRING(255);
+	ErrorCode : HRESULT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT _bError THEN
+	_bError := TRUE;
+	_hrErrorCode := ErrorCode;
+	IF Message = '' THEN
+		_sErrorMessage := 'Application configuration initialization failed.';
+	ELSE
+		_sErrorMessage := Message;
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Ready" Id="{0b170b93-5657-4b3a-bbd4-34f1f336bea3}">
+      <Declaration><![CDATA[PROPERTY PUBLIC FINAL Ready : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{d22bb374-9b62-464a-9439-80e9c5fc1052}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Ready := _bRegistered AND NOT _bError AND _ModuleConfigurationManager.Ready;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

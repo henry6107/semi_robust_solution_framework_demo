@@ -30,8 +30,11 @@ VAR_OUTPUT
 	ZeroVariableAccepted : BOOL;
 END_VAR
 VAR
-	_ServiceControls : ARRAY[1..1] OF ST_ServiceCtrl;
-	_ServiceStatuses : ARRAY[1..1] OF ST_ServiceStatus;
+	_UpperServiceCtrl : ST_ServiceCtrl;
+	_EffectiveServiceCtrl : ST_ServiceCtrl;
+	_UpperServiceParam : ST_Chamber1SpinAxisJogParam;
+	_EffectiveServiceParam : ST_Chamber1SpinAxisJogParam;
+	_ServiceStatus : ST_ServiceStatus;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -39,8 +42,22 @@ END_VAR
 	OutsideAlarmAccepted := M_AddAlarm(MainErrorId := AlarmId, SourceErrorId := 0, Message := 'Axis disabled', Path := 'Test.Axis', Severity := E_Severity.Alarm);
 	OutsideVariableAccepted := M_AddVariable(Id := VariableId, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := 'outside');
 END_IF
-M_UpdateModule(ServiceControls := _ServiceControls, ServiceStatuses := _ServiceStatuses);]]></ST>
+M_UpdateModule();]]></ST>
     </Implementation>
+    <Method Name="H_RegisterServices" Id="{170591fd-ea12-4d26-88ad-6ef63bd55190}">
+      <Declaration><![CDATA[METHOD PROTECTED H_RegisterServices
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterService(
+	ServiceId := 1,
+	AllowCompositeCall := FALSE,
+	UpperCtrl := _UpperServiceCtrl,
+	EffectiveCtrl := _EffectiveServiceCtrl,
+	UpperParam := _UpperServiceParam,
+	EffectiveParam := _EffectiveServiceParam,
+	Status := _ServiceStatus);]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="H_UpdateAlarm" Id="{64fbc36b-fa1b-445f-8357-177ea6c3b833}">
       <Declaration><![CDATA[METHOD PROTECTED H_UpdateAlarm
 VAR

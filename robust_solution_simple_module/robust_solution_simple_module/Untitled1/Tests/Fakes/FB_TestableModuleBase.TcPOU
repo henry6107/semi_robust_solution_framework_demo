@@ -3,15 +3,30 @@
   <POU Name="FB_TestableModuleBase" Id="{26ed25ca-5582-476d-84bf-1fed652a381d}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_TestableModuleBase EXTENDS FB_ModuleBase
 VAR
-	_ServiceControls : ARRAY[1..1] OF ST_ServiceCtrl;
-	_ServiceStatuses : ARRAY[1..1] OF ST_ServiceStatus;
+	_UpperServiceCtrl : ST_ServiceCtrl;
+	_EffectiveServiceCtrl : ST_ServiceCtrl;
+	_UpperServiceParam : ST_Chamber1SpinAxisJogParam;
+	_EffectiveServiceParam : ST_Chamber1SpinAxisJogParam;
+	_ServiceStatus : ST_ServiceStatus;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateModule(
-	ServiceControls := _ServiceControls,
-	ServiceStatuses := _ServiceStatuses);]]></ST>
+      <ST><![CDATA[M_UpdateModule();]]></ST>
     </Implementation>
+    <Method Name="H_RegisterServices" Id="{5d092d00-e976-450f-a79e-d48e19d42d88}">
+      <Declaration><![CDATA[METHOD PROTECTED H_RegisterServices
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_RegisterService(
+	ServiceId := 1,
+	AllowCompositeCall := FALSE,
+	UpperCtrl := _UpperServiceCtrl,
+	EffectiveCtrl := _EffectiveServiceCtrl,
+	UpperParam := _UpperServiceParam,
+	EffectiveParam := _EffectiveServiceParam,
+	Status := _ServiceStatus);]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_SetServiceStatus" Id="{5461878a-0ad3-4d4e-b67a-bcc6acdfcb40}">
       <Declaration><![CDATA[METHOD PUBLIC M_SetServiceStatus
 VAR_IN_OUT CONSTANT
@@ -19,7 +34,7 @@ VAR_IN_OUT CONSTANT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_ServiceStatuses[1] := Status;]]></ST>
+        <ST><![CDATA[_ServiceStatus := Status;]]></ST>
       </Implementation>
     </Method>
   </POU>

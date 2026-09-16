@@ -8,12 +8,11 @@ VAR_INPUT
 END_VAR
 
 VAR
-	_CommandedVelocity : LREAL;
-	_VelocityRetriggerPending : BOOL;
+	_LatchedParam : ST_Chamber1SpinAxisMoveVelParam;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.ExecuteUntilExternalStop);
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);
 ]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{49ed7549-95d2-4542-8c09-83ad057d2672}" />
@@ -25,10 +24,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Release defensively in case an unexpected transition skipped cleanup.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
-
-_CommandedVelocity := 0;
-_VelocityRetriggerPending := FALSE;]]></ST>
+Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnAborting" Id="{8ef4724f-e418-45d4-b245-336c28b5f1de}" FolderPath="StateAction\">
@@ -56,9 +52,9 @@ Axis_BaseUnit.M_MoveVel(
 	OwnerId := ServiceId,
 	Execute := FALSE,
 	Direction := MC_Direction.MC_Positive_Direction,
-	Velocity := Param.Velocity,
-	Acceleration := Param.Acceleration,
-	Deceleration := Param.Deceleration);
+	Velocity := _LatchedParam.Velocity,
+	Acceleration := _LatchedParam.Acceleration,
+	Deceleration := _LatchedParam.Deceleration);
 	
 Axis_BaseUnit.M_Reset(
 	OwnerId := ServiceId,
@@ -113,8 +109,8 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Completing normally releases first; this is an idempotent safety net.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);]]></ST>
+        <ST><![CDATA[// Reaching Complete means target velocity was reached; the Axis is still moving,
+// so this Service must retain ownership until Stop or Abort cleanup finishes.]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnCompleting" Id="{3864e1ba-9360-45a8-9d26-f1e180c8fbe5}" FolderPath="StateAction\">
@@ -128,12 +124,12 @@ END_VAR
 	OwnerId := ServiceId,
 	Execute := FALSE,
 	Direction := MC_Direction.MC_Positive_Direction,
-	Velocity := Param.Velocity,
-	Acceleration := Param.Acceleration,
-	Deceleration := Param.Deceleration);
+	Velocity := _LatchedParam.Velocity,
+	Acceleration := _LatchedParam.Acceleration,
+	Deceleration := _LatchedParam.Deceleration);
 
-// Release only after the active MoveVelocity request has been withdrawn.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
+// Lowering Execute only withdraws the FB request; it does not stop the Axis.
+// Keep ownership so a later Stop from Complete or Idle can control the motion.
 H_OnCompleting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
@@ -144,61 +140,32 @@ VAR_INPUT
 END_VAR
 
 VAR
+	bInVelocity : BOOL;
 	bError : BOOL;
 END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
 
-// Parameters can change while Execute is active, so validate them every scan.
-IF (Param.Velocity <= 0) OR (Param.Acceleration < 0) OR (Param.Deceleration < 0) THEN
-	M_AddError(MainErrorId := E_Chamber1ErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Motion parameters became invalid during Execute.');
-	RequestCommand(E_PackMLCommand.Stop);
-	RETURN;
-END_IF
-
-// Tc2_MC2 applies new motion parameters on a rising edge of Execute. Keep the
-// axis moving while pulsing Execute low for one scan, then retrigger with the
-// latest valid velocity and the current acceleration/deceleration values.
-IF _VelocityRetriggerPending THEN
-	Axis_BaseUnit.M_MoveVel(
-		OwnerId := ServiceId,
-		Execute := TRUE,
-		Direction := MC_Direction.MC_Positive_Direction,
-		Velocity := Param.Velocity,
-		Acceleration := Param.Acceleration,
-		Deceleration := Param.Deceleration,
-		Error=> bError);
-
-	_CommandedVelocity := Param.Velocity;
-	_VelocityRetriggerPending := FALSE;
-
-ELSIF Param.Velocity <> _CommandedVelocity THEN
-	Axis_BaseUnit.M_MoveVel(
-		OwnerId := ServiceId,
-		Execute := FALSE,
-		Direction := MC_Direction.MC_Positive_Direction,
-		Velocity := Param.Velocity,
-		Acceleration := Param.Acceleration,
-		Deceleration := Param.Deceleration,
-		Error=> bError);
-
-	_VelocityRetriggerPending := TRUE;
-
-ELSE
-	Axis_BaseUnit.M_MoveVel(
-		OwnerId := ServiceId,
-		Execute := TRUE,
-		Direction := MC_Direction.MC_Positive_Direction,
-		Velocity := Param.Velocity,
-		Acceleration := Param.Acceleration,
-		Deceleration := Param.Deceleration,
-		Error=> bError);
-END_IF
+// The Start-time snapshot remains fixed for the entire Execute phase.
+Axis_BaseUnit.M_MoveVel(
+	OwnerId := ServiceId,
+	Execute := TRUE,
+	Direction := MC_Direction.MC_Positive_Direction,
+	Velocity := _LatchedParam.Velocity,
+	Acceleration := _LatchedParam.Acceleration,
+	Deceleration := _LatchedParam.Deceleration,
+	InVelocity => bInVelocity,
+	Error => bError);
 
 IF bError THEN
 	M_AddError(MainErrorId := E_Chamber1ErrorCode.Axis_Command_Error_During_Execute, SourceErrorId := 0, Message := 'MoveVelocity failed during Execute.');
 	RequestCommand(E_PackMLCommand.Stop);
+	RETURN;
+END_IF
+
+IF bInVelocity THEN
+	H_OnExecute := E_PackMLHookResult.Done;
 END_IF
 ]]></ST>
       </Implementation>
@@ -231,11 +198,8 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// Idle Services must not retain a Resource from an earlier operation.
-Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
-
-_CommandedVelocity := 0;
-_VelocityRetriggerPending := FALSE;]]></ST>
+        <ST><![CDATA[// Reset changes only the PackML state. A MoveVel that completed naturally may
+// still be moving, so Idle intentionally retains any existing Axis ownership.]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnResetting" Id="{0680bc64-d1f9-407b-b6ca-83882b900618}" FolderPath="StateAction\">
@@ -278,6 +242,9 @@ IF Param.Deceleration < 0 THEN
 	RETURN;
 END_IF
 
+// Keep one fixed command snapshot until the Service leaves this run.
+_LatchedParam := Param;
+
 // Resource contention is a failed Start, not a wait condition.
 IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ServiceId) THEN
 	M_AddError(MainErrorId := E_Chamber1ErrorCode.Resource_Acquire_Failed_During_Starting, SourceErrorId := 0, Message := 'Axis resource acquisition failed during Starting.');
@@ -298,9 +265,6 @@ IF Axis_BaseUnit.AxisHasJob THEN
 	RETURN;
 END_IF
 
-_CommandedVelocity := Param.Velocity;
-_VelocityRetriggerPending := FALSE;
-
 H_OnStarting := E_PackMLHookResult.Done;
 ]]></ST>
       </Implementation>
@@ -314,9 +278,6 @@ END_VAR
       <Implementation>
         <ST><![CDATA[// Release defensively after every Stop path.
 Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
-
-_CommandedVelocity := 0;
-_VelocityRetriggerPending := FALSE;
 ]]></ST>
       </Implementation>
     </Method>
@@ -346,21 +307,21 @@ Axis_BaseUnit.M_MoveVel(
 	OwnerId := ServiceId,
 	Execute := FALSE,
 	Direction := MC_Direction.MC_Positive_Direction,
-	Velocity := Param.Velocity,
-	Acceleration := Param.Acceleration,
-	Deceleration := Param.Deceleration);
+	Velocity := _LatchedParam.Velocity,
+	Acceleration := _LatchedParam.Acceleration,
+	Deceleration := _LatchedParam.Deceleration);
 	
 Axis_BaseUnit.M_Stop(
 	OwnerId := ServiceId,
 	Execute := TRUE, 
-	Deceleration:= Param.Deceleration,
+	Deceleration:= _LatchedParam.Deceleration,
 	Done=> bDone, Error=> bError, ErrorId=> nErrorId);
 
 IF bDone THEN
 	Axis_BaseUnit.M_Stop(
 		OwnerId := ServiceId,
 		Execute := FALSE, 
-		Deceleration:= Param.Deceleration);
+		Deceleration:= _LatchedParam.Deceleration);
 	// Ownership is released only after the asynchronous Stop has completed.
 	Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);
 	H_OnStopping := E_PackMLHookResult.Done;
@@ -375,7 +336,7 @@ ELSIF bError THEN
 	Axis_BaseUnit.M_Stop(
 		OwnerId := ServiceId,
 		Execute := FALSE, 
-		Deceleration:= Param.Deceleration);
+		Deceleration:= _LatchedParam.Deceleration);
 		
 	RequestCommand(E_PackMLCommand.Abort);
 END_IF

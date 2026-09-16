@@ -17,6 +17,8 @@ END_VAR
 
 VAR
 	_CmdRequestOneShot : R_TRIG;
+	_LastObservedPackMLState : E_PackMLState := E_PackMLState.Undefined;
+	_ActiveExecuteSubStateRecord : UINT;
 	
 	{attribute 'instance-path'}
     {attribute 'noinit'}
@@ -26,6 +28,20 @@ END_VAR
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
+    <Method Name="H_GetExecuteSubState" Id="{df111ed2-37f4-49f9-90f4-999a15583353}">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubState : UDINT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_GetExecuteSubState := 0;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_GetExecuteSubStateName" Id="{9ebf9202-2dc7-4b2a-b268-d5c51d856bd3}">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubStateName : STRING(80)
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_GetExecuteSubStateName := '';]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_AddError" Id="{4e62615f-0e50-466e-9f56-aa0713d5e3ab}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_AddError : BOOL
 VAR_INPUT
@@ -110,6 +126,25 @@ FOR nIndex := 1 TO Param_Config.MaxServiceData DO
 END_FOR]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_ClearExecuteSubStateStatus" Id="{c93def37-541e-45f2-9620-d2aa746a8f34}">
+      <Declaration><![CDATA[METHOD PRIVATE M_ClearExecuteSubStateStatus
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(Status.ExecuteSubState), 0, SIZEOF(Status.ExecuteSubState));
+_ActiveExecuteSubStateRecord := 0;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_CloseExecuteSubStateRecord" Id="{ae13a574-507c-49ec-b671-4310dd4e9261}">
+      <Declaration><![CDATA[METHOD PRIVATE M_CloseExecuteSubStateRecord
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF (_ActiveExecuteSubStateRecord > 0)
+	AND (_ActiveExecuteSubStateRecord <= Status.ExecuteSubState.RecordCount) THEN
+	Status.ExecuteSubState.Records[_ActiveExecuteSubStateRecord].EndTimestamp := Context.UtcDateTime;
+END_IF
+_ActiveExecuteSubStateRecord := 0;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_UpdateData" Id="{52f20474-69d8-45fd-9268-a22bd550dba9}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateData : BOOL
 VAR_INPUT
@@ -159,25 +194,104 @@ Status.Data.DataList[nTargetIndex].Value := Value;
 M_UpdateData := TRUE;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="M_UpdateExecuteSubStateStatus" Id="{77545218-f183-4cc0-a793-b7c960834bdd}">
+      <Declaration><![CDATA[METHOD PRIVATE M_UpdateExecuteSubStateStatus
+VAR_INPUT
+	ExecuteActionEvaluated : BOOL;
+END_VAR
+VAR
+	NewState : UDINT;
+	NewRecordIndex : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF PackMLOut.eStateCurrent <> E_PackMLState.Execute THEN
+	M_CloseExecuteSubStateRecord();
+	Status.ExecuteSubState.CurrentState := 0;
+	RETURN;
+END_IF
+
+// Entering Execute does not run H_OnExecute until the following Service scan.
+// Do not sample a substate until an Execute action has actually been evaluated.
+IF NOT ExecuteActionEvaluated THEN
+	M_CloseExecuteSubStateRecord();
+	Status.ExecuteSubState.CurrentState := 0;
+	RETURN;
+END_IF
+
+NewState := H_GetExecuteSubState();
+IF NewState = Status.ExecuteSubState.CurrentState THEN
+	RETURN;
+END_IF
+
+M_CloseExecuteSubStateRecord();
+Status.ExecuteSubState.CurrentState := NewState;
+
+// State zero means that the Service currently exposes no Execute substate.
+IF NewState = 0 THEN
+	RETURN;
+END_IF
+
+// Preserve the first records. CurrentState continues to update after overflow.
+IF Status.ExecuteSubState.RecordCount >= Param_Config.MaxExecuteSubStateRecords THEN
+	Status.ExecuteSubState.Overflow := TRUE;
+	RETURN;
+END_IF
+
+NewRecordIndex := Status.ExecuteSubState.RecordCount + 1;
+Status.ExecuteSubState.RecordCount := NewRecordIndex;
+Status.ExecuteSubState.Records[NewRecordIndex].State := NewState;
+Status.ExecuteSubState.Records[NewRecordIndex].Name := H_GetExecuteSubStateName();
+Status.ExecuteSubState.Records[NewRecordIndex].StartTimestamp := Context.UtcDateTime;
+Status.ExecuteSubState.Records[NewRecordIndex].EndTimestamp := '';
+_ActiveExecuteSubStateRecord := NewRecordIndex;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="M_UpdateService" Id="{8ae05b1d-81f7-4b0b-9f3f-42116c68a842}">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateService
 VAR_INPUT
 	CompletionBehavior : E_ServiceCompletionBehavior;
 END_VAR
+VAR
+	bEnteredStarting : BOOL;
+	PreviousPackMLState : E_PackMLState;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[PackMLIn := Ctrl.PackMLIn;
+        <ST><![CDATA[PreviousPackMLState := PackMLOut.eStateCurrent;
+PackMLIn := Ctrl.PackMLIn;
 SUPER^();
 
 _CmdRequestOneShot(CLK:= PackMLIn.bCommandChangeRequest, Q=> );
 
-// Updata status
+// Starting may complete and enter Execute in the same scan. In that case,
+// eStatePrevious still exposes the transient Starting state.
+bEnteredStarting :=
+	// Starting 執行超過1個 scan
+	((PackMLOut.eStateCurrent = E_PackMLState.Starting)
+		AND (_LastObservedPackMLState <> E_PackMLState.Starting))
+
+	// Starting 在同一scan 就結束，即 _LastObservedPackMLState = Idle & PackMLOut.eStateCurrent = Execute
+	OR ((PackMLOut.eStateCurrent = E_PackMLState.Execute)
+		AND (PackMLOut.eStatePrevious = E_PackMLState.Starting)
+		AND (_LastObservedPackMLState <> E_PackMLState.Starting)
+		AND (_LastObservedPackMLState <> E_PackMLState.Execute));
+
+IF bEnteredStarting THEN
+	M_ClearExecuteSubStateStatus();
+END_IF
+
+// Update status.
 Status.PackMLOut := PackMLOut;
+M_UpdateExecuteSubStateStatus(
+	ExecuteActionEvaluated := PreviousPackMLState = E_PackMLState.Execute);
 Status.CompletionBehavior := CompletionBehavior;
 Status.ServiceId := ServiceId;
 IF _CmdRequestOneShot.Q THEN // Acknowledge to upper controller that command received
 	Status.ResponseId := Ctrl.RequestId;
-END_IF]]></ST>
+END_IF
+
+_LastObservedPackMLState := PackMLOut.eStateCurrent;]]></ST>
       </Implementation>
     </Method>
   </POU>

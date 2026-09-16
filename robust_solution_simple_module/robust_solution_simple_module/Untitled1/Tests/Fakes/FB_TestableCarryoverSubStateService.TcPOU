@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_TestableCarryoverSubStateService" Id="{2e98a9ae-b2b7-46bc-94c1-8fc05d7b0b5a}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TestableCarryoverSubStateService EXTENDS FB_ServiceBase
+VAR
+	// Simulate a second run that still holds the previous run's final substate.
+	_Step : UDINT := 5;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
+    </Implementation>
+    <Method Name="H_GetExecuteSubState" Id="{7feac875-9e4c-481a-87d4-dccfc80d819e}">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubState : UDINT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_GetExecuteSubState := _Step;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_GetExecuteSubStateName" Id="{612301a6-f8c6-4d75-8d0d-bd9f517b57f4}">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubStateName : STRING(80)
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE _Step OF
+	1: H_GetExecuteSubStateName := 'LiftReady';
+	5: H_GetExecuteSubStateName := 'Finish';
+ELSE
+	H_GetExecuteSubStateName := '';
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnExecute" Id="{50323b34-6b9f-432f-a631-ea17ee71161b}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF bFirstScan THEN
+	_Step := 1;
+END_IF
+H_OnExecute := E_PackMLHookResult.Busy;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
