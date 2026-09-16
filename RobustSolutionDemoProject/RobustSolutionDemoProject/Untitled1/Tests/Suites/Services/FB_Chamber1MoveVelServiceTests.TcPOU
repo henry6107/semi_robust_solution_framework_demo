@@ -1,0 +1,390 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Chamber1MoveVelServiceTests" Id="{b6b812f2-56fd-4dea-9b83-be395c1bac88}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1MoveVelServiceTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	// Keep large FB instances at Test Suite scope to avoid Method stack overflow.
+	SpinService : FB_Chamber1SpinAxisMoveVelCWServices;
+	SpinFake : FB_FakeAxis_BaseUnit;
+	LiftCWService : FB_Chamber1LiftPinAxisMoveVelCWServices;
+	LiftCWFake : FB_FakeAxis_BaseUnit;
+	LiftCCWService : FB_Chamber1LiftPinAxisMoveVelCCWServices;
+	LiftCCWFake : FB_FakeAxis_BaseUnit;
+	ResetService : FB_Chamber1SpinAxisMoveVelCWServices;
+	ResetFake : FB_FakeAxis_BaseUnit;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[MoveVelServicesCompleteNaturallyWithoutRetrigger();
+ResetToIdleKeepsOwnershipUntilStop();]]></ST>
+    </Implementation>
+    <Method Name="MoveVelServicesCompleteNaturallyWithoutRetrigger" Id="{65f60f8d-14c3-42eb-960a-dd705e8fb99d}">
+      <Declaration><![CDATA[METHOD MoveVelServicesCompleteNaturallyWithoutRetrigger
+VAR_INST
+	SpinAxis : I_Axis_BaseUnit;
+	LiftCWAxis : I_Axis_BaseUnit;
+	LiftCCWAxis : I_Axis_BaseUnit;
+	Ctrl : ST_ServiceCtrl;
+	SpinParam : ST_Chamber1SpinAxisMoveVelParam;
+	LiftCWParam : ST_Chamber1LiftPinAxisMoveVelParam;
+	LiftCCWParam : ST_Chamber1LiftPinAxisMoveVelParam;
+	Context : ST_ServiceContext;
+	SpinCall : ST_FakeAxisCall;
+	LiftCWCall : ST_FakeAxisCall;
+	LiftCCWCall : ST_FakeAxisCall;
+	nSpinHistoryBeforeStop : UINT;
+	nLiftCWHistoryBeforeStop : UINT;
+	nLiftCCWHistoryBeforeStop : UINT;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('MoveVelServicesCompleteNaturallyWithoutRetrigger');
+
+CASE nPhase OF
+	0:
+		SpinFake.M_ResetScenario();
+		LiftCWFake.M_ResetScenario();
+		LiftCCWFake.M_ResetScenario();
+		SpinAxis := SpinFake;
+		LiftCWAxis := LiftCWFake;
+		LiftCCWAxis := LiftCCWFake;
+
+		SpinParam.Velocity := 11;
+		SpinParam.Acceleration := 12;
+		SpinParam.Deceleration := 13;
+		LiftCWParam.Velocity := 21;
+		LiftCWParam.Acceleration := 22;
+		LiftCWParam.Deceleration := 23;
+		LiftCCWParam.Velocity := 31;
+		LiftCCWParam.Acceleration := 32;
+		LiftCCWParam.Deceleration := 33;
+		Context.ModuleId := 1;
+
+		AssertTrue(Condition := SpinFake.M_QueueResult(Operation := E_FakeAxisOperation.MoveVel, AfterActiveCycles := 2, Done := FALSE, InVelocity := TRUE, Error := FALSE, ErrorId := 0), Message := 'Spin MoveVel script must be accepted.');
+		AssertTrue(Condition := LiftCWFake.M_QueueResult(Operation := E_FakeAxisOperation.MoveVel, AfterActiveCycles := 2, Done := FALSE, InVelocity := TRUE, Error := FALSE, ErrorId := 0), Message := 'Lift CW MoveVel script must be accepted.');
+		AssertTrue(Condition := LiftCCWFake.M_QueueResult(Operation := E_FakeAxisOperation.MoveVel, AfterActiveCycles := 2, Done := FALSE, InVelocity := TRUE, Error := FALSE, ErrorId := 0), Message := 'Lift CCW MoveVel script must be accepted.');
+		AssertTrue(Condition := SpinFake.M_QueueResult(Operation := E_FakeAxisOperation.Stop, AfterActiveCycles := 1, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0), Message := 'Spin Stop script must be accepted.');
+		AssertTrue(Condition := LiftCWFake.M_QueueResult(Operation := E_FakeAxisOperation.Stop, AfterActiveCycles := 1, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0), Message := 'Lift CW Stop script must be accepted.');
+		AssertTrue(Condition := LiftCCWFake.M_QueueResult(Operation := E_FakeAxisOperation.Stop, AfterActiveCycles := 1, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0), Message := 'Lift CCW Stop script must be accepted.');
+
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+
+		AssertTrue(Condition := (SpinService.PackMLOut.eStateCurrent = E_PackMLState.Aborted)
+			AND (LiftCWService.PackMLOut.eStateCurrent = E_PackMLState.Aborted)
+			AND (LiftCCWService.PackMLOut.eStateCurrent = E_PackMLState.Aborted), Message := 'Initial scan must reach Aborted.');
+		AssertTrue(Condition := (SpinService.Status.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+			AND (LiftCWService.Status.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion)
+			AND (LiftCCWService.Status.CompletionBehavior = E_ServiceCompletionBehavior.NaturalCompletion), Message := 'Every MoveVel Service must publish NaturalCompletion.');
+		nPhase := 1;
+
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+		AssertTrue(Condition := (SpinService.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
+			AND (LiftCWService.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
+			AND (LiftCCWService.PackMLOut.eStateCurrent = E_PackMLState.Stopped), Message := 'Clear must bring every MoveVel Service to Stopped.');
+
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+		AssertTrue(Condition := (SpinService.PackMLOut.eStateCurrent = E_PackMLState.Idle)
+			AND (LiftCWService.PackMLOut.eStateCurrent = E_PackMLState.Idle)
+			AND (LiftCCWService.PackMLOut.eStateCurrent = E_PackMLState.Idle), Message := 'Reset must bring every MoveVel Service to Idle.');
+		nPhase := 2;
+
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+		AssertTrue(Condition := (SpinService.PackMLOut.eStateCurrent = E_PackMLState.Execute)
+			AND (LiftCWService.PackMLOut.eStateCurrent = E_PackMLState.Execute)
+			AND (LiftCCWService.PackMLOut.eStateCurrent = E_PackMLState.Execute), Message := 'Valid Start must bring every MoveVel Service to Execute.');
+		AssertTrue(Condition := SpinAxis.M_IsResourceOwner(OwnerId := 31)
+			AND LiftCWAxis.M_IsResourceOwner(OwnerId := 32)
+			AND LiftCCWAxis.M_IsResourceOwner(OwnerId := 33), Message := 'Execute must retain each Axis ownership.');
+		nPhase := 3;
+
+	3:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+
+		AssertTrue(Condition := SpinFake.M_GetCall(Index := SpinFake.HistoryCount, CallRecord => SpinCall), Message := 'Spin MoveVel call must be recorded.');
+		AssertTrue(Condition := LiftCWFake.M_GetCall(Index := LiftCWFake.HistoryCount, CallRecord => LiftCWCall), Message := 'Lift CW MoveVel call must be recorded.');
+		AssertTrue(Condition := LiftCCWFake.M_GetCall(Index := LiftCCWFake.HistoryCount, CallRecord => LiftCCWCall), Message := 'Lift CCW MoveVel call must be recorded.');
+		AssertTrue(Condition := SpinCall.Execute AND LiftCWCall.Execute AND LiftCCWCall.Execute, Message := 'Initial MoveVel requests must remain high.');
+		AssertTrue(Condition := (SpinCall.Direction = MC_Direction.MC_Positive_Direction)
+			AND (LiftCWCall.Direction = MC_Direction.MC_Positive_Direction)
+			AND (LiftCCWCall.Direction = MC_Direction.MC_Negative_Direction), Message := 'MoveVel Services must preserve their configured directions.');
+
+		// Mutations after Start must not change the active command snapshot.
+		SpinParam.Velocity := 111;
+		SpinParam.Acceleration := 112;
+		SpinParam.Deceleration := 113;
+		LiftCWParam.Velocity := 121;
+		LiftCWParam.Acceleration := 122;
+		LiftCWParam.Deceleration := 123;
+		LiftCCWParam.Velocity := 131;
+		LiftCCWParam.Acceleration := 132;
+		LiftCCWParam.Deceleration := 133;
+		nPhase := 4;
+
+	4:
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+
+		AssertTrue(Condition := (SpinService.PackMLOut.eStateCurrent = E_PackMLState.Execute)
+			AND (LiftCWService.PackMLOut.eStateCurrent = E_PackMLState.Execute)
+			AND (LiftCCWService.PackMLOut.eStateCurrent = E_PackMLState.Execute), Message := 'MoveVel Services must wait for InVelocity.');
+		AssertTrue(Condition := SpinFake.M_GetCall(Index := SpinFake.HistoryCount, CallRecord => SpinCall), Message := 'Second Spin MoveVel call must be recorded.');
+		AssertTrue(Condition := LiftCWFake.M_GetCall(Index := LiftCWFake.HistoryCount, CallRecord => LiftCWCall), Message := 'Second Lift CW MoveVel call must be recorded.');
+		AssertTrue(Condition := LiftCCWFake.M_GetCall(Index := LiftCCWFake.HistoryCount, CallRecord => LiftCCWCall), Message := 'Second Lift CCW MoveVel call must be recorded.');
+		AssertTrue(Condition := SpinCall.Execute AND (SpinCall.Velocity = 11) AND (SpinCall.Acceleration = 12) AND (SpinCall.Deceleration = 13), Message := 'Spin MoveVel must keep its Start-time parameters without retriggering.');
+		AssertTrue(Condition := LiftCWCall.Execute AND (LiftCWCall.Velocity = 21) AND (LiftCWCall.Acceleration = 22) AND (LiftCWCall.Deceleration = 23), Message := 'Lift CW MoveVel must keep its Start-time parameters without retriggering.');
+		AssertTrue(Condition := LiftCCWCall.Execute AND (LiftCCWCall.Velocity = 31) AND (LiftCCWCall.Acceleration = 32) AND (LiftCCWCall.Deceleration = 33), Message := 'Lift CCW MoveVel must keep its Start-time parameters without retriggering.');
+		nPhase := 5;
+
+	5:
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+		AssertTrue(Condition := (SpinService.PackMLOut.eStateCurrent = E_PackMLState.Completing)
+			AND (LiftCWService.PackMLOut.eStateCurrent = E_PackMLState.Completing)
+			AND (LiftCCWService.PackMLOut.eStateCurrent = E_PackMLState.Completing), Message := 'InVelocity must move every MoveVel Service to Completing.');
+		AssertTrue(Condition := SpinAxis.M_IsResourceOwner(OwnerId := 31)
+			AND LiftCWAxis.M_IsResourceOwner(OwnerId := 32)
+			AND LiftCCWAxis.M_IsResourceOwner(OwnerId := 33), Message := 'Completing entry must retain ownership until MoveVel withdrawal.');
+		nPhase := 6;
+
+	6:
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+
+		AssertTrue(Condition := (SpinService.PackMLOut.eStateCurrent = E_PackMLState.Complete)
+			AND (LiftCWService.PackMLOut.eStateCurrent = E_PackMLState.Complete)
+			AND (LiftCCWService.PackMLOut.eStateCurrent = E_PackMLState.Complete), Message := 'Completing must reach Complete.');
+		AssertTrue(Condition := SpinAxis.M_IsResourceOwner(OwnerId := 31)
+			AND LiftCWAxis.M_IsResourceOwner(OwnerId := 32)
+			AND LiftCCWAxis.M_IsResourceOwner(OwnerId := 33), Message := 'Complete must retain Axis ownership while physical motion continues.');
+		AssertTrue(Condition := SpinFake.M_GetCall(Index := SpinFake.HistoryCount, CallRecord => SpinCall), Message := 'Spin withdrawal must be recorded.');
+		AssertTrue(Condition := LiftCWFake.M_GetCall(Index := LiftCWFake.HistoryCount, CallRecord => LiftCWCall), Message := 'Lift CW withdrawal must be recorded.');
+		AssertTrue(Condition := LiftCCWFake.M_GetCall(Index := LiftCCWFake.HistoryCount, CallRecord => LiftCCWCall), Message := 'Lift CCW withdrawal must be recorded.');
+		AssertTrue(Condition := (SpinCall.Operation = E_FakeAxisOperation.MoveVel)
+			AND (LiftCWCall.Operation = E_FakeAxisOperation.MoveVel)
+			AND (LiftCCWCall.Operation = E_FakeAxisOperation.MoveVel), Message := 'Natural completion must withdraw MoveVel without issuing Stop.');
+		AssertFalse(Condition := SpinCall.Execute OR LiftCWCall.Execute OR LiftCCWCall.Execute, Message := 'Completing must lower every MoveVel request.');
+		nSpinHistoryBeforeStop := SpinFake.HistoryCount;
+		nLiftCWHistoryBeforeStop := LiftCWFake.HistoryCount;
+		nLiftCCWHistoryBeforeStop := LiftCCWFake.HistoryCount;
+		nPhase := 7;
+
+	7:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Stop;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+
+		AssertTrue(Condition := (SpinService.PackMLOut.eStateCurrent = E_PackMLState.Stopping)
+			AND (LiftCWService.PackMLOut.eStateCurrent = E_PackMLState.Stopping)
+			AND (LiftCCWService.PackMLOut.eStateCurrent = E_PackMLState.Stopping), Message := 'Stop from Complete must enter Stopping.');
+		AssertTrue(Condition := SpinAxis.M_IsResourceOwner(OwnerId := 31)
+			AND LiftCWAxis.M_IsResourceOwner(OwnerId := 32)
+			AND LiftCCWAxis.M_IsResourceOwner(OwnerId := 33), Message := 'Stopping must retain ownership until physical Stop completes.');
+		AssertTrue(Condition := SpinFake.M_GetCall(Index := nSpinHistoryBeforeStop + 2, CallRecord => SpinCall), Message := 'Spin physical Stop request must be recorded.');
+		AssertTrue(Condition := LiftCWFake.M_GetCall(Index := nLiftCWHistoryBeforeStop + 2, CallRecord => LiftCWCall), Message := 'Lift CW physical Stop request must be recorded.');
+		AssertTrue(Condition := LiftCCWFake.M_GetCall(Index := nLiftCCWHistoryBeforeStop + 2, CallRecord => LiftCCWCall), Message := 'Lift CCW physical Stop request must be recorded.');
+		AssertTrue(Condition := (SpinCall.Operation = E_FakeAxisOperation.Stop) AND SpinCall.Accepted AND SpinCall.Execute AND (SpinCall.Deceleration = 13), Message := 'Spin Stop must use the latched Deceleration.');
+		AssertTrue(Condition := (LiftCWCall.Operation = E_FakeAxisOperation.Stop) AND LiftCWCall.Accepted AND LiftCWCall.Execute AND (LiftCWCall.Deceleration = 23), Message := 'Lift CW Stop must use the latched Deceleration.');
+		AssertTrue(Condition := (LiftCCWCall.Operation = E_FakeAxisOperation.Stop) AND LiftCCWCall.Accepted AND LiftCCWCall.Execute AND (LiftCCWCall.Deceleration = 33), Message := 'Lift CCW Stop must use the latched Deceleration.');
+		nPhase := 8;
+
+	8:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		SpinService(Ctrl := Ctrl, Param := SpinParam, Context := Context, Axis_BaseUnit := SpinAxis, ServiceId := 31);
+		LiftCWService(Ctrl := Ctrl, Param := LiftCWParam, Context := Context, Axis_BaseUnit := LiftCWAxis, ServiceId := 32);
+		LiftCCWService(Ctrl := Ctrl, Param := LiftCCWParam, Context := Context, Axis_BaseUnit := LiftCCWAxis, ServiceId := 33);
+		SpinFake.M_CyclicUpdate();
+		LiftCWFake.M_CyclicUpdate();
+		LiftCCWFake.M_CyclicUpdate();
+
+		AssertTrue(Condition := (SpinService.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
+			AND (LiftCWService.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
+			AND (LiftCCWService.PackMLOut.eStateCurrent = E_PackMLState.Stopped), Message := 'Physical Stop completion must reach Stopped.');
+		AssertFalse(Condition := SpinAxis.M_IsResourceOwner(OwnerId := 31)
+			OR LiftCWAxis.M_IsResourceOwner(OwnerId := 32)
+			OR LiftCCWAxis.M_IsResourceOwner(OwnerId := 33), Message := 'Stopped Services must release Axis ownership.');
+		AssertTrue(Condition := (SpinService.Status.ErrorList[1].MainErrorId = 0)
+			AND (LiftCWService.Status.ErrorList[1].MainErrorId = 0)
+			AND (LiftCCWService.Status.ErrorList[1].MainErrorId = 0), Message := 'Successful MoveVel completion and Stop must not create Service errors.');
+		AssertFalse(Condition := SpinFake.HistoryOverflowed OR LiftCWFake.HistoryOverflowed OR LiftCCWFake.HistoryOverflowed, Message := 'MoveVel test history must not overflow.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResetToIdleKeepsOwnershipUntilStop" Id="{8ae3565f-10ab-40d3-8aae-ae6109e0e429}">
+      <Declaration><![CDATA[METHOD ResetToIdleKeepsOwnershipUntilStop
+VAR_INST
+	Axis : I_Axis_BaseUnit;
+	Ctrl : ST_ServiceCtrl;
+	Param : ST_Chamber1SpinAxisMoveVelParam;
+	Context : ST_ServiceContext;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ResetToIdleKeepsOwnershipUntilStop');
+
+CASE nPhase OF
+	0:
+		ResetFake.M_ResetScenario();
+		Axis := ResetFake;
+		Param.Velocity := 41;
+		Param.Acceleration := 42;
+		Param.Deceleration := 43;
+		Context.ModuleId := 1;
+		AssertTrue(Condition := ResetFake.M_QueueResult(Operation := E_FakeAxisOperation.MoveVel, AfterActiveCycles := 1, Done := FALSE, InVelocity := TRUE, Error := FALSE, ErrorId := 0), Message := 'Reset-path MoveVel script must be accepted.');
+		AssertTrue(Condition := ResetFake.M_QueueResult(Operation := E_FakeAxisOperation.Stop, AfterActiveCycles := 1, Done := TRUE, InVelocity := FALSE, Error := FALSE, ErrorId := 0), Message := 'Reset-path Stop script must be accepted.');
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		AssertTrue(Condition := ResetService.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Initial scan must reach Aborted.');
+		nPhase := 1;
+
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		AssertTrue(Condition := ResetService.PackMLOut.eStateCurrent = E_PackMLState.Idle, Message := 'Setup Reset must reach Idle.');
+		nPhase := 2;
+
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		AssertTrue(Condition := ResetService.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Valid Start must reach Execute.');
+		nPhase := 3;
+
+	3:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		nPhase := 4;
+
+	4:
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		AssertTrue(Condition := ResetService.PackMLOut.eStateCurrent = E_PackMLState.Completing, Message := 'InVelocity must reach Completing.');
+		nPhase := 5;
+
+	5:
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		AssertTrue(Condition := ResetService.PackMLOut.eStateCurrent = E_PackMLState.Complete, Message := 'Completing must reach Complete.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 41), Message := 'Complete must keep ownership before Reset.');
+		nPhase := 6;
+
+	6:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		AssertTrue(Condition := ResetService.PackMLOut.eStateCurrent = E_PackMLState.Idle, Message := 'Reset from Complete must reach Idle without stopping motion.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 41), Message := 'Idle must retain ownership for the continuing MoveVel motion.');
+		AssertFalse(Condition := Axis.M_AcquireResource(OwnerId := 99), Message := 'A different Service must not acquire the moving Axis.');
+		nPhase := 7;
+
+	7:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Stop;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		AssertTrue(Condition := ResetService.PackMLOut.eStateCurrent = E_PackMLState.Stopping, Message := 'Stop from Idle must start physical stopping.');
+		AssertTrue(Condition := Axis.M_IsResourceOwner(OwnerId := 41), Message := 'Stopping from Idle must retain ownership until Done.');
+		nPhase := 8;
+
+	8:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		ResetService(Ctrl := Ctrl, Param := Param, Context := Context, Axis_BaseUnit := Axis, ServiceId := 41);
+		ResetFake.M_CyclicUpdate();
+		AssertTrue(Condition := ResetService.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Stop Done must reach Stopped after Reset-to-Idle.');
+		AssertFalse(Condition := Axis.M_IsResourceOwner(OwnerId := 41), Message := 'Stopped must release ownership after Reset-to-Idle.');
+		AssertTrue(Condition := ResetService.Status.ErrorList[1].MainErrorId = 0, Message := 'Reset and Stop lifecycle must not create errors.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
