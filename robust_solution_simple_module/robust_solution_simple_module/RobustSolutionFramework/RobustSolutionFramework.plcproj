@@ -267,9 +267,6 @@
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
     </Compile>
-    <Compile Include="PlcTask.TcTTO">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\00_BaseUnit\Base\FB_BaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>

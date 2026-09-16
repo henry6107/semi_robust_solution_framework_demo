@@ -1007,9 +1007,6 @@ External Setpoint Generation:
 				<Cpu CpuId="1"/>
 			</Settings>
 			<Tasks>
-				<Task Id="3" Priority="20" CycleTime="100000" AmsPort="350" AdtTasks="true">
-					<Name>PlcTask</Name>
-				</Task>
 				<Task Id="4" Priority="21" CycleTime="100000" AmsPort="351" AdtTasks="true">
 					<Name>UnitTest Task</Name>
 				</Task>
@@ -1020,24 +1017,10 @@ External Setpoint Generation:
 		</System>
 		<Plc>
 			<Project GUID="{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}" Name="RobustSolutionFramework" PrjFilePath="RobustSolutionFramework\RobustSolutionFramework.plcproj" TmcFilePath="RobustSolutionFramework\RobustSolutionFramework.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{E70D70EF-06FD-45FA-4B15-4E9908ED17BF}" TmcPath="Untitled1\Untitled1.tmc">
+				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{0514F376-AD6F-9F49-2BBA-EBB39B3DCB8E}" TmcPath="Untitled1\Untitled1.tmc">
 					<Name>RobustSolutionFramework Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
-					<Contexts>
-						<Context>
-							<Id>0</Id>
-							<Name>PlcTask</Name>
-							<ManualConfig>
-								<OTCID>#x02010030</OTCID>
-							</ManualConfig>
-							<Priority>20</Priority>
-							<CycleTime>10000000</CycleTime>
-						</Context>
-					</Contexts>
 					<JsonDynPous><![CDATA[null]]></JsonDynPous>
-					<TaskPouOids>
-						<TaskPouOid Prio="20" OTCID="#x08502001"/>
-					</TaskPouOids>
 				</Instance>
 			</Project>
 			<Project GUID="{77C99B7E-274C-4127-B1EA-48EE00657A6C}" Name="FrameworkUnitTest" PrjFilePath="FrameworkUnitTest\FrameworkUnitTest.plcproj" TmcFilePath="FrameworkUnitTest\FrameworkUnitTest.tmc" ReloadTmc="true" AmsPort="852" FileArchiveSettings="#x000e" SymbolicMapping="true">
@@ -1062,7 +1045,7 @@ External Setpoint Generation:
 				</Instance>
 			</Project>
 			<Project GUID="{211D1B58-22B7-4F39-8E50-EDC8876BDF19}" Name="RobustSolutionDemoProject" PrjFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.plcproj" TmcFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.tmc" ReloadTmc="true" AmsPort="853" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{FE17D711-29A7-BBF3-AD2B-0FA1A6C6C6D4}">
+				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{5B29FEA5-6BE7-A079-5821-936957773A2A}">
 					<Name>RobustSolutionDemoProject Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" AreaNo="1">
