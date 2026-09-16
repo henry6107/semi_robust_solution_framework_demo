@@ -127,103 +127,103 @@
     <Compile Include="Configuration\POUs\FB_ApplicationConfigRoot.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Alarm\E_AlarmAckCommand.TcDUT">
+    <Compile Include="DUTs\Contracts\Alarm\E_Severity.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Alarm\E_AlarmAckError.TcDUT">
+    <Compile Include="DUTs\Contracts\Alarm\ST_ExtAlarm.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Alarm\ST_AlarmAckRequest.TcDUT">
+    <Compile Include="DUTs\Contracts\Descriptor\E_DescriptorType.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Alarm\ST_AlarmLifecycleState.TcDUT">
+    <Compile Include="DUTs\Contracts\Descriptor\ST_ExtDescriptor.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Alarm\ST_ModuleAlarmStatus.TcDUT">
+    <Compile Include="DUTs\Contracts\System\ST_SystemContext.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_DescriptorType.TcDUT">
+    <Compile Include="DUTs\Infrastructure\EL Modules\ST_EL1889Ex.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_Severity.TcDUT">
+    <Compile Include="DUTs\Infrastructure\EL Modules\ST_EL2809Ex.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Hardware Module\ST_EL2809Ex.TcDUT">
+    <Compile Include="DUTs\Infrastructure\EL Modules\ST_EL3602Ex.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Hardware Module\ST_EL1889Ex.TcDUT">
+    <Compile Include="DUTs\Infrastructure\ST_ReserveForGetSymbolNameByAddrress.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Hardware Module\ST_EL3602Ex.TcDUT">
+    <Compile Include="DUTs\Module\Alarm\E_AlarmAckCommand.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Hardware Module\ST_ReserveForGetSymbolNameByAddrress.TcDUT">
+    <Compile Include="DUTs\Module\Alarm\E_AlarmAckError.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ExtAlarm.TcDUT">
+    <Compile Include="DUTs\Module\Alarm\ST_AlarmAckRequest.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ExtDescriptor.TcDUT">
+    <Compile Include="DUTs\Module\Alarm\ST_AlarmLifecycleState.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ModuleCtrl.TcDUT">
+    <Compile Include="DUTs\Module\Alarm\ST_ModuleAlarmStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ModuleDataStatus.TcDUT">
+    <Compile Include="DUTs\Module\Contract\ST_ModuleCtrl.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ModuleVariableStatus.TcDUT">
+    <Compile Include="DUTs\Module\Contract\ST_ModuleDataStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ModuleStatus.TcDUT">
+    <Compile Include="DUTs\Module\Contract\ST_ModuleStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_Module_CtrlStatus_Base.TcDUT">
+    <Compile Include="DUTs\Module\Contract\ST_ModuleVariableStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ServiceCtrl.TcDUT">
+    <Compile Include="DUTs\Module\Contract\ST_Module_CtrlStatus_Base.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ServiceContext.TcDUT">
+    <Compile Include="DUTs\Module\ServiceCoordination\E_CompositeOwnershipState.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_ServiceCallSubmitResult.TcDUT">
+    <Compile Include="DUTs\Module\ServiceCoordination\E_ServiceCallSubmitResult.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_ServiceInternalCommandState.TcDUT">
+    <Compile Include="DUTs\Module\ServiceCoordination\E_ServiceInternalCommandState.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_CompositeOwnershipState.TcDUT">
+    <Compile Include="DUTs\Module\ServiceCoordination\E_ServiceRegistrationError.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_ServiceCompletionBehavior.TcDUT">
+    <Compile Include="DUTs\Module\ServiceCoordination\ST_ServiceExecutionSnapshot.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ServiceExecutionSnapshot.TcDUT">
+    <Compile Include="DUTs\Module\ServiceCoordination\ST_ServiceRegistrationEntry.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_CompositeServiceErrorCode.TcDUT">
+    <Compile Include="DUTs\Service\Composite\E_CompositeServiceErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ServiceRegistrationEntry.TcDUT">
+    <Compile Include="DUTs\Service\Contracts\E_ServiceCompletionBehavior.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\E_ServiceRegistrationError.TcDUT">
+    <Compile Include="DUTs\Service\Contracts\ST_ServiceContext.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ServiceDataStatus.TcDUT">
+    <Compile Include="DUTs\Service\Contracts\ST_ServiceCtrl.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ServiceExecuteSubStateRecord.TcDUT">
+    <Compile Include="DUTs\Service\Contracts\ST_ServiceDataStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ServiceExecuteSubStateStatus.TcDUT">
+    <Compile Include="DUTs\Service\Contracts\ST_ServiceExecuteSubStateRecord.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_ServiceStatus.TcDUT">
+    <Compile Include="DUTs\Service\Contracts\ST_ServiceExecuteSubStateStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_SystemContext.TcDUT">
+    <Compile Include="DUTs\Service\Contracts\ST_ServiceStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\Wafer Transfer\E_OperationState.TcDUT">
@@ -269,10 +269,13 @@
     <Compile Include="PlcTask.TcTTO">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\00_BaseUnit\FB_Axis_BaseUnit.TcPOU">
+    <Compile Include="POUs\00_BaseUnit\Base\FB_BaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\00_BaseUnit\FB_BaseUnit.TcPOU">
+    <Compile Include="POUs\00_BaseUnit\Base\T_ResourceOwnerId.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\00_BaseUnit\FB_Axis_BaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\00_BaseUnit\Interfaces\I_Axis_BaseUnit.TcIO">
@@ -284,16 +287,10 @@
     <Compile Include="POUs\00_BaseUnit\Interfaces\I_ResourceLock.TcIO">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\00_BaseUnit\T_ResourceOwnerId.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\10_Module\FB_ModuleAlarmManager.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\FB_ModuleBase.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Module\FB_ServiceBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Module\FB_ServiceCoordinator.TcPOU">
@@ -302,55 +299,55 @@
     <Compile Include="POUs\10_Module\FB_ServiceCaller.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Module\FB_CompositeServiceBase.TcPOU">
+    <Compile Include="POUs\20_Service\FB_CompositeServiceBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\MAIN.TcPOU">
+    <Compile Include="POUs\20_Service\FB_ServiceBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\FB_UtcClock.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLCommand.TcDUT">
+    <Compile Include="POUs\30_PackML_Base\DUTs\E_PackMLCommand.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLErrorID.TcDUT">
+    <Compile Include="POUs\30_PackML_Base\DUTs\E_PackMLErrorID.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLHookResult.TcDUT">
+    <Compile Include="POUs\30_PackML_Base\DUTs\E_PackMLHookResult.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLMode.TcDUT">
+    <Compile Include="POUs\30_PackML_Base\DUTs\E_PackMLMode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\DUTs\E_PackMLState.TcDUT">
+    <Compile Include="POUs\30_PackML_Base\DUTs\E_PackMLState.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\DUTs\ST_PML_Base_In.TcDUT">
+    <Compile Include="POUs\30_PackML_Base\DUTs\ST_PML_Base_In.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\DUTs\ST_PML_Base_Out.TcDUT">
+    <Compile Include="POUs\30_PackML_Base\DUTs\ST_PML_Base_Out.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\DUTs\T_PackMLMode.TcDUT">
+    <Compile Include="POUs\30_PackML_Base\DUTs\T_PackMLMode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\FB_PackMLBase.TcPOU">
+    <Compile Include="POUs\30_PackML_Base\FB_PackMLBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\FB_PackMLModeSet.TcPOU">
+    <Compile Include="POUs\30_PackML_Base\FB_PackMLModeSet.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\Utilities\F_PackMLCommandToString.TcPOU">
+    <Compile Include="POUs\30_PackML_Base\Utilities\F_PackMLCommandToString.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\Utilities\F_PackMLErrorIDToString.TcPOU">
+    <Compile Include="POUs\30_PackML_Base\Utilities\F_PackMLErrorIDToString.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\Utilities\F_PackMLModeToString.TcPOU">
+    <Compile Include="POUs\30_PackML_Base\Utilities\F_PackMLModeToString.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\PackML_Base\Utilities\F_PackMLStateToString.TcPOU">
+    <Compile Include="POUs\30_PackML_Base\Utilities\F_PackMLStateToString.TcPOU">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
@@ -360,17 +357,30 @@
     <Folder Include="Configuration\Interfaces" />
     <Folder Include="Configuration\POUs" />
     <Folder Include="DUTs" />
-    <Folder Include="DUTs\Hardware Module" />
-    <Folder Include="DUTs\Alarm" />
+    <Folder Include="DUTs\Contracts\Alarm" />
+    <Folder Include="DUTs\Contracts\Descriptor" />
+    <Folder Include="DUTs\Contracts\System" />
+    <Folder Include="DUTs\Infrastructure" />
+    <Folder Include="DUTs\Contracts" />
+    <Folder Include="DUTs\Infrastructure\EL Modules" />
+    <Folder Include="DUTs\Module" />
+    <Folder Include="DUTs\Module\Alarm" />
+    <Folder Include="DUTs\Module\Contract" />
+    <Folder Include="DUTs\Module\ServiceCoordination" />
+    <Folder Include="DUTs\Service" />
+    <Folder Include="DUTs\Service\Contracts" />
+    <Folder Include="DUTs\Service\Composite" />
     <Folder Include="DUTs\Wafer Transfer" />
     <Folder Include="GVLs" />
     <Folder Include="POUs" />
     <Folder Include="POUs\00_BaseUnit" />
     <Folder Include="POUs\00_BaseUnit\Interfaces" />
+    <Folder Include="POUs\00_BaseUnit\Base" />
     <Folder Include="POUs\10_Module" />
-    <Folder Include="POUs\PackML_Base" />
-    <Folder Include="POUs\PackML_Base\DUTs" />
-    <Folder Include="POUs\PackML_Base\Utilities" />
+    <Folder Include="POUs\20_Service" />
+    <Folder Include="POUs\30_PackML_Base" />
+    <Folder Include="POUs\30_PackML_Base\DUTs" />
+    <Folder Include="POUs\30_PackML_Base\Utilities" />
     <Folder Include="VISUs" />
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="E_ServiceRegistrationError" Id="{6cbe5fc5-a603-4dbb-8086-1d9e4584cd75}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
