@@ -9,9 +9,12 @@ STRUCT
 	LiftPinAxisMoveVelCW : ST_Chamber1LiftPinAxisMoveVelParam;
 	LiftPinAxisMoveVelCCW : ST_Chamber1LiftPinAxisMoveVelParam;
 	LiftPinAxisMoveAbs : ST_Chamber1LiftPinAxisMoveAbsParam;
-	WaferReceive : ST_WaferTransferParam;
-	WaferSend : ST_WaferTransferParam;
+	DoorClose : ST_EmptyServiceParam;
+	DoorOpen : ST_EmptyServiceParam;
+	VacuumOn : ST_EmptyServiceParam;
+	VacuumOff : ST_EmptyServiceParam;
 	PreparePosition : ST_Chamber1PreparePositionParam;
+	Endpoint1PrepareSendWafer : ST_EmptyServiceParam;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

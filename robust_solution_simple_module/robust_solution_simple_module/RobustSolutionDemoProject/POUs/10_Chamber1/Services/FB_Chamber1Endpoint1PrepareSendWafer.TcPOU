@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Chamber1Endpoint1PrepareSendWafer" Id="{31c0f8a3-2bb7-4853-987f-7b1795d30426}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1Endpoint1PrepareSendWafer EXTENDS FB_CompositeServiceBase]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
+    </Implementation>
+    <Folder Name="HookMethod" Id="{858d5fe9-2c92-497c-8c1b-6833d260548b}" />
+    <Method Name="H_DeclareServices" Id="{1979dc54-f44c-43aa-9c15-89ebd2fc31b9}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_DeclareServices
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_AddDependency(ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs);
+M_AddDependency(ServiceId := E_Chamber1ServiceId.VacuumOff);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_GetExecuteSubState" Id="{12ac4626-2cd6-4b4d-bd14-30262f3181af}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubState : UDINT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_GetExecuteSubStateName" Id="{35243858-965b-4837-a7ce-4e8151da400b}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubStateName : STRING(80)
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnCompositeExecute" Id="{6e0866a2-2b89-4e5d-a7f0-96d53557ce83}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnCompositeExecute : RobustSolution_BATW.E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

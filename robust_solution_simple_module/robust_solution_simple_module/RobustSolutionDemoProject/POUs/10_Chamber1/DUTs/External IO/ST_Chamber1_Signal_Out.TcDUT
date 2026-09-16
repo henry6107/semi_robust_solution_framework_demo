@@ -3,6 +3,7 @@
   <DUT Name="ST_Chamber1_Signal_Out" Id="{9921dc3d-b38f-43b3-84f6-12803bd60c4e}">
     <Declaration><![CDATA[TYPE ST_Chamber1_Signal_Out :
 STRUCT
+	bDoorClosed : BOOL;
 	bVaccumOn : BOOL;
 
 	bDOs : ARRAY[1..16] OF BOOL;

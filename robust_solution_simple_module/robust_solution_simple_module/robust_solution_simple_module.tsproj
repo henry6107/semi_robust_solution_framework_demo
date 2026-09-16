@@ -1045,7 +1045,7 @@ External Setpoint Generation:
 				</Instance>
 			</Project>
 			<Project GUID="{211D1B58-22B7-4F39-8E50-EDC8876BDF19}" Name="RobustSolutionDemoProject" PrjFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.plcproj" TmcFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.tmc" ReloadTmc="true" AmsPort="853" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{5B29FEA5-6BE7-A079-5821-936957773A2A}">
+				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{6C9D572C-97E7-D8D4-B279-C43251AB5468}">
 					<Name>RobustSolutionDemoProject Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" AreaNo="1">

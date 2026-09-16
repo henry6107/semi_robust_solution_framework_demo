@@ -10,9 +10,12 @@ STRUCT
 	LiftPinAxisMoveVelCCW : ST_ServiceCtrl;
 	LiftPinAxisMoveAbs : ST_ServiceCtrl;
 	
-	WaferSend : ST_ServiceCtrl;
-	WaferReceive : ST_ServiceCtrl;
+	DoorClose : ST_ServiceCtrl;
+	DoorOpen : ST_ServiceCtrl;
+	VacuumOn : ST_ServiceCtrl;
+	VacuumOff : ST_ServiceCtrl;
 	PreparePosition : ST_ServiceCtrl;
+	Endpoint1PrepareSendWafer : ST_ServiceCtrl;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

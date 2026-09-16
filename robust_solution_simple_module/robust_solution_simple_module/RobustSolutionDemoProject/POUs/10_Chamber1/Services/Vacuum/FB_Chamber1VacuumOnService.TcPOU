@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Chamber1VacuumOnService" Id="{0becf4f6-2fcb-4aec-8991-e0fa8a14cc25}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1VacuumOnService EXTENDS FB_ServiceBase
+VAR_INPUT
+	IsVacuumOn : BOOL;
+END_VAR
+VAR_IN_OUT
+	VacuumOnCtrl : BOOL;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
+    </Implementation>
+    <Folder Name="StateAction" Id="{1c4d892d-09c4-4b94-89c6-327906839cad}" />
+    <Method Name="H_OnExecute" Id="{41063325-acd7-4f0b-ad4b-411c55899df3}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
+
+VacuumOnCtrl := TRUE;
+
+IF IsVacuumOn = TRUE THEN
+	H_OnExecute := E_PackMLHookResult.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

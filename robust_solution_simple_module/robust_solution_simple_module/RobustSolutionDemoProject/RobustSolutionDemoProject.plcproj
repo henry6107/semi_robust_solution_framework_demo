@@ -26,6 +26,10 @@
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
     </Compile>
+    <Compile Include="GVLs\GVL_ShareMemory.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
     <Compile Include="PlcTask.TcTTO">
       <SubType>Code</SubType>
     </Compile>
@@ -53,25 +57,40 @@
     <Compile Include="POUs\10_Chamber1\DUTs\E_Chamber1ServiceId.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\PreparePositionService\E_Chamber1PreparePositionStep.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Door\ST_Chamber1DoorCloseParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\PreparePositionService\ST_Chamber1PreparePositionParam.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Door\ST_Chamber1DoorOpenParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\ST_Chamber1LiftPinAxisMoveAbsParam.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareSendWafer\ST_Chamber1Endpoint1PrepardSendWaferParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\ST_Chamber1LiftPinAxisMoveVelParam.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\LiftAxis\ST_Chamber1LiftPinAxisMoveAbsParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\ST_Chamber1SpinAxisJogParam.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\LiftAxis\ST_Chamber1LiftPinAxisMoveVelParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\ST_Chamber1SpinAxisMoveAbsParam.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\PreparePosition\E_Chamber1PreparePositionStep.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\ST_Chamber1SpinAxisMoveVelParam.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\PreparePosition\ST_Chamber1PreparePositionParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\SpinAxis\ST_Chamber1SpinAxisJogParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\SpinAxis\ST_Chamber1SpinAxisMoveAbsParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\SpinAxis\ST_Chamber1SpinAxisMoveVelParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Vacuum\ST_Chamber1VacuumOffParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Vacuum\ST_Chamber1VacuumOnParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Chamber1\FB_Chamber1ModuleConfigurationAdapter.TcPOU">
@@ -80,31 +99,40 @@
     <Compile Include="POUs\10_Chamber1\FB_Chamber1_Module.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1LiftPinAxisMoveAbsServices.TcPOU">
+    <Compile Include="POUs\10_Chamber1\Services\Door\FB_Chamber1Endpoint1DoorCloseService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1LiftPinAxisMoveVelCCWServices.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1LiftPinAxisMoveVelCWServices.TcPOU">
+    <Compile Include="POUs\10_Chamber1\Services\Door\FB_Chamber1Endpoint1DoorOpenService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1PreparePositionService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1SpinAxisJogCWServices.TcPOU">
+    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1Endpoint1PrepareSendWafer.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1SpinAxisMoveAbsServices.TcPOU">
+    <Compile Include="POUs\10_Chamber1\Services\LiftAxis\FB_Chamber1LiftPinAxisMoveAbsServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1SpinAxisMoveVelCWServices.TcPOU">
+    <Compile Include="POUs\10_Chamber1\Services\LiftAxis\FB_Chamber1LiftPinAxisMoveVelCCWServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1WaferReceiveService.TcPOU">
+    <Compile Include="POUs\10_Chamber1\Services\LiftAxis\FB_Chamber1LiftPinAxisMoveVelCWServices.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1WaferSendService.TcPOU">
+    <Compile Include="POUs\10_Chamber1\Services\SpinAxis\FB_Chamber1SpinAxisJogCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Chamber1\Services\SpinAxis\FB_Chamber1SpinAxisMoveAbsServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Chamber1\Services\SpinAxis\FB_Chamber1SpinAxisMoveVelCWServices.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Chamber1\Services\Vacuum\FB_Chamber1VacuumOnService.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\10_Chamber1\Services\Vacuum\FB_Chamber1VacuumOffService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\FB_ConfigRoot.TcPOU">
@@ -122,8 +150,17 @@
     <Folder Include="POUs\10_Chamber1\DUTs\Ctrl Status Interface" />
     <Folder Include="POUs\10_Chamber1\DUTs\External IO" />
     <Folder Include="POUs\10_Chamber1\DUTs\Service Param" />
-    <Folder Include="POUs\10_Chamber1\DUTs\Service Param\PreparePositionService" />
+    <Folder Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareSendWafer" />
+    <Folder Include="POUs\10_Chamber1\DUTs\Service Param\LiftAxis" />
+    <Folder Include="POUs\10_Chamber1\DUTs\Service Param\Door" />
+    <Folder Include="POUs\10_Chamber1\DUTs\Service Param\Vacuum" />
+    <Folder Include="POUs\10_Chamber1\DUTs\Service Param\SpinAxis" />
+    <Folder Include="POUs\10_Chamber1\DUTs\Service Param\PreparePosition" />
     <Folder Include="POUs\10_Chamber1\Services" />
+    <Folder Include="POUs\10_Chamber1\Services\Door" />
+    <Folder Include="POUs\10_Chamber1\Services\LiftAxis" />
+    <Folder Include="POUs\10_Chamber1\Services\SpinAxis" />
+    <Folder Include="POUs\10_Chamber1\Services\Vacuum" />
     <Folder Include="VISUs" />
   </ItemGroup>
   <ItemGroup>

@@ -29,10 +29,17 @@ VAR
 	_LiftPinAxisMoveVelCWService : FB_Chamber1LiftPinAxisMoveVelCWServices;
 	_LiftPinAxisMoveVelCCWService : FB_Chamber1LiftPinAxisMoveVelCCWServices;
 	_LiftPinAxisMoveAbsService : FB_Chamber1LiftPinAxisMoveAbsServices;
-	_WaferSendService : FB_Chamber1WaferSendService;
-	_WaferReceiveService : FB_Chamber1WaferReceiveService;
+	_Endpoint1DoorOpenService : FB_Chamber1Endpoint1DoorOpenService;
+	_Endpoint1DoorCloseService : FB_Chamber1Endpoint1DoorCloseService;
+	_VacuumOffService : FB_Chamber1VacuumOffService;
+	_VacuumOnService : FB_Chamber1VacuumOnService;
+	_Endpoint1PrepareSendWaferService : FB_Chamber1Endpoint1PrepareSendWafer;
 	_PreparePositionService : FB_Chamber1PreparePositionService;
-
+	
+	_bEndpoint1_SendReady : BOOL;
+	_bEndpoint1_SendPrepared : BOOL;
+	_bEndpoint1_ReceiveReady : BOOL;
+	_bEndpoint1_ReceivePrepared : BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -42,24 +49,28 @@ IF (SpinAxis_BaseUnit = 0) OR (LiftPinAxis_BaseUnit = 0) THEN
 END_IF
 
 // Config wafer transfer endpoint
-ModuleStatus.WaferTransferResponseList[1].EndpointId := 1;
-ModuleStatus.WaferTransferResponseList[1].WaferHandlingType := E_WaferHandlingType.Passive;
-ModuleStatus.WaferTransferResponseList[1].Capability := E_TransferCapability.Bidirectional;
-ModuleStatus.WaferTransferResponseList[1].SendServiceId := E_Chamber1ServiceId.WaferSend;
-ModuleStatus.WaferTransferResponseList[1].ReceiveServiceId := E_Chamber1ServiceId.WaferReceive;
+ModuleStatus.WaferStatusList[1].EndpointId := 1;
+ModuleStatus.WaferStatusList[1].EndpointName := 'Hello World';
+
+// Update endpoint status (for SVID display)
+_bEndpoint1_SendReady := _ServiceCoordinator.AllIdle AND
+						 ModuleStatus.WaferStatusList[1].MaterialContext.Id <> 0;
+						 
+_bEndpoint1_SendPrepared := _bEndpoint1_SendReady AND
+							HwInput.bVacuumOn = FALSE AND
+							LiftPinAxis_BaseUnit.AxisActualPosition = 70.0;
+
+_bEndpoint1_ReceiveReady := _ServiceCoordinator.AllIdle AND
+						 ModuleStatus.WaferStatusList[1].MaterialContext.Id = 0;
+						 
+_bEndpoint1_ReceivePrepared := _bEndpoint1_ReceiveReady AND
+							HwInput.bVacuumOn = FALSE AND
+							LiftPinAxis_BaseUnit.AxisActualPosition = 70.0;
 
 M_UpdateModule();
 
 // Update status
-ServiceStatus := _ServiceStatusStore;
-
-// Link status to module
-ModuleStatus.WaferTransferResponseList[1].Send.Status := ServiceStatus.WaferSend;
-ModuleStatus.WaferTransferResponseList[1].Send.Signal := _WaferSendService.SignalOut;
-ModuleStatus.WaferTransferResponseList[1].SendReady := _ServiceCoordinator.AllIdle;
-ModuleStatus.WaferTransferResponseList[1].Receive.Status := ServiceStatus.WaferReceive;
-ModuleStatus.WaferTransferResponseList[1].Receive.Signal := _WaferReceiveService.SignalOut;
-ModuleStatus.WaferTransferResponseList[1].ReceiveReady := _ServiceCoordinator.AllIdle;]]></ST>
+ServiceStatus := _ServiceStatusStore;]]></ST>
     </Implementation>
     <Folder Name="ModuleUpdate" Id="{a9f2fa3e-34f5-43fc-8823-0e0dbffba0ff}" />
     <Method Name="H_RegisterServices" Id="{3d094774-a05b-4729-a18a-320af51f821a}" FolderPath="ModuleUpdate\">
@@ -116,21 +127,37 @@ M_RegisterService(
 	EffectiveParam := _EffectiveServiceParam.LiftPinAxisMoveAbs,
 	Status := _ServiceStatusStore.LiftPinAxisMoveAbs);
 M_RegisterService(
-	ServiceId := E_Chamber1ServiceId.WaferSend,
-	AllowCompositeCall := FALSE,
-	UpperCtrl := ServiceCtrl.WaferSend,
-	EffectiveCtrl := _EffectiveServiceCtrl.WaferSend,
-	UpperParam := ServiceParam.WaferSend,
-	EffectiveParam := _EffectiveServiceParam.WaferSend,
-	Status := _ServiceStatusStore.WaferSend);
+	ServiceId := E_Chamber1ServiceId.DoorClose,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.DoorClose,
+	EffectiveCtrl := _EffectiveServiceCtrl.DoorClose,
+	UpperParam := ServiceParam.DoorClose,
+	EffectiveParam := _EffectiveServiceParam.DoorClose,
+	Status := _ServiceStatusStore.DoorClose);
 M_RegisterService(
-	ServiceId := E_Chamber1ServiceId.WaferReceive,
-	AllowCompositeCall := FALSE,
-	UpperCtrl := ServiceCtrl.WaferReceive,
-	EffectiveCtrl := _EffectiveServiceCtrl.WaferReceive,
-	UpperParam := ServiceParam.WaferReceive,
-	EffectiveParam := _EffectiveServiceParam.WaferReceive,
-	Status := _ServiceStatusStore.WaferReceive);
+	ServiceId := E_Chamber1ServiceId.DoorOpen,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.DoorOpen,
+	EffectiveCtrl := _EffectiveServiceCtrl.DoorOpen,
+	UpperParam := ServiceParam.DoorOpen,
+	EffectiveParam := _EffectiveServiceParam.DoorOpen,
+	Status := _ServiceStatusStore.DoorOpen);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.VacuumOff,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.VacuumOff,
+	EffectiveCtrl := _EffectiveServiceCtrl.VacuumOff,
+	UpperParam := ServiceParam.VacuumOff,
+	EffectiveParam := _EffectiveServiceParam.VacuumOff,
+	Status := _ServiceStatusStore.DoorClose);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.VacuumOn,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.VacuumOn,
+	EffectiveCtrl := _EffectiveServiceCtrl.VacuumOn,
+	UpperParam := ServiceParam.VacuumOn,
+	EffectiveParam := _EffectiveServiceParam.VacuumOn,
+	Status := _ServiceStatusStore.VacuumOn);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.PreparePosition,
 	AllowCompositeCall := FALSE,
@@ -139,11 +166,23 @@ M_RegisterService(
 	UpperParam := ServiceParam.PreparePosition,
 	EffectiveParam := _EffectiveServiceParam.PreparePosition,
 	Status := _ServiceStatusStore.PreparePosition);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.Endpoint1PrepareSendWafer,
+	AllowCompositeCall := FALSE,
+	UpperCtrl := ServiceCtrl.Endpoint1PrepareSendWafer,
+	EffectiveCtrl := _EffectiveServiceCtrl.Endpoint1PrepareSendWafer,
+	UpperParam := ServiceParam.Endpoint1PrepareSendWafer,
+	EffectiveParam := _EffectiveServiceParam.Endpoint1PrepareSendWafer,
+	Status := _ServiceStatusStore.Endpoint1PrepareSendWafer);
 
 // Register dependency of composite service
 _PreparePositionService.M_RegisterDefinition(
 	CompositeServiceId := E_Chamber1ServiceId.PreparePosition,
-	Coordinator := _ServiceCoordinator);]]></ST>
+	Coordinator := _ServiceCoordinator);
+_Endpoint1PrepareSendWaferService.M_RegisterDefinition(
+	CompositeServiceId := E_Chamber1ServiceId.Endpoint1PrepareSendWafer,
+	Coordinator := _ServiceCoordinator);	
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_UpdateBaseUnit" Id="{23db425b-9082-4959-8f76-43820da7ead4}" FolderPath="ModuleUpdate\">
@@ -211,35 +250,69 @@ _LiftPinAxisMoveAbsService(
 	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveAbs,
 	Status=> _ServiceStatusStore.LiftPinAxisMoveAbs);
 
+_LiftPinAxisMoveAbsService(
+	Ctrl:= _EffectiveServiceCtrl.LiftPinAxisMoveAbs,
+	Param:= _EffectiveServiceParam.LiftPinAxisMoveAbs,
+	Context:= _ServiceContext,
+	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
+	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveAbs,
+	Status=> _ServiceStatusStore.LiftPinAxisMoveAbs);
+	
+_Endpoint1DoorOpenService(
+	Ctrl:=  _EffectiveServiceCtrl.DoorOpen, 
+	Context:= _ServiceContext, 
+	ServiceId:= E_Chamber1ServiceId.DoorOpen, 
+	Status=> _ServiceStatusStore.DoorOpen, 
+	IsDoorClose:= HwInput.bDoorClosed, 
+	DoorCloseCtrl:= HwOutput.bDoorClosed);
+
+_Endpoint1DoorCloseService(
+	Ctrl:=  _EffectiveServiceCtrl.DoorClose, 
+	Context:= _ServiceContext, 
+	ServiceId:= E_Chamber1ServiceId.DoorClose, 
+	Status=> _ServiceStatusStore.DoorClose, 
+	IsDoorClose:= HwInput.bDoorClosed,
+	IsRobotInChamber:= HwInput.bRobotInChamber,
+	DoorCloseCtrl:= HwOutput.bDoorClosed);
+	
+_VacuumOnService(
+	Ctrl:= _EffectiveServiceCtrl.VacuumOn, 
+	Context:= _ServiceContext, 
+	ServiceId:= E_Chamber1ServiceId.VacuumOn, 
+	Status=> _ServiceStatusStore.VacuumOn, 
+	IsVacuumOn:= HwInput.bVacuumOn, 
+	VacuumOnCtrl:= HwOutput.bVaccumOn);
+	
+_VacuumOffService(
+	Ctrl:= _EffectiveServiceCtrl.VacuumOff, 
+	Context:= _ServiceContext, 
+	ServiceId:= E_Chamber1ServiceId.VacuumOff, 
+	Status=> _ServiceStatusStore.VacuumOff, 
+	IsVacuumOn:= HwInput.bVacuumOn, 
+	VacuumOnCtrl:= HwOutput.bVaccumOn);
+
 _PreparePositionService(
 	Ctrl := _EffectiveServiceCtrl.PreparePosition,
-	Param := _EffectiveServiceParam.PreparePosition,
 	Context := _ServiceContext,
 	ServiceId := E_Chamber1ServiceId.PreparePosition,
 	Status => _ServiceStatusStore.PreparePosition);
 
-// Both directions share Station material and hardware storage.
-// TODO: Coordinate Send/Receive access when implementing the transfer sequences.
-_WaferSendService(
-	Ctrl := _EffectiveServiceCtrl.WaferSend,
-	Param := _EffectiveServiceParam.WaferSend,
-	Context := _ServiceContext,
-	ServiceId := E_Chamber1ServiceId.WaferSend,
-	MaterialInfo := ModuleStatus.WaferTransferResponseList[1].MaterialInfo,
-	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
-	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
-	Status => _ServiceStatusStore.WaferSend);
-
-_WaferReceiveService(
-	Ctrl := _EffectiveServiceCtrl.WaferReceive,
-	Param := _EffectiveServiceParam.WaferReceive,
-	Context := _ServiceContext,
-	ServiceId := E_Chamber1ServiceId.WaferReceive,
-	MaterialInfo := ModuleStatus.WaferTransferResponseList[1].MaterialInfo,
-	SpinAxis_BaseUnit := SpinAxis_BaseUnit,
-	LiftPinAxis_BaseUnit := LiftPinAxis_BaseUnit,
-	Status => _ServiceStatusStore.WaferReceive);
+_Endpoint1PrepareSendWaferService(
+	Ctrl:= _EffectiveServiceCtrl.Endpoint1PrepareSendWafer, 
+	Context:= _ServiceContext, 
+	ServiceId:= E_Chamber1ServiceId.Endpoint1PrepareSendWafer, 
+	Status=> _ServiceStatusStore.Endpoint1PrepareSendWafer);
 ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_UpdateVariable" Id="{f1317a35-f1a9-4c7f-8626-408b95b270c6}">
+      <Declaration><![CDATA[METHOD PROTECTED H_UpdateVariable
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[M_AddVariable(Id:= 10, Name:= 'Endpoint1_SendReady', DataType:= E_DescriptorType.Boolean, Unit:= '', Value:= TO_STRING(_bEndpoint1_SendReady));
+M_AddVariable(Id:= 11, Name:= 'Endpoint1_SendPrepared', DataType:= E_DescriptorType.Boolean, Unit:= '', Value:= TO_STRING(_bEndpoint1_SendPrepared));
+M_AddVariable(Id:= 12, Name:= 'Endpoint1_ReceiveReady', DataType:= E_DescriptorType.Boolean, Unit:= '', Value:= TO_STRING(_bEndpoint1_ReceiveReady));
+M_AddVariable(Id:= 13, Name:= 'Endpoint1_ReceivePrepared', DataType:= E_DescriptorType.Boolean, Unit:= '', Value:= TO_STRING(_bEndpoint1_ReceivePrepared));]]></ST>
       </Implementation>
     </Method>
   </POU>

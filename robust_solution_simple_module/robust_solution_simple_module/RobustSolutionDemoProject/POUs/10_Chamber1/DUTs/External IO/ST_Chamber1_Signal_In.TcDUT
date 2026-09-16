@@ -4,7 +4,9 @@
     <Declaration><![CDATA[TYPE ST_Chamber1_Signal_In :
 STRUCT
 	bDoorClosed : BOOL;
+	bVacuumOn : BOOL;
 	rTemperature : REAL;
+	bRobotInChamber : BOOL;
 
 	bDIs : ARRAY[1..16] OF BOOL;
 	rAIs : ARRAY[1..16] OF REAL;

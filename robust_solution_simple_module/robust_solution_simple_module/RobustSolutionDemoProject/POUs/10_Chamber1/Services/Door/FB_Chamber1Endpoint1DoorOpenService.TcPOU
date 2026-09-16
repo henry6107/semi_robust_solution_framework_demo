@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Chamber1Endpoint1DoorOpenService" Id="{4daeed7c-3826-41bd-bf92-bfd659122874}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1Endpoint1DoorOpenService EXTENDS FB_ServiceBase
+VAR_INPUT
+	IsDoorClose : BOOL;
+END_VAR
+VAR_IN_OUT
+	DoorCloseCtrl : BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
+    </Implementation>
+    <Folder Name="StateAction" Id="{646b83f4-0787-498b-af58-9cda5139b54e}" />
+    <Method Name="H_OnExecute" Id="{bf4ab31f-7e62-4525-8a41-8b0a1f44ff39}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
+
+DoorCloseCtrl := FALSE;
+
+IF IsDoorClose = FALSE THEN
+	H_OnExecute := E_PackMLHookResult.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
