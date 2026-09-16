@@ -2,9 +2,65 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_TestableServiceBase" Id="{7adf419a-ced5-4d73-8e72-9b5f880b380e}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_TestableServiceBase EXTENDS FB_ServiceBase
+VAR_INPUT
+	TestExecuteSubState : UDINT;
+	TestExecuteSubStateName : STRING(80);
+	StartingBusyScans : UINT;
+	CompleteExecute : BOOL;
+END_VAR
+VAR
+	_StartingBusyScanCount : UINT;
+END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.Unknown);]]></ST>
     </Implementation>
+    <Method Name="H_GetExecuteSubState" Id="{2dc051f5-9daa-4f09-b028-817999b9263f}">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubState : UDINT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_GetExecuteSubState := TestExecuteSubState;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_GetExecuteSubStateName" Id="{dfbfb96c-1a4a-42a8-a91e-d29695c3cd26}">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubStateName : STRING(80)
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_GetExecuteSubStateName := TestExecuteSubStateName;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnExecute" Id="{95b9d8dc-56d2-4fa1-848d-a09c7342fc00}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF CompleteExecute THEN
+	H_OnExecute := E_PackMLHookResult.Done;
+ELSE
+	H_OnExecute := E_PackMLHookResult.Busy;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStarting" Id="{2f99d974-134f-4165-b909-3aa9bcd87425}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF bFirstScan THEN
+	_StartingBusyScanCount := 0;
+END_IF
+
+IF _StartingBusyScanCount < StartingBusyScans THEN
+	_StartingBusyScanCount := _StartingBusyScanCount + 1;
+	H_OnStarting := E_PackMLHookResult.Busy;
+ELSE
+	H_OnStarting := E_PackMLHookResult.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
   </POU>
 </TcPlcObject>

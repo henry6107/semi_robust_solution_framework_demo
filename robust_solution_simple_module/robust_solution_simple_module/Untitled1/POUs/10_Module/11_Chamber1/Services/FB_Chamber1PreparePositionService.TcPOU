@@ -29,6 +29,13 @@ M_AddDependency(ServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs);]]></ST>
         <ST><![CDATA[H_GetExecuteSubState := TO_UDINT(_Step);]]></ST>
       </Implementation>
     </Method>
+    <Method Name="H_GetExecuteSubStateName" Id="{4bd3eb31-86a8-440b-8aae-989daf282d97}" FolderPath="HookMethod\">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubStateName : STRING(80)
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_GetExecuteSubStateName := TO_STRING(_Step);]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="H_OnCompositeExecute" Id="{d5a81cba-16cb-4e86-87ec-c5cb5717ffae}" FolderPath="HookMethod\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnCompositeExecute : E_PackMLHookResult
 VAR_INPUT

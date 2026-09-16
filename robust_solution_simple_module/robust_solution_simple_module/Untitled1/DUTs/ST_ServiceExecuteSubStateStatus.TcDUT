@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_ServiceExecuteSubStateStatus" Id="{a15814c2-3e9f-4408-a0cb-0ce894567d71}">
+    <Declaration><![CDATA[TYPE ST_ServiceExecuteSubStateStatus :
+STRUCT
+	// Zero whenever the Service is not executing or exposes no substate.
+	CurrentState : UDINT;
+	RecordCount : UINT;
+	// The first records are preserved when capacity is exhausted.
+	Overflow : BOOL;
+	Records : ARRAY[1..Param_Config.MaxExecuteSubStateRecords] OF ST_ServiceExecuteSubStateRecord;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

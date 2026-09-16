@@ -57,6 +57,16 @@ A valid RuntimeConfig definition takes full precedence over the same Hook identi
 **Hook SVID**:
 A descriptor submitted by `M_AddVariable` within `H_UpdateVariable` for the current Module scan. It needs no configured node registration and disappears when omitted. JSON descriptors have priority within the shared 100-entry VariableList; the descriptor ID, not its array index, is the identity.
 
+## Service Execution Language
+
+**Execute Substate Occurrence**:
+One uninterrupted interval during which a Service reports the same non-zero substate while it is in Execute. Re-entering the same substate begins another occurrence.
+_Avoid_: Unique substate, current step
+
+**Execute Substate History**:
+The ordered occurrences retained for the current Service run, beginning when the Service enters Starting. Leaving and later re-entering Execute preserves the history until the next Starting.
+_Avoid_: Permanent audit log, previous-run history
+
 
 ## Reference Binding Language
 

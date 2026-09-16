@@ -226,6 +226,12 @@
     <Compile Include="DUTs\ST_ServiceDataStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\ST_ServiceExecuteSubStateRecord.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_ServiceExecuteSubStateStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\ST_ServiceStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -460,6 +466,9 @@
     <Compile Include="Tests\Fakes\FB_TestableServiceBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Fakes\FB_TestableCarryoverSubStateService.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Fakes\FB_TestableModuleBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -494,6 +503,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Services\FB_ServiceBaseTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\Services\FB_ServiceExecuteSubStateTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="TestTask.TcTTO">

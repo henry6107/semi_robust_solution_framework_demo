@@ -11,6 +11,7 @@ VAR_GLOBAL CONSTANT
 	MaxModuleAlarm : UINT := MaxPublishedModuleAlarms;	// Compatibility alias for existing consumers.
 	MaxServiceError : UINT := 10;		// Num of Service Error per round
 	MaxServiceData : UINT := 30;		// Num of persistent Data descriptors per Service
+	MaxExecuteSubStateRecords : UINT := 30;	// Chronological Execute substate occurrences retained per Service run.
 	MaxServicesPerModule : UINT := 100;	// Maximum number of Services registered by one Module.
 	MaxCompositeDependencies : UINT := 10;	// Maximum number of child Services declared by one Composite Service.
 	MaxModuleData : UINT := 50;			// Num of DVID
