@@ -139,6 +139,9 @@
     <Compile Include="Configuration\POUs\FB_ModuleConfigurationManager.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Configuration\POUs\FB_ApplicationConfigRoot.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\Alarm\E_AlarmAckCommand.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -400,6 +403,12 @@
     <Compile Include="POUs\10_Module\FB_CompositeServiceBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\FB_ConfigRoot.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Run.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\MAIN.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -457,6 +466,9 @@
     <Compile Include="Tests\Fakes\FB_FakeBaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Fakes\FB_TestApplicationConfigRoot.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Fakes\FB_FakeModuleConfigurationAdapter.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -485,6 +497,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Configuration\FB_ModuleResourceRegistrationTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suites\Configuration\FB_ApplicationConfigRootTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suites\Modules\FB_Chamber1_ModuleTests.TcPOU">

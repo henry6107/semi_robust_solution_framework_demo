@@ -8,7 +8,7 @@ PLC 啟動時會從 `Param_Config.ModuleConfigFilePath` 載入 UTF-8 JSON；預�
 
 ## Chamber1 公開介面
 
-`moduleType` 使用 `Chamber1`，必須與 `MAIN` 註冊的名稱完全一致；舊模組名稱不提供相容別名。`Chamber1` 是模組類型名稱，仍支援 `Param_Config.MaxModulePerType` 定義的 6 個 slot。
+`moduleType` 使用 `Chamber1`，必須與應用程式 `FB_ConfigRoot` 註冊的名稱完全一致；舊模組名稱不提供相容別名。`Chamber1` 是模組類型名稱，仍支援 `Param_Config.MaxModulePerType` 定義的 6 個 slot。
 
 ADS 模組實例路徑為 `GVL_Module.Chamber1[slot]`，控制與狀態資料位於 `GVL_Module.Chamber1_Control[slot]`；執行期設定與軸參照分別位於 `Chamber1_Runtime`、`Chamber1_SpinAxis`、`Chamber1_LiftPinAxis` 陣列。原先獨立的 GUI／C# 全域入口已移除，外部用戶端需更新為目前公開的符號路徑。
 
@@ -27,7 +27,9 @@ Module ID 使用設定檔的數值 `id` 與 PLC 的 `UDINT` 欄位，不再提�
 
 ## 可連結節點
 
-設定檔只能使用 PLC initial 階段已註冊到 `FB_LinkVariableManager`／`FB_ReferenceManager` 的節點。Beckhoff 實體 I/O 與 BaseUnit reference 由 `MAIN` 註冊；兩個 manager 都會從實際變數位址自動取得 ADS symbol，呼叫端不需手寫名稱。Module I/O 則由對應 adapter 透過通用 registration interface 宣告；`FB_LinkVariableManager` 不包含 Chamber1 或其他應用 Module Type 的 concrete registration method。使用者仍只需修改 JSON 來選擇已公開的節點。
+設定檔只能使用 PLC initial 階段已註冊到 `FB_LinkVariableManager`／`FB_ReferenceManager` 的節點。Beckhoff 實體 I/O、BaseUnit reference 與 Module Type 由繼承 `FB_ApplicationConfigRoot` 的應用程式 `FB_ConfigRoot` 註冊；兩個 manager 都會從實際變數位址自動取得 ADS symbol，呼叫端不需手寫名稱。Module I/O 則由對應 adapter 透過通用 registration interface 宣告；`FB_LinkVariableManager` 不包含 Chamber1 或其他應用 Module Type 的 concrete registration method。使用者仍只需修改 JSON 來選擇已公開的節點。
+
+PLC task 只需執行 `MAIN`；`MAIN` 建立應用程式的 `FB_ConfigRoot`，並以 `Run(ApplicationConfigRoot := ConfigRoot)` 注入共用的 `Run` Program。`Run` 負責設定輪詢、UTC／heartbeat context，以及 Ready 後固定的 input copy、Module polling、output copy 順序；具體註冊與 Module 呼叫留在 `FB_ConfigRoot` 的 hooks。
 
 Module adapter 以 `M_RegisterModuleNode(Variable, Access)` 宣告完整 I/O surface；manager 會從變數位址與大小取得完整 ADS symbol，所有 declarations 都會寫入 registry。未被 configuration 使用的 nodes 仍占用 node-table 容量，但不會建立 link，也不增加 cyclic copy 或 configured-value read。初始化每個 Module instance 時，adapter 先以註冊完成後取得的 `ModuleSymbol` 呼叫 `M_SetModuleScope`，再透過 `M_TakeRequired(Port := 引腳變數)`／`M_TakeOptional(Port := 引腳變數)` 取得 reference；Context 使用引腳位址與大小反查 ADS symbol，驗證所屬 Module／Slot 並取出完整相對路徑；framework 統一處理 JSON lookup、source resolve、重複取用與未取用的 unknown key，adapter 只負責以 `__QUERYINTERFACE` 驗證並轉成 Module 所需的 typed interface。
 
@@ -49,7 +51,7 @@ VariableList 與 AlarmList 的 `source` 也必須是該 enabled Module 註冊的
 | `MaxModulePerType` | 6 | 每一種 Module type 可建立的實例數量，也是該 type 的 slot 範圍 `1..6`。各 type 擁有自己的 arrays，因此不同 type 可以使用相同 slot。 |
 | `MaxTotalConfiguredModules` | 48 | 整份 config 的 `modules[]` 最大 entry 數量，包含 enabled 與 disabled entries；目前由 `MaxModulePerType * MaxModuleTypes` 計算。 |
 
-Module type 自己的 FB、Runtime、Control 與 reference arrays，以及 adapter 的 slot 驗證和 MAIN cyclic loop，都必須使用 `MaxModulePerType`。Config parser、`ST_SystemFileConfig.Modules` 與全系統 link table 則使用 `MaxTotalConfiguredModules`。
+Module type 自己的 FB、Runtime、Control 與 reference arrays，以及 adapter 的 slot 驗證和 `FB_ConfigRoot.H_RunModules` 週期迴圈，都必須使用 `MaxModulePerType`。Config parser、`ST_SystemFileConfig.Modules` 與全系統 link table 則使用 `MaxTotalConfiguredModules`。
 
 ## 資料與 Registry 容量
 

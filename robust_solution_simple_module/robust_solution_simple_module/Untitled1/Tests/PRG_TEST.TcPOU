@@ -12,6 +12,7 @@ VAR
 	ModuleAlarmManagerTests : FB_ModuleAlarmManagerTests;
 	Chamber1ModuleTests : FB_Chamber1_ModuleTests;
 	ModuleResourceRegistrationTests : FB_ModuleResourceRegistrationTests;
+	ApplicationConfigRootTests : FB_ApplicationConfigRootTests;
 END_VAR
 ]]></Declaration>
     <Implementation>
