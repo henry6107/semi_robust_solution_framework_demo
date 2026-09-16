@@ -3,11 +3,11 @@
   <POU Name="MAIN" Id="{732eef67-564b-4eae-a87a-e2bb58901008}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
-	ConfigRoot : FB_ConfigRoot;
+	ApplicationConfigRoot : FB_ConfigRoot;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[Run(ApplicationConfigRoot := ConfigRoot);]]></ST>
+      <ST><![CDATA[ApplicationConfigRoot.Run();]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

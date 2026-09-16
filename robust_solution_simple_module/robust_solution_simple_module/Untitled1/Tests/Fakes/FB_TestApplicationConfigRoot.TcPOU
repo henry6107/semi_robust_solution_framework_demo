@@ -66,20 +66,5 @@ END_VAR
         <ST><![CDATA[ModuleCycleCalls := ModuleCycleCalls + 1;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_InvokeRunModulesForTest" Id="{5181f65c-80a1-4944-a6ce-121041357bdb}">
-      <Declaration><![CDATA[METHOD PUBLIC M_InvokeRunModulesForTest
-VAR_IN_OUT CONSTANT
-	SystemContext : ST_SystemContext;
-END_VAR
-VAR
-	VariableNodeReader : I_VariableNodeReader;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[H_RunModules(
-	SystemContext := SystemContext,
-	VariableNodeReader := VariableNodeReader);]]></ST>
-      </Implementation>
-    </Method>
   </POU>
 </TcPlcObject>

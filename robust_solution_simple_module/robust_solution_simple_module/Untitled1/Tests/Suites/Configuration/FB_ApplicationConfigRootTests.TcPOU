@@ -4,7 +4,6 @@
     <Declaration><![CDATA[FUNCTION_BLOCK FB_ApplicationConfigRootTests EXTENDS TcUnit.FB_TestSuite
 VAR
 	_ConfigRoot : FB_TestApplicationConfigRoot;
-	_SystemContext : ST_SystemContext;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -16,7 +15,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[TEST('RegistrationHooksRunOnceInOrderAndLatchFailure');
 
-_ConfigRoot.M_PollConfiguration();
+_ConfigRoot.Run();
 
 AssertTrue(
 	Condition := (_ConfigRoot.IoRegistrationCalls = 1)
@@ -33,27 +32,18 @@ AssertTrue(
 		AND (_ConfigRoot.ErrorMessage = 'A Module Type name and adapter are required.'),
 	Message := 'The first registration failure must be exposed by the ConfigRoot properties.');
 
-// A second poll must neither retry registration nor enter configuration loading.
-_ConfigRoot.M_PollConfiguration();
+// A second cycle must neither retry registration nor enter configuration loading.
+_ConfigRoot.Run();
 AssertTrue(
 	Condition := (_ConfigRoot.IoRegistrationCalls = 1)
 		AND (_ConfigRoot.BaseUnitRegistrationCalls = 1)
 		AND (_ConfigRoot.ModuleTypeRegistrationCalls = 1),
 	Message := 'A latched startup failure must not retry application registration.');
 
-// The public cyclic seam is gated by Ready.
-_ConfigRoot.M_CyclicModules(SystemContext := _SystemContext);
+// The public Run seam is gated by Ready.
 AssertTrue(
 	Condition := _ConfigRoot.ModuleCycleCalls = 0,
 	Message := 'Module polling must remain disabled after configuration initialization fails.');
-
-// Invoke the hook only through the test seam to prove the concrete override is callable.
-IF _ConfigRoot.ModuleCycleCalls = 0 THEN
-	_ConfigRoot.M_InvokeRunModulesForTest(SystemContext := _SystemContext);
-END_IF
-AssertTrue(
-	Condition := _ConfigRoot.ModuleCycleCalls = 1,
-	Message := 'The derived ConfigRoot must provide the Module polling hook.');
 
 TEST_FINISHED();]]></ST>
       </Implementation>

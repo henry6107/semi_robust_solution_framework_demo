@@ -29,7 +29,7 @@ Module ID 使用設定檔的數值 `id` 與 PLC 的 `UDINT` 欄位，不再提�
 
 設定檔只能使用 PLC initial 階段已註冊到 `FB_LinkVariableManager`／`FB_ReferenceManager` 的節點。Beckhoff 實體 I/O、BaseUnit reference 與 Module Type 由繼承 `FB_ApplicationConfigRoot` 的應用程式 `FB_ConfigRoot` 註冊；兩個 manager 都會從實際變數位址自動取得 ADS symbol，呼叫端不需手寫名稱。Module I/O 則由對應 adapter 透過通用 registration interface 宣告；`FB_LinkVariableManager` 不包含 Chamber1 或其他應用 Module Type 的 concrete registration method。使用者仍只需修改 JSON 來選擇已公開的節點。
 
-PLC task 只需執行 `MAIN`；`MAIN` 建立應用程式的 `FB_ConfigRoot`，並以 `Run(ApplicationConfigRoot := ConfigRoot)` 注入共用的 `Run` Program。`Run` 負責設定輪詢、UTC／heartbeat context，以及 Ready 後固定的 input copy、Module polling、output copy 順序；具體註冊與 Module 呼叫留在 `FB_ConfigRoot` 的 hooks。
+PLC task 只需執行 `MAIN`；`MAIN` 建立應用程式的 `FB_ConfigRoot`，並呼叫繼承自 `FB_ApplicationConfigRoot` 的 `ApplicationConfigRoot.Run()`。`Run` method 負責設定輪詢、UTC／heartbeat context，以及 Ready 後固定的 input copy、Module polling、output copy 順序；具體註冊與 Module 呼叫留在 `FB_ConfigRoot` 的 hooks。
 
 Module adapter 以 `M_RegisterModuleNode(Variable, Access)` 宣告完整 I/O surface；manager 會從變數位址與大小取得完整 ADS symbol，所有 declarations 都會寫入 registry。未被 configuration 使用的 nodes 仍占用 node-table 容量，但不會建立 link，也不增加 cyclic copy 或 configured-value read。初始化每個 Module instance 時，adapter 先以註冊完成後取得的 `ModuleSymbol` 呼叫 `M_SetModuleScope`，再透過 `M_TakeRequired(Port := 引腳變數)`／`M_TakeOptional(Port := 引腳變數)` 取得 reference；Context 使用引腳位址與大小反查 ADS symbol，驗證所屬 Module／Slot 並取出完整相對路徑；framework 統一處理 JSON lookup、source resolve、重複取用與未取用的 unknown key，adapter 只負責以 `__QUERYINTERFACE` 驗證並轉成 Module 所需的 typed interface。
 

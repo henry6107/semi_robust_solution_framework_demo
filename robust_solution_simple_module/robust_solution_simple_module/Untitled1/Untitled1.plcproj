@@ -406,9 +406,6 @@
     <Compile Include="POUs\FB_ConfigRoot.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\Run.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\MAIN.TcPOU">
       <SubType>Code</SubType>
     </Compile>

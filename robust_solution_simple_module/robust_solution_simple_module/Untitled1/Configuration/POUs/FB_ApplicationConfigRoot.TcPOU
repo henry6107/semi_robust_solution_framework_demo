@@ -7,6 +7,8 @@ VAR
 	_ReferenceManager : FB_ReferenceManager;
 	_ModuleTypeRegistry : FB_ModuleTypeRegistry;
 	_ModuleConfigurationManager : FB_ModuleConfigurationManager;
+	_UtcClock : FB_UtcClock;
+	_SystemContext : ST_SystemContext;
 	_bRegistrationAttempted : BOOL;
 	_bRegistered : BOOL;
 	_bError : BOOL;
@@ -92,40 +94,26 @@ END_VAR
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_CyclicInput" Id="{bdd61f85-631c-46ea-9b9e-021c6badf010}">
-      <Declaration><![CDATA[METHOD PUBLIC FINAL M_CyclicInput
+    <Method Name="Run" Id="{bdd61f85-631c-46ea-9b9e-021c6badf010}">
+      <Declaration><![CDATA[METHOD PUBLIC FINAL Run
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF Ready THEN
+        <ST><![CDATA[M_PollConfiguration();
+
+_UtcClock(UtcDateTime => _SystemContext.UtcDateTime);
+_SystemContext.ModuleHeartbeatTimeout := Param_Config.ModuleHeartbeat_Timeout;
+
+IF Ready THEN
 	_LinkVariableManager.M_CyclicInput();
-END_IF]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_CyclicModules" Id="{efe30913-6738-4a2f-8f94-a3174c6941c4}">
-      <Declaration><![CDATA[METHOD PUBLIC FINAL M_CyclicModules
-VAR_IN_OUT CONSTANT
-	SystemContext : ST_SystemContext;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[IF Ready THEN
 	H_RunModules(
-		SystemContext := SystemContext,
+		SystemContext := _SystemContext,
 		VariableNodeReader := _LinkVariableManager);
-END_IF]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="M_CyclicOutput" Id="{edeb8ca1-72ab-4bc5-85a0-c9f83942239b}">
-      <Declaration><![CDATA[METHOD PUBLIC FINAL M_CyclicOutput
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[IF Ready THEN
 	_LinkVariableManager.M_CyclicOutput();
 END_IF]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_PollConfiguration" Id="{3afd629d-8905-4d8b-9a7e-d84357b3398c}">
-      <Declaration><![CDATA[METHOD PUBLIC FINAL M_PollConfiguration
+      <Declaration><![CDATA[METHOD PRIVATE M_PollConfiguration
 VAR
 	bRegistrationSessionStarted : BOOL;
 	bRegistrationSealed : BOOL;

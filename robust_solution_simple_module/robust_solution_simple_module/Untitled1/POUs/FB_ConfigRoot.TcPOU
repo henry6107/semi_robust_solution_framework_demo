@@ -13,9 +13,7 @@ END_VAR
       <Declaration><![CDATA[METHOD PROTECTED H_RegisterBaseUnits
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT M_RegisterBaseUnit(BaseUnit := GVL_IO.NC_Axis1) THEN
-	RETURN;
-END_IF
+        <ST><![CDATA[M_RegisterBaseUnit(BaseUnit := GVL_IO.NC_Axis1);
 M_RegisterBaseUnit(BaseUnit := GVL_IO.NC_Axis2);]]></ST>
       </Implementation>
     </Method>
