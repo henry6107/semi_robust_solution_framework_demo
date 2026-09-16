@@ -8,9 +8,7 @@ TYPE E_ServiceCompletionBehavior :
 (
 	Unknown := 0,
 	NaturalCompletion := 1,
-	ExecuteUntilExternalStop := 2,
-	SendWafer := 3,
-	ReceiveWafer := 4
+	ExecuteUntilExternalStop := 2
 ) UDINT;
 END_TYPE
 ]]></Declaration>

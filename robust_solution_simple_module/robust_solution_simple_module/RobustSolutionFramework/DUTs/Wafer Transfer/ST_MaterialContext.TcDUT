@@ -4,6 +4,7 @@
     <Declaration><![CDATA[TYPE ST_MaterialContext :
 STRUCT
 	Id : UDINT;
+	OperationState : E_OperationState;
 	// Add other information of wafer...
 END_STRUCT
 END_TYPE
