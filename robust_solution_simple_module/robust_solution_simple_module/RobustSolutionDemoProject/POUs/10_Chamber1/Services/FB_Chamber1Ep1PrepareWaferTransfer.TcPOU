@@ -3,7 +3,7 @@
   <POU Name="FB_Chamber1Ep1PrepareWaferTransfer" Id="{31c0f8a3-2bb7-4853-987f-7b1795d30426}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Chamber1Ep1PrepareWaferTransfer EXTENDS FB_CompositeServiceBase
 VAR
-	_Step : E_Chamber1Ep1PrepareWaferTransferStep;
+	_Step : E_Ch1Ep1PrepareWaferTransferStep;
 	_CommandSubmitted : BOOL;
 	_LiftPinMoveParam : ST_Chamber1LiftPinAxisMoveAbsParam;
 	_VacuumOffParam : ST_EmptyServiceParam;
@@ -50,7 +50,7 @@ END_VAR
         <ST><![CDATA[H_OnCompositeExecute := E_PackMLHookResult.Busy;
 
 IF bFirstScan THEN
-	_Step := E_Chamber1Ep1PrepareWaferTransferStep.MoveLiftPinAxis;
+	_Step := E_Ch1Ep1PrepareWaferTransferStep.MoveLiftPinAxis;
 	_CommandSubmitted := FALSE;
 
 	_LiftPinMoveParam.Position := 70.0;
@@ -60,7 +60,7 @@ IF bFirstScan THEN
 END_IF
 
 CASE _Step OF
-	E_Chamber1Ep1PrepareWaferTransferStep.MoveLiftPinAxis:
+	E_Ch1Ep1PrepareWaferTransferStep.MoveLiftPinAxis:
 		IF NOT _CommandSubmitted THEN
 			SubmitResult := M_StartDependency(
 				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
@@ -98,11 +98,11 @@ CASE _Step OF
 				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
 				Snapshot => Snapshot)
 			AND (Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Complete) THEN
-			_Step := E_Chamber1Ep1PrepareWaferTransferStep.VacuumOff;
+			_Step := E_Ch1Ep1PrepareWaferTransferStep.VacuumOff;
 			_CommandSubmitted := FALSE;
 		END_IF
 
-	E_Chamber1Ep1PrepareWaferTransferStep.VacuumOff:
+	E_Ch1Ep1PrepareWaferTransferStep.VacuumOff:
 		IF NOT _CommandSubmitted THEN
 			SubmitResult := M_StartDependency(
 				ServiceId := E_Chamber1ServiceId.VacuumOff,
@@ -140,11 +140,11 @@ CASE _Step OF
 				ServiceId := E_Chamber1ServiceId.VacuumOff,
 				Snapshot => Snapshot)
 			AND (Snapshot.PackMLOut.eStateCurrent = E_PackMLState.Complete) THEN
-			_Step := E_Chamber1Ep1PrepareWaferTransferStep.Finish;
+			_Step := E_Ch1Ep1PrepareWaferTransferStep.Finish;
 			_CommandSubmitted := FALSE;
 		END_IF
 
-	E_Chamber1Ep1PrepareWaferTransferStep.Finish:
+	E_Ch1Ep1PrepareWaferTransferStep.Finish:
 		H_OnCompositeExecute := E_PackMLHookResult.Done;
 
 	ELSE

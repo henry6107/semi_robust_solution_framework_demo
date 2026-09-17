@@ -172,8 +172,8 @@ M_RegisterService(
 	AllowCompositeCall := FALSE,
 	UpperCtrl := ServiceCtrl.Ep1PrepareWaferTransfer,
 	EffectiveCtrl := _EffectiveServiceCtrl.Ep1PrepareWaferTransfer,
-	UpperParam := ServiceParam.Endpoint1PrepareSendWafer,
-	EffectiveParam := _EffectiveServiceParam.Endpoint1PrepareSendWafer,
+	UpperParam := ServiceParam.Ep1PrepareWaferTransfer,
+	EffectiveParam := _EffectiveServiceParam.Ep1PrepareWaferTransfer,
 	Status := _ServiceStatusStore.Ep1PrepareWaferTransfer);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.SetMaterial,

@@ -63,10 +63,10 @@
     <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Door\ST_Chamber1DoorOpenParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareWaferTransfer\E_Chamber1Ep1PrepareWaferTransferStep.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareWaferTransfer\E_Ch1Ep1PrepareWaferTransferStep.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareWaferTransfer\ST_Chamber1Ep1PrepardWaferTransferParam.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareWaferTransfer\ST_ChEp1PrepareWaferTransferParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Chamber1\DUTs\Service Param\LiftAxis\ST_Chamber1LiftPinAxisMoveAbsParam.TcDUT">
