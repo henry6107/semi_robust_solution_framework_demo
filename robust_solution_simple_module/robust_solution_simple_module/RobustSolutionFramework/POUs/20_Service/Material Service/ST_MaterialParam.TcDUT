@@ -3,7 +3,7 @@
   <DUT Name="ST_MaterialParam" Id="{11cdc8d6-6601-4eca-8aa9-69121d718b6c}">
     <Declaration><![CDATA[TYPE ST_MaterialParam :
 STRUCT
-	CmdType : E_MaterialCmdType;
+	CmdType : E_SetMaterialCmdType;
 	TargetEndpointId : UDINT;
 	MaterialContext : ST_MaterialContext;
 END_STRUCT

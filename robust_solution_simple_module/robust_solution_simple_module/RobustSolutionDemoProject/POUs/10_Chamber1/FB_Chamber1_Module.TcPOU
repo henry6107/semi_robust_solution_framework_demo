@@ -35,7 +35,7 @@ VAR
 	_VacuumOnService : FB_Chamber1VacuumOnService;
 	_Endpoint1PrepareSendWaferService : FB_Chamber1Endpoint1PrepareSendWafer;
 	_PreparePositionService : FB_Chamber1PreparePositionService;
-	_SetMaterialService : FB_MaterialService;
+	_SetMaterialService : FB_SetMaterialService;
 	
 	_bEndpoint1_SendReady : BOOL;
 	_bEndpoint1_SendPrepared : BOOL;

@@ -45,6 +45,9 @@ VAR
 	SubmitResult : E_ServiceCallSubmitResult;
 	CommandState : E_ServiceInternalCommandState;
 	Snapshot : ST_ServiceExecutionSnapshot;
+	LiftReadyParam : ST_Chamber1LiftPinAxisMoveAbsParam;
+	SpinAlignParam : ST_Chamber1SpinAxisMoveAbsParam;
+	LiftWorkParam : ST_Chamber1LiftPinAxisMoveAbsParam;
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -60,9 +63,14 @@ CASE _Step OF
 	
 		// Set command if not submitted
 		IF NOT _CommandSubmitted THEN
+			LiftReadyParam.Position := Param.LiftReadyPosition;
+			LiftReadyParam.Velocity := Param.LiftReadyVelocity;
+			LiftReadyParam.Acceleration := Param.LiftReadyAcceleration;
+			LiftReadyParam.Deceleration := Param.LiftReadyDeceleration;
+
 			SubmitResult := M_StartDependency(
 				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
-				Parameters := Param.LiftReady);
+				Parameters := LiftReadyParam);
 			
 			// Submit successfully
 			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
@@ -104,9 +112,14 @@ CASE _Step OF
 	
 		// Set command if not submitted
 		IF NOT _CommandSubmitted THEN
+			SpinAlignParam.Position := Param.SpinAlignPosition;
+			SpinAlignParam.Velocity := Param.SpinAlignVelocity;
+			SpinAlignParam.Acceleration := Param.SpinAlignAcceleration;
+			SpinAlignParam.Deceleration := Param.SpinAlignDeceleration;
+
 			SubmitResult := M_StartDependency(
 				ServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs,
-				Parameters := Param.SpinAlign);
+				Parameters := SpinAlignParam);
 				
 			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
 				_CommandSubmitted := TRUE;
@@ -180,9 +193,14 @@ CASE _Step OF
 
 	E_Chamber1PreparePositionStep.LiftWork:
 		IF NOT _CommandSubmitted THEN
+			LiftWorkParam.Position := Param.LiftWorkPosition;
+			LiftWorkParam.Velocity := Param.LiftWorkVelocity;
+			LiftWorkParam.Acceleration := Param.LiftWorkAcceleration;
+			LiftWorkParam.Deceleration := Param.LiftWorkDeceleration;
+
 			SubmitResult := M_StartDependency(
 				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
-				Parameters := Param.LiftWork);
+				Parameters := LiftWorkParam);
 				
 			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
 				_CommandSubmitted := TRUE;

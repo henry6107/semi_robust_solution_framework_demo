@@ -1539,6 +1539,7 @@ External Setpoint Generation:
 					<Drive Name="Drive" DrvType="5">
 						<DrvPara>
 							<Analog TorqueSetpointScale="10" ScaleFactorActTorque="0.1"/>
+							<TimeComp TaskDelayCycles="1"/>
 						</DrvPara>
 						<Vars VarGrpType="1">
 							<Name>Inputs</Name>
@@ -1692,6 +1693,7 @@ External Setpoint Generation:
 					<Drive Name="Drive" DrvType="5">
 						<DrvPara>
 							<Analog TorqueSetpointScale="10" ScaleFactorActTorque="0.1"/>
+							<TimeComp TaskDelayCycles="1"/>
 						</DrvPara>
 						<Vars VarGrpType="1">
 							<Name>Inputs</Name>
@@ -1812,7 +1814,7 @@ External Setpoint Generation:
 				</Instance>
 			</Project>
 			<Project GUID="{211D1B58-22B7-4F39-8E50-EDC8876BDF19}" Name="RobustSolutionDemoProject" PrjFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.plcproj" TmcFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.tmc" ReloadTmc="true" AmsPort="853" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{7F3CAFF7-96F3-B802-B53A-08F6784E3C43}">
+				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{777C5069-77E5-A9C2-9DF8-B0DA3EF9663B}">
 					<Name>RobustSolutionDemoProject Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" AreaNo="1">

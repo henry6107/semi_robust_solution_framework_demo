@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="FB_MaterialService" Id="{a93d4b40-d015-47ca-8838-89ddd92d5102}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_MaterialService EXTENDS FB_ServiceBase
+  <POU Name="FB_SetMaterialService" Id="{a93d4b40-d015-47ca-8838-89ddd92d5102}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_SetMaterialService EXTENDS FB_ServiceBase
 VAR_INPUT
 	Param : ST_MaterialParam;
 END_VAR
@@ -32,16 +32,16 @@ END_VAR
         <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
 
 CASE _ActiveParam.CmdType OF
-	E_MaterialCmdType.Modify:
+	E_SetMaterialCmdType.Modify:
 		WaferStatusList[_TargetIndex].MaterialContext := _ActiveParam.MaterialContext;
 
-	E_MaterialCmdType.Clear:
+	E_SetMaterialCmdType.Clear:
 		MEMSET(
 			ADR(WaferStatusList[_TargetIndex].MaterialContext),
 			0,
 			SIZEOF(WaferStatusList[_TargetIndex].MaterialContext));
 
-	E_MaterialCmdType.ClearAll:
+	E_SetMaterialCmdType.ClearAll:
 		FOR nIndex := LOWER_BOUND(WaferStatusList, 1)
 			TO UPPER_BOUND(WaferStatusList, 1) DO
 			MEMSET(
@@ -53,7 +53,7 @@ CASE _ActiveParam.CmdType OF
 	ELSE
 		// Starting validates and snapshots the command. This is a defensive guard.
 		M_AddError(
-			MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.InvalidCommand),
+			MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.InvalidCommand),
 			SourceErrorId := 0,
 			Message := 'The snapshotted material command is invalid.');
 		RequestCommand(E_PackMLCommand.Stop);
@@ -84,11 +84,11 @@ IF bFirstScan THEN
 END_IF
 
 CASE _ActiveParam.CmdType OF
-	E_MaterialCmdType.Modify,
-	E_MaterialCmdType.Clear:
+	E_SetMaterialCmdType.Modify,
+	E_SetMaterialCmdType.Clear:
 		IF _ActiveParam.TargetEndpointId = 0 THEN
 			M_AddError(
-				MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.TargetEndpointIdRequired),
+				MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.TargetEndpointIdRequired),
 				SourceErrorId := 0,
 				Message := 'TargetEndpointId must be non-zero for Modify or Clear.');
 			RequestCommand(E_PackMLCommand.Stop);
@@ -106,7 +106,7 @@ CASE _ActiveParam.CmdType OF
 
 		IF nTargetMatchCount = 0 THEN
 			M_AddError(
-				MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.TargetEndpointNotFound),
+				MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.TargetEndpointNotFound),
 				SourceErrorId := 0,
 				Message := 'TargetEndpointId was not found in WaferStatusList.');
 			RequestCommand(E_PackMLCommand.Stop);
@@ -115,20 +115,20 @@ CASE _ActiveParam.CmdType OF
 
 		IF nTargetMatchCount > 1 THEN
 			M_AddError(
-				MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.DuplicateTargetEndpointId),
+				MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.DuplicateTargetEndpointId),
 				SourceErrorId := 0,
 				Message := 'TargetEndpointId is duplicated in WaferStatusList.');
 			RequestCommand(E_PackMLCommand.Stop);
 			RETURN;
 		END_IF
 
-	E_MaterialCmdType.ClearAll:
+	E_SetMaterialCmdType.ClearAll:
 		// ClearAll intentionally ignores TargetEndpointId and MaterialContext.
 		_TargetIndex := 0;
 
 	ELSE
 		M_AddError(
-			MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.InvalidCommand),
+			MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.InvalidCommand),
 			SourceErrorId := 0,
 			Message := 'CmdType is not a supported material command.');
 		RequestCommand(E_PackMLCommand.Stop);
