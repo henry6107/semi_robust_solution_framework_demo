@@ -258,14 +258,6 @@ _LiftPinAxisMoveAbsService(
 	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
 	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveAbs,
 	Status=> _ServiceStatusStore.LiftPinAxisMoveAbs);
-
-_LiftPinAxisMoveAbsService(
-	Ctrl:= _EffectiveServiceCtrl.LiftPinAxisMoveAbs,
-	Param:= _EffectiveServiceParam.LiftPinAxisMoveAbs,
-	Context:= _ServiceContext,
-	Axis_BaseUnit:= LiftPinAxis_BaseUnit,
-	ServiceId:= E_Chamber1ServiceId.LiftPinAxisMoveAbs,
-	Status=> _ServiceStatusStore.LiftPinAxisMoveAbs);
 	
 _Endpoint1DoorOpenService(
 	Ctrl:=  _EffectiveServiceCtrl.DoorOpen, 
@@ -310,6 +302,7 @@ _SetMaterialService(
 
 _PreparePositionService(
 	Ctrl := _EffectiveServiceCtrl.PreparePosition,
+	Param:= _EffectiveServiceParam.PreparePosition,
 	Context := _ServiceContext,
 	ServiceId := E_Chamber1ServiceId.PreparePosition,
 	Status => _ServiceStatusStore.PreparePosition);

@@ -8,6 +8,10 @@ END_VAR
 VAR
 	_Step : E_Chamber1PreparePositionStep;
 	_CommandSubmitted : BOOL;
+	
+	_LiftReadyParam : ST_Chamber1LiftPinAxisMoveAbsParam;
+	_SpinAlignParam : ST_Chamber1SpinAxisMoveAbsParam;
+	_LiftWorkParam : ST_Chamber1LiftPinAxisMoveAbsParam;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -45,9 +49,7 @@ VAR
 	SubmitResult : E_ServiceCallSubmitResult;
 	CommandState : E_ServiceInternalCommandState;
 	Snapshot : ST_ServiceExecutionSnapshot;
-	LiftReadyParam : ST_Chamber1LiftPinAxisMoveAbsParam;
-	SpinAlignParam : ST_Chamber1SpinAxisMoveAbsParam;
-	LiftWorkParam : ST_Chamber1LiftPinAxisMoveAbsParam;
+
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -63,14 +65,14 @@ CASE _Step OF
 	
 		// Set command if not submitted
 		IF NOT _CommandSubmitted THEN
-			LiftReadyParam.Position := Param.LiftReadyPosition;
-			LiftReadyParam.Velocity := Param.LiftReadyVelocity;
-			LiftReadyParam.Acceleration := Param.LiftReadyAcceleration;
-			LiftReadyParam.Deceleration := Param.LiftReadyDeceleration;
+			_LiftReadyParam.Position := Param.LiftReadyPosition;
+			_LiftReadyParam.Velocity := Param.LiftReadyVelocity;
+			_LiftReadyParam.Acceleration := Param.LiftReadyAcceleration;
+			_LiftReadyParam.Deceleration := Param.LiftReadyDeceleration;
 
 			SubmitResult := M_StartDependency(
 				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
-				Parameters := LiftReadyParam);
+				Parameters := _LiftReadyParam);
 			
 			// Submit successfully
 			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
@@ -112,14 +114,14 @@ CASE _Step OF
 	
 		// Set command if not submitted
 		IF NOT _CommandSubmitted THEN
-			SpinAlignParam.Position := Param.SpinAlignPosition;
-			SpinAlignParam.Velocity := Param.SpinAlignVelocity;
-			SpinAlignParam.Acceleration := Param.SpinAlignAcceleration;
-			SpinAlignParam.Deceleration := Param.SpinAlignDeceleration;
+			_SpinAlignParam.Position := Param.SpinAlignPosition;
+			_SpinAlignParam.Velocity := Param.SpinAlignVelocity;
+			_SpinAlignParam.Acceleration := Param.SpinAlignAcceleration;
+			_SpinAlignParam.Deceleration := Param.SpinAlignDeceleration;
 
 			SubmitResult := M_StartDependency(
 				ServiceId := E_Chamber1ServiceId.SpinAxisMoveAbs,
-				Parameters := SpinAlignParam);
+				Parameters := _SpinAlignParam);
 				
 			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
 				_CommandSubmitted := TRUE;
@@ -193,14 +195,14 @@ CASE _Step OF
 
 	E_Chamber1PreparePositionStep.LiftWork:
 		IF NOT _CommandSubmitted THEN
-			LiftWorkParam.Position := Param.LiftWorkPosition;
-			LiftWorkParam.Velocity := Param.LiftWorkVelocity;
-			LiftWorkParam.Acceleration := Param.LiftWorkAcceleration;
-			LiftWorkParam.Deceleration := Param.LiftWorkDeceleration;
+			_LiftWorkParam.Position := Param.LiftWorkPosition;
+			_LiftWorkParam.Velocity := Param.LiftWorkVelocity;
+			_LiftWorkParam.Acceleration := Param.LiftWorkAcceleration;
+			_LiftWorkParam.Deceleration := Param.LiftWorkDeceleration;
 
 			SubmitResult := M_StartDependency(
 				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
-				Parameters := LiftWorkParam);
+				Parameters := _LiftWorkParam);
 				
 			IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
 				_CommandSubmitted := TRUE;
