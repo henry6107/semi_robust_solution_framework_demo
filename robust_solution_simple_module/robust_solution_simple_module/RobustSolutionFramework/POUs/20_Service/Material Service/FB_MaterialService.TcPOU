@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_MaterialService" Id="{a93d4b40-d015-47ca-8838-89ddd92d5102}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_MaterialService EXTENDS FB_ServiceBase
+VAR_INPUT
+	Param : ST_MaterialParam;
+END_VAR
+
+VAR_IN_OUT
+	WaferStatusList : ARRAY[*] OF ST_WaferStatus; 
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="H_OnExecute" Id="{b12ade9d-beb0-469f-ac4b-b8e9258f4736}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStarting" Id="{8aa5812b-d63b-4ccb-b5a6-367614c8ebb7}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
