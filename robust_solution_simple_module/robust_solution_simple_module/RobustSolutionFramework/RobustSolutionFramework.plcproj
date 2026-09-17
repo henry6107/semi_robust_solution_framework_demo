@@ -230,7 +230,7 @@
     <Compile Include="DUTs\Service\Contracts\ST_ServiceStatus.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\Wafer Transfer\E_OperationState.TcDUT">
+    <Compile Include="DUTs\Wafer Transfer\E_MaterialOperateState.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\Wafer Transfer\ST_MaterialContext.TcDUT">

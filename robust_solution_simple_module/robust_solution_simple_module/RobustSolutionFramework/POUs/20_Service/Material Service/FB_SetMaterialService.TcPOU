@@ -33,7 +33,8 @@ END_VAR
 
 CASE _ActiveParam.CmdType OF
 	E_SetMaterialCmdType.Modify:
-		WaferStatusList[_TargetIndex].MaterialContext := _ActiveParam.MaterialContext;
+		WaferStatusList[_TargetIndex].MaterialContext.Id := _ActiveParam.MaterialId;
+		WaferStatusList[_TargetIndex].MaterialContext.OperationState := _ActiveParam.MaterialOperateState;
 
 	E_SetMaterialCmdType.Clear:
 		MEMSET(

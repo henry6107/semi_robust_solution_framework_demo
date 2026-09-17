@@ -14,7 +14,7 @@ STRUCT
 	VacuumOn : ST_ServiceStatus;
 	VacuumOff : ST_ServiceStatus;
 	PreparePosition : ST_ServiceStatus;
-	Endpoint1PrepareSendWafer : ST_ServiceStatus;
+	Ep1PrepareWaferTransfer : ST_ServiceStatus;
 	SetMaterial : ST_ServiceStatus;
 END_STRUCT
 END_TYPE

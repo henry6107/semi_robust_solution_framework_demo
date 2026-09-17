@@ -3,7 +3,7 @@
   <DUT Name="ST_ServiceExecuteSubStateRecord" Id="{e81d9967-20df-41d0-80f4-593a2a7dfc56}">
     <Declaration><![CDATA[TYPE ST_ServiceExecuteSubStateRecord :
 STRUCT
-	State : UDINT;
+	Step : UDINT;
 	Name : STRING(80);
 	// UTC timestamp formatted as YYYYMMDDHHMMSSUUU.
 	StartTimestamp : STRING(20);

@@ -33,7 +33,7 @@ VAR
 	_Endpoint1DoorCloseService : FB_Chamber1Endpoint1DoorCloseService;
 	_VacuumOffService : FB_Chamber1VacuumOffService;
 	_VacuumOnService : FB_Chamber1VacuumOnService;
-	_Endpoint1PrepareSendWaferService : FB_Chamber1Endpoint1PrepareSendWafer;
+	_Ep1PrepareWaferTransferService : FB_Chamber1Ep1PrepareWaferTransfer;
 	_PreparePositionService : FB_Chamber1PreparePositionService;
 	_SetMaterialService : FB_SetMaterialService;
 	
@@ -55,14 +55,14 @@ ModuleStatus.WaferStatusList[1].EndpointName := 'Hello World';
 
 // Update endpoint status (for SVID display)
 _bEndpoint1_SendReady := _ServiceCoordinator.AllIdle AND
-						 ModuleStatus.WaferStatusList[1].MaterialContext.Id <> 0;
+						 ModuleStatus.WaferStatusList[1].MaterialContext.Id <> '';
 						 
 _bEndpoint1_SendPrepared := _bEndpoint1_SendReady AND
 							HwInput.bVacuumOn = FALSE AND
 							LiftPinAxis_BaseUnit.AxisActualPosition = 70.0;
 
 _bEndpoint1_ReceiveReady := _ServiceCoordinator.AllIdle AND
-						 ModuleStatus.WaferStatusList[1].MaterialContext.Id = 0;
+						 ModuleStatus.WaferStatusList[1].MaterialContext.Id = '';
 						 
 _bEndpoint1_ReceivePrepared := _bEndpoint1_ReceiveReady AND
 							HwInput.bVacuumOn = FALSE AND
@@ -170,11 +170,11 @@ M_RegisterService(
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.Endpoint1PrepareSendWafer,
 	AllowCompositeCall := FALSE,
-	UpperCtrl := ServiceCtrl.Endpoint1PrepareSendWafer,
-	EffectiveCtrl := _EffectiveServiceCtrl.Endpoint1PrepareSendWafer,
+	UpperCtrl := ServiceCtrl.Ep1PrepareWaferTransfer,
+	EffectiveCtrl := _EffectiveServiceCtrl.Ep1PrepareWaferTransfer,
 	UpperParam := ServiceParam.Endpoint1PrepareSendWafer,
 	EffectiveParam := _EffectiveServiceParam.Endpoint1PrepareSendWafer,
-	Status := _ServiceStatusStore.Endpoint1PrepareSendWafer);
+	Status := _ServiceStatusStore.Ep1PrepareWaferTransfer);
 M_RegisterService(
 	ServiceId := E_Chamber1ServiceId.SetMaterial,
 	AllowCompositeCall := TRUE,
@@ -188,7 +188,7 @@ M_RegisterService(
 _PreparePositionService.M_RegisterDefinition(
 	CompositeServiceId := E_Chamber1ServiceId.PreparePosition,
 	Coordinator := _ServiceCoordinator);
-_Endpoint1PrepareSendWaferService.M_RegisterDefinition(
+_Ep1PrepareWaferTransferService.M_RegisterDefinition(
 	CompositeServiceId := E_Chamber1ServiceId.Endpoint1PrepareSendWafer,
 	Coordinator := _ServiceCoordinator);	
 ]]></ST>
@@ -307,11 +307,11 @@ _PreparePositionService(
 	ServiceId := E_Chamber1ServiceId.PreparePosition,
 	Status => _ServiceStatusStore.PreparePosition);
 
-_Endpoint1PrepareSendWaferService(
-	Ctrl:= _EffectiveServiceCtrl.Endpoint1PrepareSendWafer, 
+_Ep1PrepareWaferTransferService(
+	Ctrl:= _EffectiveServiceCtrl.Ep1PrepareWaferTransfer, 
 	Context:= _ServiceContext, 
 	ServiceId:= E_Chamber1ServiceId.Endpoint1PrepareSendWafer, 
-	Status=> _ServiceStatusStore.Endpoint1PrepareSendWafer);
+	Status=> _ServiceStatusStore.Ep1PrepareWaferTransfer);
 ]]></ST>
       </Implementation>
     </Method>

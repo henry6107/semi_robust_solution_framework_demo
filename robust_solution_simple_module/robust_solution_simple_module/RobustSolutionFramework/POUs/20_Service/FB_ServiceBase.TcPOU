@@ -207,7 +207,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF PackMLOut.eStateCurrent <> E_PackMLState.Execute THEN
 	M_CloseExecuteSubStateRecord();
-	Status.ExecuteSubState.CurrentState := 0;
+	Status.ExecuteSubState.CurrentStep := 0;
 	RETURN;
 END_IF
 
@@ -215,17 +215,17 @@ END_IF
 // Do not sample a substate until an Execute action has actually been evaluated.
 IF NOT ExecuteActionEvaluated THEN
 	M_CloseExecuteSubStateRecord();
-	Status.ExecuteSubState.CurrentState := 0;
+	Status.ExecuteSubState.CurrentStep := 0;
 	RETURN;
 END_IF
 
 NewState := H_GetExecuteSubState();
-IF NewState = Status.ExecuteSubState.CurrentState THEN
+IF NewState = Status.ExecuteSubState.CurrentStep THEN
 	RETURN;
 END_IF
 
 M_CloseExecuteSubStateRecord();
-Status.ExecuteSubState.CurrentState := NewState;
+Status.ExecuteSubState.CurrentStep := NewState;
 
 // State zero means that the Service currently exposes no Execute substate.
 IF NewState = 0 THEN
@@ -240,7 +240,7 @@ END_IF
 
 NewRecordIndex := Status.ExecuteSubState.RecordCount + 1;
 Status.ExecuteSubState.RecordCount := NewRecordIndex;
-Status.ExecuteSubState.Records[NewRecordIndex].State := NewState;
+Status.ExecuteSubState.Records[NewRecordIndex].Step := NewState;
 Status.ExecuteSubState.Records[NewRecordIndex].Name := H_GetExecuteSubStateName();
 Status.ExecuteSubState.Records[NewRecordIndex].StartTimestamp := Context.UtcDateTime;
 Status.ExecuteSubState.Records[NewRecordIndex].EndTimestamp := '';

@@ -4,7 +4,7 @@
     <Declaration><![CDATA[TYPE ST_ServiceExecuteSubStateStatus :
 STRUCT
 	// Zero whenever the Service is not executing or exposes no substate.
-	CurrentState : UDINT;
+	CurrentStep : UDINT;
 	RecordCount : UINT;
 	// The first records are preserved when capacity is exhausted.
 	Overflow : BOOL;

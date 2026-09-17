@@ -63,10 +63,10 @@
     <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Door\ST_Chamber1DoorOpenParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareSendWafer\E_Chamber1Endpoint1PrepareSendWaferStep.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareWaferTransfer\E_Chamber1Ep1PrepareWaferTransferStep.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareSendWafer\ST_Chamber1Endpoint1PrepardSendWaferParam.TcDUT">
+    <Compile Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareWaferTransfer\ST_Chamber1Ep1PrepardWaferTransferParam.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Chamber1\DUTs\Service Param\LiftAxis\ST_Chamber1LiftPinAxisMoveAbsParam.TcDUT">
@@ -111,7 +111,7 @@
     <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1PreparePositionService.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1Endpoint1PrepareSendWafer.TcPOU">
+    <Compile Include="POUs\10_Chamber1\Services\FB_Chamber1Ep1PrepareWaferTransfer.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\10_Chamber1\Services\LiftAxis\FB_Chamber1LiftPinAxisMoveAbsServices.TcPOU">
@@ -153,7 +153,7 @@
     <Folder Include="POUs\10_Chamber1\DUTs\Ctrl Status Interface" />
     <Folder Include="POUs\10_Chamber1\DUTs\External IO" />
     <Folder Include="POUs\10_Chamber1\DUTs\Service Param" />
-    <Folder Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareSendWafer" />
+    <Folder Include="POUs\10_Chamber1\DUTs\Service Param\Endpoint1PrepareWaferTransfer" />
     <Folder Include="POUs\10_Chamber1\DUTs\Service Param\LiftAxis" />
     <Folder Include="POUs\10_Chamber1\DUTs\Service Param\Door" />
     <Folder Include="POUs\10_Chamber1\DUTs\Service Param\Vacuum" />

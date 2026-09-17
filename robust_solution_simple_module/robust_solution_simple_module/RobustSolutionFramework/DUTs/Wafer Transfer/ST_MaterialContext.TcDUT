@@ -3,8 +3,8 @@
   <DUT Name="ST_MaterialContext" Id="{4b60fcdc-f719-468b-a244-a14310a360da}">
     <Declaration><![CDATA[TYPE ST_MaterialContext :
 STRUCT
-	Id : UDINT;
-	OperationState : E_OperationState;
+	Id : STRING(80);
+	OperationState : E_MaterialOperateState;
 	// Add other information of wafer...
 END_STRUCT
 END_TYPE

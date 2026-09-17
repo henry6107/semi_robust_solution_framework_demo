@@ -5,7 +5,10 @@
 STRUCT
 	CmdType : E_SetMaterialCmdType;
 	TargetEndpointId : UDINT;
-	MaterialContext : ST_MaterialContext;
+	
+	// Material context
+	MaterialId : STRING(80);
+	MaterialOperateState : E_MaterialOperateState;
 END_STRUCT
 END_TYPE
 ]]></Declaration>
