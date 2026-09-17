@@ -18,7 +18,8 @@ TYPE E_Chamber1ServiceId :
 	DoorClose := 10,
 	VacuumOn := 11,
 	VacuumOff := 12,
-	PreparePosition := 13
+	PreparePosition := 13,
+	SetMaterial := 14
 ) UDINT;
 END_TYPE
 ]]></Declaration>

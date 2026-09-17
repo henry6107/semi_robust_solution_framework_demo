@@ -282,6 +282,9 @@
     <Compile Include="POUs\20_Service\Material Service\E_MaterialCmdType.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\20_Service\Material Service\E_MaterialServiceErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\20_Service\Material Service\FB_MaterialService.TcPOU">
       <SubType>Code</SubType>
     </Compile>

@@ -9,18 +9,58 @@ END_VAR
 VAR_IN_OUT
 	WaferStatusList : ARRAY[*] OF ST_WaferStatus; 
 END_VAR
+
+VAR
+	_ActiveParam : ST_MaterialParam;
+	_TargetIndex : DINT;
+END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
     </Implementation>
     <Method Name="H_OnExecute" Id="{b12ade9d-beb0-469f-ac4b-b8e9258f4736}">
       <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
 VAR_INPUT
 	bFirstScan	: BOOL;
 END_VAR
+
+VAR
+	nIndex : DINT;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[H_OnExecute := E_PackMLHookResult.Busy;
+
+CASE _ActiveParam.CmdType OF
+	E_MaterialCmdType.Modify:
+		WaferStatusList[_TargetIndex].MaterialContext := _ActiveParam.MaterialContext;
+
+	E_MaterialCmdType.Clear:
+		MEMSET(
+			ADR(WaferStatusList[_TargetIndex].MaterialContext),
+			0,
+			SIZEOF(WaferStatusList[_TargetIndex].MaterialContext));
+
+	E_MaterialCmdType.ClearAll:
+		FOR nIndex := LOWER_BOUND(WaferStatusList, 1)
+			TO UPPER_BOUND(WaferStatusList, 1) DO
+			MEMSET(
+				ADR(WaferStatusList[nIndex].MaterialContext),
+				0,
+				SIZEOF(WaferStatusList[nIndex].MaterialContext));
+		END_FOR
+
+	ELSE
+		// Starting validates and snapshots the command. This is a defensive guard.
+		M_AddError(
+			MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.InvalidCommand),
+			SourceErrorId := 0,
+			Message := 'The snapshotted material command is invalid.');
+		RequestCommand(E_PackMLCommand.Stop);
+		RETURN;
+END_CASE
+
+H_OnExecute := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnStarting" Id="{8aa5812b-d63b-4ccb-b5a6-367614c8ebb7}">
@@ -28,9 +68,74 @@ END_VAR
 VAR_INPUT
 	bFirstScan	: BOOL;
 END_VAR
+
+VAR
+	nIndex : DINT;
+	nTargetMatchCount : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[H_OnStarting := E_PackMLHookResult.Busy;
+
+IF bFirstScan THEN
+	// Execute must use the same values that were validated during Starting.
+	_ActiveParam := Param;
+	_TargetIndex := 0;
+END_IF
+
+CASE _ActiveParam.CmdType OF
+	E_MaterialCmdType.Modify,
+	E_MaterialCmdType.Clear:
+		IF _ActiveParam.TargetEndpointId = 0 THEN
+			M_AddError(
+				MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.TargetEndpointIdRequired),
+				SourceErrorId := 0,
+				Message := 'TargetEndpointId must be non-zero for Modify or Clear.');
+			RequestCommand(E_PackMLCommand.Stop);
+			RETURN;
+		END_IF
+
+		nTargetMatchCount := 0;
+		FOR nIndex := LOWER_BOUND(WaferStatusList, 1)
+			TO UPPER_BOUND(WaferStatusList, 1) DO
+			IF WaferStatusList[nIndex].EndpointId = _ActiveParam.TargetEndpointId THEN
+				nTargetMatchCount := nTargetMatchCount + 1;
+				_TargetIndex := nIndex;
+			END_IF
+		END_FOR
+
+		IF nTargetMatchCount = 0 THEN
+			M_AddError(
+				MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.TargetEndpointNotFound),
+				SourceErrorId := 0,
+				Message := 'TargetEndpointId was not found in WaferStatusList.');
+			RequestCommand(E_PackMLCommand.Stop);
+			RETURN;
+		END_IF
+
+		IF nTargetMatchCount > 1 THEN
+			M_AddError(
+				MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.DuplicateTargetEndpointId),
+				SourceErrorId := 0,
+				Message := 'TargetEndpointId is duplicated in WaferStatusList.');
+			RequestCommand(E_PackMLCommand.Stop);
+			RETURN;
+		END_IF
+
+	E_MaterialCmdType.ClearAll:
+		// ClearAll intentionally ignores TargetEndpointId and MaterialContext.
+		_TargetIndex := 0;
+
+	ELSE
+		M_AddError(
+			MainErrorId := TO_UDINT(E_MaterialServiceErrorCode.InvalidCommand),
+			SourceErrorId := 0,
+			Message := 'CmdType is not a supported material command.');
+		RequestCommand(E_PackMLCommand.Stop);
+		RETURN;
+END_CASE
+
+H_OnStarting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
   </POU>

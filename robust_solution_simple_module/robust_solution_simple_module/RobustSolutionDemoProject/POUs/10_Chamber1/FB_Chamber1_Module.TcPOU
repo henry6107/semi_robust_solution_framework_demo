@@ -35,6 +35,7 @@ VAR
 	_VacuumOnService : FB_Chamber1VacuumOnService;
 	_Endpoint1PrepareSendWaferService : FB_Chamber1Endpoint1PrepareSendWafer;
 	_PreparePositionService : FB_Chamber1PreparePositionService;
+	_SetMaterialService : FB_MaterialService;
 	
 	_bEndpoint1_SendReady : BOOL;
 	_bEndpoint1_SendPrepared : BOOL;
@@ -174,6 +175,14 @@ M_RegisterService(
 	UpperParam := ServiceParam.Endpoint1PrepareSendWafer,
 	EffectiveParam := _EffectiveServiceParam.Endpoint1PrepareSendWafer,
 	Status := _ServiceStatusStore.Endpoint1PrepareSendWafer);
+M_RegisterService(
+	ServiceId := E_Chamber1ServiceId.SetMaterial,
+	AllowCompositeCall := TRUE,
+	UpperCtrl := ServiceCtrl.SetMaterial,
+	EffectiveCtrl := _EffectiveServiceCtrl.SetMaterial,
+	UpperParam := ServiceParam.SetMaterialParam,
+	EffectiveParam := _EffectiveServiceParam.SetMaterialParam,
+	Status := _ServiceStatusStore.SetMaterial);
 
 // Register dependency of composite service
 _PreparePositionService.M_RegisterDefinition(
@@ -290,6 +299,14 @@ _VacuumOffService(
 	Status=> _ServiceStatusStore.VacuumOff, 
 	IsVacuumOn:= HwInput.bVacuumOn, 
 	VacuumOnCtrl:= HwOutput.bVaccumOn);
+
+_SetMaterialService(
+	Ctrl:= _EffectiveServiceCtrl.SetMaterial,
+	Context:= _ServiceContext,
+	ServiceId:= E_Chamber1ServiceId.SetMaterial,
+	Status=> _ServiceStatusStore.SetMaterial,
+	Param:= _EffectiveServiceParam.SetMaterialParam,
+	WaferStatusList:= ModuleStatus.WaferStatusList);
 
 _PreparePositionService(
 	Ctrl := _EffectiveServiceCtrl.PreparePosition,

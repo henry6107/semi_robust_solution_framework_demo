@@ -15,6 +15,7 @@ STRUCT
 	VacuumOff : ST_EmptyServiceParam;
 	PreparePosition : ST_Chamber1PreparePositionParam;
 	Endpoint1PrepareSendWafer : ST_EmptyServiceParam;
+	SetMaterialParam : ST_MaterialParam;
 END_STRUCT
 END_TYPE
 ]]></Declaration>
