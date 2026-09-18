@@ -86,6 +86,7 @@ CASE _Step OF
 				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
 				SourceErrorId := TO_UDINT(E_PackMLCommand.Start),
 				Message := 'LiftPinAxis MoveAbs Start was rejected.');
+				
 		ELSIF (CommandState = E_ServiceInternalCommandState.Cancelled)
 			OR (CommandState = E_ServiceInternalCommandState.None) THEN
 			M_FailSequence(
@@ -93,6 +94,7 @@ CASE _Step OF
 				FailedServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
 				SourceErrorId := TO_UDINT(CommandState),
 				Message := 'LiftPinAxis MoveAbs command state was lost.');
+				
 		ELSIF (CommandState = E_ServiceInternalCommandState.Accepted)
 			AND M_GetDependencyServiceSnapshot(
 				ServiceId := E_Chamber1ServiceId.LiftPinAxisMoveAbs,
@@ -152,7 +154,7 @@ CASE _Step OF
 			ErrorCode := E_CompositeServiceErrorCode.InvalidSequenceState,
 			FailedServiceId := ServiceId,
 			SourceErrorId := TO_UDINT(_Step),
-			Message := 'Endpoint1PrepareSendWafer entered an invalid sequence step.');
+			Message := 'Endpoint1PrepareWaferTransfer entered an invalid sequence step.');
 END_CASE]]></ST>
       </Implementation>
     </Method>

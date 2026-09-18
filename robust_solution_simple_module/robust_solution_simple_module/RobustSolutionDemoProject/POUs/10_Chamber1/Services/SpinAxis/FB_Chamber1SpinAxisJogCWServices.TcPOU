@@ -63,7 +63,8 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Done;
+        <ST><![CDATA[MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
+H_OnClearing := E_PackMLHookResult.Done;
 
 ]]></ST>
       </Implementation>
@@ -132,30 +133,9 @@ IF bError THEN
 		MainErrorId := E_Chamber1ErrorCode.Axis_Command_Error_During_Execute,
 		SourceErrorId := nErrorId,
 		Message := 'Jog failed during Execute.');
-	RequestCommand(E_PackMLCommand.Stop);
+	RequestCommand(E_PackMLCommand.Abort);
 END_IF
 ]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnHeld" Id="{fc1df435-3bb5-4a7c-8ab6-c741096bcbf0}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnHeld
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnHolding" Id="{ece160eb-a5c7-4980-a6c1-7b10ad25762b}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnHolding : E_PackMLHookResult
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnHolding := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnIdle" Id="{801e1204-bf1d-4d12-b7fd-e2791384226a}" FolderPath="StateAction\">
@@ -176,9 +156,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
-
-H_OnResetting := E_PackMLHookResult.Done;]]></ST>
+        <ST><![CDATA[H_OnResetting := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnStarting" Id="{bcd7c333-82d2-481d-9c52-d49b2030a18e}" FolderPath="StateAction\">
@@ -193,26 +171,26 @@ END_VAR
 // Validate Service-owned data before reserving the shared BaseUnit.
 IF Param.Velocity <= 0 THEN
 	M_AddError(MainErrorId := E_Chamber1ErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Velocity must be greater than zero.');
-	RequestCommand(E_PackMLCommand.Stop);
+	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
 IF Param.Acceleration < 0 THEN
 	M_AddError(MainErrorId := E_Chamber1ErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Acceleration must not be negative.');
-	RequestCommand(E_PackMLCommand.Stop);
+	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
 IF Param.Deceleration < 0 THEN
 	M_AddError(MainErrorId := E_Chamber1ErrorCode.Invalid_Param, SourceErrorId := 0, Message := 'Deceleration must not be negative.');
-	RequestCommand(E_PackMLCommand.Stop);
+	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
 // Resource contention is a failed Start, not a wait condition.
 IF NOT Axis_BaseUnit.M_AcquireResource(OwnerId := ServiceId) THEN
 	M_AddError(MainErrorId := E_Chamber1ErrorCode.Resource_Acquire_Failed_During_Starting, SourceErrorId := 0, Message := 'Axis resource acquisition failed during Starting.');
-	RequestCommand(E_PackMLCommand.Stop);
+	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
@@ -225,7 +203,7 @@ END_IF
 
 IF Axis_BaseUnit.AxisHasJob THEN
 	M_AddError(MainErrorId := E_Chamber1ErrorCode.Axis_Is_Busy_During_Starting, SourceErrorId := 0, Message := 'Axis is busy during Starting.');
-	RequestCommand(E_PackMLCommand.Stop);
+	RequestCommand(E_PackMLCommand.Abort);
 	RETURN;
 END_IF
 
@@ -271,60 +249,6 @@ Axis_BaseUnit.M_Jog(
 
 // Jog is stopped once both direction commands have been withdrawn.
 Axis_BaseUnit.M_ReleaseResource(OwnerId := ServiceId);]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnSuspended" Id="{e85e43db-649a-4658-a8a4-46ee44393ec1}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspended
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Default action hook intentionally empty. Override in derived FBs when needed.]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnSuspending" Id="{e203e9d4-d997-4a54-8a42-be70e0403d06}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnSuspending : E_PackMLHookResult
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnSuspending := E_PackMLHookResult.Done;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnUndefined" Id="{f7603c5c-6fc0-49e6-83fe-7aacac7ddd39}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnUndefined : E_PackMLHookResult
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// The base FB leaves Undefined immediately unless a derived FB delays startup.
-H_OnUndefined := E_PackMLHookResult.Done;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnUnholding" Id="{273aa969-3e22-4ea9-8cb4-3dea54c7fc6d}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnUnholding : E_PackMLHookResult
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnUnholding := E_PackMLHookResult.Done;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="H_OnUnsuspending" Id="{901ae4a7-eddd-4729-903d-3db2ee99da23}" FolderPath="StateAction\">
-      <Declaration><![CDATA[METHOD PROTECTED H_OnUnsuspending : E_PackMLHookResult
-VAR_INPUT
-	bFirstScan	: BOOL;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[// Default transient hooks complete immediately; override when work is required.
-H_OnUnsuspending := E_PackMLHookResult.Done;]]></ST>
       </Implementation>
     </Method>
   </POU>

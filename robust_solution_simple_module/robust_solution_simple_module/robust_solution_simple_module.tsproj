@@ -1786,14 +1786,14 @@ External Setpoint Generation:
 		</Motion>
 		<Plc>
 			<Project GUID="{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}" Name="RobustSolutionFramework" PrjFilePath="RobustSolutionFramework\RobustSolutionFramework.plcproj" TmcFilePath="RobustSolutionFramework\RobustSolutionFramework.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{AC81C1DB-CB9D-875A-7808-C9F46E6CDFFE}" TmcPath="RobustSolutionFramework\RobustSolutionFramework.tmc">
+				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{D6632B69-648B-108E-6120-2903D9CF726C}" TmcPath="RobustSolutionFramework\RobustSolutionFramework.tmc">
 					<Name>RobustSolutionFramework Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<JsonDynPous><![CDATA[null]]></JsonDynPous>
 				</Instance>
 			</Project>
 			<Project GUID="{77C99B7E-274C-4127-B1EA-48EE00657A6C}" Name="FrameworkUnitTest" PrjFilePath="FrameworkUnitTest\FrameworkUnitTest.plcproj" TmcFilePath="FrameworkUnitTest\FrameworkUnitTest.tmc" ReloadTmc="true" AmsPort="852" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502040" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{03246054-140F-876E-44F4-7C5B78D1CD19}" TmcPath="FrameworkUnitTest\FrameworkUnitTest.tmc">
+				<Instance Id="#x08502040" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{1B4ACC48-BAC1-03DB-300F-05A9AD056785}" TmcPath="FrameworkUnitTest\FrameworkUnitTest.tmc">
 					<Name>FrameworkUnitTest Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Contexts>
@@ -1814,7 +1814,7 @@ External Setpoint Generation:
 				</Instance>
 			</Project>
 			<Project GUID="{211D1B58-22B7-4F39-8E50-EDC8876BDF19}" Name="RobustSolutionDemoProject" PrjFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.plcproj" TmcFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.tmc" ReloadTmc="true" AmsPort="853" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{C7A31DF2-290B-6BCC-F180-91918D36816B}" TmcPath="RobustSolutionDemoProject\RobustSolutionDemoProject.tmc">
+				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{6AA10163-9839-B3D4-3DAB-BD1EDBF82F1C}" TmcPath="RobustSolutionDemoProject\RobustSolutionDemoProject.tmc">
 					<Name>RobustSolutionDemoProject Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" AreaNo="1">
