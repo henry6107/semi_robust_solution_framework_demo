@@ -273,6 +273,9 @@
     <Compile Include="POUs\10_Module\FB_ServiceCaller.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\20_Service\E_FrameworkServiceErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\20_Service\FB_CompositeServiceBase.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -280,9 +283,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\20_Service\Material Service\E_SetMaterialCmdType.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\20_Service\Material Service\E_SetMaterialServiceErrorCode.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\20_Service\Material Service\FB_SetMaterialService.TcPOU">

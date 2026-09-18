@@ -54,7 +54,7 @@ CASE _ActiveParam.CmdType OF
 	ELSE
 		// Starting validates and snapshots the command. This is a defensive guard.
 		M_AddError(
-			MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.InvalidCommand),
+			MainErrorId := TO_UDINT(E_FrameworkServiceErrorCode.SetMaterial_InvalidCmd),
 			SourceErrorId := 0,
 			Message := 'The snapshotted material command is invalid.');
 		RequestCommand(E_PackMLCommand.Stop);
@@ -89,7 +89,7 @@ CASE _ActiveParam.CmdType OF
 	E_SetMaterialCmdType.Clear:
 		IF _ActiveParam.TargetEndpointId = 0 THEN
 			M_AddError(
-				MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.TargetEndpointIdRequired),
+				MainErrorId := TO_UDINT(E_FrameworkServiceErrorCode.SetMaterial_TaEpIdRequired),
 				SourceErrorId := 0,
 				Message := 'TargetEndpointId must be non-zero for Modify or Clear.');
 			RequestCommand(E_PackMLCommand.Stop);
@@ -107,7 +107,7 @@ CASE _ActiveParam.CmdType OF
 
 		IF nTargetMatchCount = 0 THEN
 			M_AddError(
-				MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.TargetEndpointNotFound),
+				MainErrorId := TO_UDINT(E_FrameworkServiceErrorCode.SetMaterial_TaEpNotFound),
 				SourceErrorId := 0,
 				Message := 'TargetEndpointId was not found in WaferStatusList.');
 			RequestCommand(E_PackMLCommand.Stop);
@@ -116,7 +116,7 @@ CASE _ActiveParam.CmdType OF
 
 		IF nTargetMatchCount > 1 THEN
 			M_AddError(
-				MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.DuplicateTargetEndpointId),
+				MainErrorId := TO_UDINT(E_FrameworkServiceErrorCode.SetMaterial_DuplicateTaEpId),
 				SourceErrorId := 0,
 				Message := 'TargetEndpointId is duplicated in WaferStatusList.');
 			RequestCommand(E_PackMLCommand.Stop);
@@ -129,7 +129,7 @@ CASE _ActiveParam.CmdType OF
 
 	ELSE
 		M_AddError(
-			MainErrorId := TO_UDINT(E_SetMaterialServiceErrorCode.InvalidCommand),
+			MainErrorId := TO_UDINT(E_FrameworkServiceErrorCode.SetMaterial_InvalidCmd),
 			SourceErrorId := 0,
 			Message := 'CmdType is not a supported material command.');
 		RequestCommand(E_PackMLCommand.Stop);

@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_FrameworkServiceErrorCode" Id="{6c8fb4a8-f244-4036-9d41-088e65757441}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE E_FrameworkServiceErrorCode :
+(
+	// Set material service
+	None := 0,
+	SetMaterial_InvalidCmd := 900,
+	SetMaterial_TaEpIdRequired := 901,
+	SetMaterial_TaEpNotFound := 902,
+	SetMaterial_DuplicateTaEpId := 903
+) UDINT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
