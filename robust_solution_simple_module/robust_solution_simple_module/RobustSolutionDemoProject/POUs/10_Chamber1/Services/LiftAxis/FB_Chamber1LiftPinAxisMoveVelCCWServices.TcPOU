@@ -97,7 +97,7 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
+        <ST><![CDATA[M_ClearAllError();
 H_OnClearing := E_PackMLHookResult.Done;
 
 ]]></ST>

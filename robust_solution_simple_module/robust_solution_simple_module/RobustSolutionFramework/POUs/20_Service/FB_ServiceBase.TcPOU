@@ -28,6 +28,7 @@ END_VAR
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
+    <Folder Name="Alarm" Id="{739fe670-a0d7-4f1c-8e4d-40f9db23039d}" />
     <Folder Name="DataVariable" Id="{3109a967-6bf3-43e8-a07e-99771f1a7861}" />
     <Method Name="H_GetExecuteSubState" Id="{df111ed2-37f4-49f9-90f4-999a15583353}">
       <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubState : UDINT
@@ -43,7 +44,7 @@ END_VAR
         <ST><![CDATA[H_GetExecuteSubStateName := '';]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_AddError" Id="{4e62615f-0e50-466e-9f56-aa0713d5e3ab}">
+    <Method Name="M_AddError" Id="{4e62615f-0e50-466e-9f56-aa0713d5e3ab}" FolderPath="Alarm\">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_AddError : BOOL
 VAR_INPUT
 	MainErrorId : UDINT;
@@ -97,6 +98,16 @@ M_AddError := TRUE;]]></ST>
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[MEMSET(ADR(Status.Data), 0, SIZEOF(Status.Data));]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_ClearAllError" Id="{74a7f2fc-6f6d-42ad-ac47-9f603786b3c7}" FolderPath="Alarm\">
+      <Declaration><![CDATA[METHOD PROTECTED FINAL M_ClearAllError : BOOL
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
+M_ClearAllError := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_ClearData" Id="{bda59455-e3cd-4825-a537-585be96d2e4e}" FolderPath="DataVariable\">
