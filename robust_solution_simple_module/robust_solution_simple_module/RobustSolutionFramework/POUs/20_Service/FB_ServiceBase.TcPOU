@@ -28,6 +28,7 @@ END_VAR
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
+    <Folder Name="DataVariable" Id="{3109a967-6bf3-43e8-a07e-99771f1a7861}" />
     <Method Name="H_GetExecuteSubState" Id="{df111ed2-37f4-49f9-90f4-999a15583353}">
       <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubState : UDINT
 ]]></Declaration>
@@ -91,14 +92,14 @@ Status.ErrorList[nFirstEmpty].OccurrenceCount := 1;
 M_AddError := TRUE;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_ClearAllData" Id="{9ce708c8-fcc2-41b9-921d-4cf31cb789df}">
+    <Method Name="M_ClearAllData" Id="{9ce708c8-fcc2-41b9-921d-4cf31cb789df}" FolderPath="DataVariable\">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_ClearAllData
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[MEMSET(ADR(Status.Data), 0, SIZEOF(Status.Data));]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_ClearData" Id="{bda59455-e3cd-4825-a537-585be96d2e4e}">
+    <Method Name="M_ClearData" Id="{bda59455-e3cd-4825-a537-585be96d2e4e}" FolderPath="DataVariable\">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_ClearData : BOOL
 VAR_INPUT
 	DataId : UDINT;
@@ -145,7 +146,7 @@ END_IF
 _ActiveExecuteSubStateRecord := 0;]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_UpdateData" Id="{52f20474-69d8-45fd-9268-a22bd550dba9}">
+    <Method Name="M_UpdateData" Id="{52f20474-69d8-45fd-9268-a22bd550dba9}" FolderPath="DataVariable\">
       <Declaration><![CDATA[METHOD PROTECTED FINAL M_UpdateData : BOOL
 VAR_INPUT
 	DataId : UDINT;

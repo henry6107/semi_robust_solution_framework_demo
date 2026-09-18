@@ -13,6 +13,17 @@ END_VAR
       <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion);]]></ST>
     </Implementation>
     <Folder Name="StateAction" Id="{d6718092-13db-412c-a9a2-e9ff38355be8}" />
+    <Method Name="H_OnClearing" Id="{c547a0cd-8e92-4009-bcf6-ecb794c19812}" FolderPath="StateAction\">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnClearing : RobustSolution_BATW.E_PackMLHookResult
+VAR_INPUT
+	bFirstScan	: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[MEMSET(ADR(Status.ErrorList), 0, SIZEOF(Status.ErrorList));
+H_OnClearing := E_PackMLHookResult.Done;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="H_OnExecute" Id="{932ce45f-f47d-46af-8179-4c8f87fe1fb0}" FolderPath="StateAction\">
       <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
 VAR_INPUT
@@ -39,7 +50,7 @@ END_VAR
         <ST><![CDATA[H_OnStarting := RobustSolution_BATW.E_PackMLHookResult.Busy;
 IF IsRobotInChamber THEN
 	M_AddError( MainErrorId:= E_Chamber1ErrorCode.Close_Door_While_Robot_In_Chamber, SourceErrorId:= 0, Message:= 'Close door while robot in chamber.');
-	RequestCommand(E_PackMLCommand.Stop);
+	RequestCommand(E_PackMLCommand.Abort);
 END_IF
 
 H_OnStarting := RobustSolution_BATW.E_PackMLHookResult.Done;]]></ST>
