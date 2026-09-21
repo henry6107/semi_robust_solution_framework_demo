@@ -3,9 +3,9 @@
   <DUT Name="ST_TestServiceParam" Id="{9a1335a2-dace-4377-a9ac-30d83f1d627f}">
     <Declaration><![CDATA[TYPE ST_TestServiceParam :
 STRUCT
-	// 使用兩個欄位，確保 Tc3_JsonXml 能反查真實 DUT 型別名稱。
-	Value : DINT;
-	Sequence : UDINT;
+// 使用兩個欄位，確保 Tc3_JsonXml 能反查真實 DUT 型別名稱。
+Value : DINT;
+Sequence : UDINT;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

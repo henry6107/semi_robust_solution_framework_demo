@@ -3,6 +3,7 @@
   <POU Name="FB_FakeBaseUnit" Id="{2b467136-4428-4bb8-8923-6813cdc7ce02}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_FakeBaseUnit IMPLEMENTS I_BaseUnit
 ]]></Declaration>
-    <Implementation><ST><![CDATA[]]></ST></Implementation>
+    <Implementation><ST><![CDATA[
+]]></ST></Implementation>
   </POU>
 </TcPlcObject>

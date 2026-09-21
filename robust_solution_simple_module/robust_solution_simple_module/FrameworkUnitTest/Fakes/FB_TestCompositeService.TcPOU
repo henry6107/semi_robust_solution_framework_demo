@@ -9,30 +9,50 @@ VAR_INPUT
 	ExecuteResult : E_PackMLHookResult := E_PackMLHookResult.Busy;
 END_VAR
 ]]></Declaration>
-    <Implementation><ST><![CDATA[M_UpdateCompositeService();]]></ST></Implementation>
+    <Implementation><ST><![CDATA[M_UpdateCompositeService();
+]]></ST></Implementation>
     <Method Name="H_DeclareServices" Id="{4423480a-d1f8-42b0-81cc-e63dc5ef7f72}">
       <Declaration><![CDATA[METHOD PROTECTED H_DeclareServices
 ]]></Declaration>
-      <Implementation><ST><![CDATA[IF DependencyCount >= 1 THEN M_AddDependency(ServiceId := DependencyOne); END_IF
-IF DependencyCount >= 2 THEN M_AddDependency(ServiceId := DependencyTwo); END_IF]]></ST></Implementation>
+      <Implementation><ST><![CDATA[IF DependencyCount >= 1 THEN
+	M_AddDependency(ServiceId := DependencyOne);
+END_IF
+IF DependencyCount >= 2 THEN
+	M_AddDependency(ServiceId := DependencyTwo);
+END_IF
+]]></ST></Implementation>
     </Method>
     <Method Name="H_OnCompositeExecute" Id="{06a08594-9169-4684-8f5c-624b9103f18e}">
       <Declaration><![CDATA[METHOD PROTECTED H_OnCompositeExecute : E_PackMLHookResult
-VAR_INPUT bFirstScan : BOOL; END_VAR
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
 ]]></Declaration>
-      <Implementation><ST><![CDATA[H_OnCompositeExecute := ExecuteResult;]]></ST></Implementation>
+      <Implementation><ST><![CDATA[H_OnCompositeExecute := ExecuteResult;
+]]></ST></Implementation>
     </Method>
     <Method Name="M_TestAddDependencyOutsideDefinition" Id="{a45587ff-63a7-4edc-898f-692d5db7da6e}">
       <Declaration><![CDATA[METHOD PUBLIC M_TestAddDependencyOutsideDefinition : BOOL
-VAR_INPUT ServiceIdValue : UDINT; END_VAR
+VAR_INPUT
+	ServiceIdValue : UDINT;
+END_VAR
 ]]></Declaration>
-      <Implementation><ST><![CDATA[M_TestAddDependencyOutsideDefinition := M_AddDependency(ServiceId := ServiceIdValue);]]></ST></Implementation>
+      <Implementation><ST><![CDATA[M_TestAddDependencyOutsideDefinition := M_AddDependency(ServiceId := ServiceIdValue);
+]]></ST></Implementation>
     </Method>
     <Method Name="M_TestFailSequence" Id="{326eb050-a229-4490-b1d7-8979049883a9}">
       <Declaration><![CDATA[METHOD PUBLIC M_TestFailSequence
-VAR_INPUT FailedServiceId : UDINT; END_VAR
+VAR_INPUT
+	FailedServiceId : UDINT;
+END_VAR
 ]]></Declaration>
-      <Implementation><ST><![CDATA[M_FailSequence(ErrorCode := E_CompositeServiceErrorCode.None, FailedServiceId := FailedServiceId, SourceErrorId := 0, Message := 'Test failure');]]></ST></Implementation>
+      <Implementation><ST><![CDATA[M_FailSequence(
+	ErrorCode := E_CompositeServiceErrorCode.None,
+	FailedServiceId := FailedServiceId,
+	SourceErrorId := 0,
+	Message := 'Test failure'
+);
+]]></ST></Implementation>
     </Method>
   </POU>
 </TcPlcObject>

@@ -4,58 +4,136 @@
     <Declaration><![CDATA[FUNCTION_BLOCK FB_CompositeServiceBaseTests EXTENDS TcUnit.FB_TestSuite
 ]]></Declaration>
     <Implementation><ST><![CDATA[DefinitionRegistersOnceAndOnlyInsideDeclarationWindow();
-UnconfiguredCompositeStartStopsWithFrameworkError();]]></ST></Implementation>
+UnconfiguredCompositeStartStopsWithFrameworkError();
+]]></ST></Implementation>
     <Method Name="DefinitionRegistersOnceAndOnlyInsideDeclarationWindow" Id="{824af8bd-3416-4776-bf53-1f98717a366b}">
       <Declaration><![CDATA[METHOD DefinitionRegistersOnceAndOnlyInsideDeclarationWindow
-VAR_INST Composite : FB_TestCompositeService; Coordinator : FB_ServiceCoordinator; CompositeUpperCtrl : ST_ServiceCtrl; CompositeEffectiveCtrl : ST_ServiceCtrl; CompositeUpperParam : ST_TestServiceParam; CompositeEffectiveParam : ST_TestServiceParam; CompositeStatus : ST_ServiceStatus; ChildUpperCtrl : ST_ServiceCtrl; ChildEffectiveCtrl : ST_ServiceCtrl; ChildUpperParam : ST_TestServiceParam; ChildEffectiveParam : ST_TestServiceParam; ChildStatus : ST_ServiceStatus; END_VAR
+VAR_INST
+	Composite : FB_TestCompositeService;
+	Coordinator : FB_ServiceCoordinator;
+	CompositeUpperCtrl : ST_ServiceCtrl;
+	CompositeEffectiveCtrl : ST_ServiceCtrl;
+	CompositeUpperParam : ST_TestServiceParam;
+	CompositeEffectiveParam : ST_TestServiceParam;
+	CompositeStatus : ST_ServiceStatus;
+	ChildUpperCtrl : ST_ServiceCtrl;
+	ChildEffectiveCtrl : ST_ServiceCtrl;
+	ChildUpperParam : ST_TestServiceParam;
+	ChildEffectiveParam : ST_TestServiceParam;
+	ChildStatus : ST_ServiceStatus;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('DefinitionRegistersOnceAndOnlyInsideDeclarationWindow');
 
 // Arrange：先登錄 Composite 本身與允許 Composite 呼叫的 dependency。
 Coordinator.M_BeginRegistration();
-AssertTrue(Condition := Coordinator.M_Register(ServiceId := 10, AllowCompositeCall := FALSE, UpperCtrl := CompositeUpperCtrl, EffectiveCtrl := CompositeEffectiveCtrl, UpperParam := CompositeUpperParam, EffectiveParam := CompositeEffectiveParam, Status := CompositeStatus), Message := 'Composite Service storage must register.');
-AssertTrue(Condition := Coordinator.M_Register(ServiceId := 20, AllowCompositeCall := TRUE, UpperCtrl := ChildUpperCtrl, EffectiveCtrl := ChildEffectiveCtrl, UpperParam := ChildUpperParam, EffectiveParam := ChildEffectiveParam, Status := ChildStatus), Message := 'Dependency Service storage must register.');
-Composite.DependencyCount := 1; Composite.DependencyOne := 20;
+AssertTrue(
+	Condition := Coordinator.M_Register(
+		ServiceId := 10,
+		AllowCompositeCall := FALSE,
+		UpperCtrl := CompositeUpperCtrl,
+		EffectiveCtrl := CompositeEffectiveCtrl,
+		UpperParam := CompositeUpperParam,
+		EffectiveParam := CompositeEffectiveParam,
+		Status := CompositeStatus
+	),
+	Message := 'Composite Service storage must register.'
+);
+AssertTrue(
+	Condition := Coordinator.M_Register(
+		ServiceId := 20,
+		AllowCompositeCall := TRUE,
+		UpperCtrl := ChildUpperCtrl,
+		EffectiveCtrl := ChildEffectiveCtrl,
+		UpperParam := ChildUpperParam,
+		EffectiveParam := ChildEffectiveParam,
+		Status := ChildStatus
+	),
+	Message := 'Dependency Service storage must register.'
+);
+Composite.DependencyCount := 1;
+Composite.DependencyOne := 20;
 
 // Act / Assert：definition 僅可成功一次，且 M_AddDependency 不能在 hook 之外使用。
-AssertTrue(Condition := Composite.M_RegisterDefinition(CompositeServiceId := 10, Coordinator := Coordinator), Message := 'First valid Composite definition must register.');
-AssertFalse(Condition := Composite.M_RegisterDefinition(CompositeServiceId := 10, Coordinator := Coordinator), Message := 'Composite definition must be one-shot.');
-AssertFalse(Condition := Composite.M_TestAddDependencyOutsideDefinition(ServiceIdValue := 20), Message := 'Dependency declaration must be restricted to H_DeclareServices.');
+AssertTrue(
+	Condition := Composite.M_RegisterDefinition(
+		CompositeServiceId := 10,
+		Coordinator := Coordinator
+	),
+	Message := 'First valid Composite definition must register.'
+);
+AssertFalse(
+	Condition := Composite.M_RegisterDefinition(
+		CompositeServiceId := 10,
+		Coordinator := Coordinator
+	),
+	Message := 'Composite definition must be one-shot.'
+);
+AssertFalse(
+	Condition := Composite.M_TestAddDependencyOutsideDefinition(ServiceIdValue := 20),
+	Message := 'Dependency declaration must be restricted to H_DeclareServices.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
     <Method Name="UnconfiguredCompositeStartStopsWithFrameworkError" Id="{ed9dadee-079d-4332-9607-9a349d6b5945}">
       <Declaration><![CDATA[METHOD UnconfiguredCompositeStartStopsWithFrameworkError
-VAR_INST Composite : FB_TestCompositeService; Ctrl : ST_ServiceCtrl; Context : ST_ServiceContext; nPhase : UINT; END_VAR
+VAR_INST
+	Composite : FB_TestCompositeService;
+	Ctrl : ST_ServiceCtrl;
+	Context : ST_ServiceContext;
+	nPhase : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('UnconfiguredCompositeStartStopsWithFrameworkError');
 
 CASE nPhase OF
 	0:
 		// 初始 Undefined -> Aborted。
-		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10); nPhase := 1;
+		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10);
+		nPhase := 1;
 	1:
-		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
-		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10); nPhase := 2;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10);
+		nPhase := 2;
 	2:
-		Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10); nPhase := 3;
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10);
+		nPhase := 3;
 	3:
-		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
-		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10); nPhase := 4;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10);
+		nPhase := 4;
 	4:
-		Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10); nPhase := 5;
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10);
+		nPhase := 5;
 	5:
 		// Starting 發現 definition 尚未設定，加入 framework error 並排入 Stop。
-		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
 		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10);
-		AssertTrue(Condition := Composite.Status.ErrorList[1].MainErrorId = TO_UDINT(E_CompositeServiceErrorCode.NotConfigured), Message := 'Unconfigured Composite must publish NotConfigured.');
+		AssertTrue(
+			Condition :=
+				Composite.Status.ErrorList[1].MainErrorId =
+				TO_UDINT(E_CompositeServiceErrorCode.NotConfigured),
+			Message := 'Unconfigured Composite must publish NotConfigured.'
+		);
 		nPhase := 6;
 	6:
 		// 下一掃描由 queued Stop 將 Starting 安全帶回 Stopped。
 		Composite(Ctrl := Ctrl, Context := Context, ServiceId := 10);
-		AssertTrue(Condition := Composite.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Unconfigured Composite must follow the safe Stop path.');
-		nPhase := 0; TEST_FINISHED();
-END_CASE]]></ST></Implementation>
+		AssertTrue(
+			Condition := Composite.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped,
+			Message := 'Unconfigured Composite must follow the safe Stop path.'
+		);
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE
+]]></ST></Implementation>
     </Method>
   </POU>
 </TcPlcObject>

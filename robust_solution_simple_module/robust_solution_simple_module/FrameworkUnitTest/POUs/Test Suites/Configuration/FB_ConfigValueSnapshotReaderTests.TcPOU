@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_ConfigValueSnapshotReaderTests" Id="{272969cc-557a-44b6-99ac-3ff20838087b}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_ConfigValueSnapshotReaderTests EXTENDS TcUnit.FB_TestSuite
@@ -6,86 +6,171 @@
     <Implementation>
       <ST><![CDATA[DisabledInvalidAndUnavailableInputsAreNotReady();
 AllSupportedTypesAreSnapshottedInConfiguredOrder();
-FirstReadErrorWins();]]></ST>
+FirstReadErrorWins();
+]]></ST>
     </Implementation>
     <Method Name="AllSupportedTypesAreSnapshottedInConfiguredOrder" Id="{38f1b720-d14f-4bfd-b091-b6ca4559b58b}">
       <Declaration><![CDATA[METHOD AllSupportedTypesAreSnapshottedInConfiguredOrder
-VAR_INST Snapshot : FB_ConfigValueSnapshotReader; Config : ST_ModuleRuntimeConfig; FakeReader : FB_FakeVariableNodeReader; Reader : I_VariableNodeReader; bValid : BOOL; END_VAR
+VAR_INST
+	Snapshot : FB_ConfigValueSnapshotReader;
+	Config : ST_ModuleRuntimeConfig;
+	FakeReader : FB_FakeVariableNodeReader;
+	Reader : I_VariableNodeReader;
+	bValid : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[TEST('AllSupportedTypesAreSnapshottedInConfiguredOrder');
 
 // Arrange：前五筆 Variable 加上一筆 Alarm，驗證兩個清單合併後仍維持順序。
-Config.Enabled := TRUE; Config.Valid := TRUE; Config.VariableCount := 5; Config.AlarmCount := 1;
-Config.VariableBindings[1].NodeHandle := 1; Config.VariableBindings[1].Definition.DataType := E_ConfigDataType.Boolean;
-Config.VariableBindings[2].NodeHandle := 2; Config.VariableBindings[2].Definition.DataType := E_ConfigDataType.Integer32;
-Config.VariableBindings[3].NodeHandle := 3; Config.VariableBindings[3].Definition.DataType := E_ConfigDataType.UnsignedInteger32;
-Config.VariableBindings[4].NodeHandle := 4; Config.VariableBindings[4].Definition.DataType := E_ConfigDataType.Float32;
-Config.VariableBindings[5].NodeHandle := 5; Config.VariableBindings[5].Definition.DataType := E_ConfigDataType.Float64;
-Config.AlarmBindings[1].NodeHandle := 6; Config.AlarmBindings[1].Definition.DataType := E_ConfigDataType.String80;
+Config.Enabled := TRUE;
+Config.Valid := TRUE;
+Config.VariableCount := 5;
+Config.AlarmCount := 1;
+Config.VariableBindings[1].NodeHandle := 1;
+Config.VariableBindings[1].Definition.DataType := E_ConfigDataType.Boolean;
+Config.VariableBindings[2].NodeHandle := 2;
+Config.VariableBindings[2].Definition.DataType := E_ConfigDataType.Integer32;
+Config.VariableBindings[3].NodeHandle := 3;
+Config.VariableBindings[3].Definition.DataType := E_ConfigDataType.UnsignedInteger32;
+Config.VariableBindings[4].NodeHandle := 4;
+Config.VariableBindings[4].Definition.DataType := E_ConfigDataType.Float32;
+Config.VariableBindings[5].NodeHandle := 5;
+Config.VariableBindings[5].Definition.DataType := E_ConfigDataType.Float64;
+Config.AlarmBindings[1].NodeHandle := 6;
+Config.AlarmBindings[1].Definition.DataType := E_ConfigDataType.String80;
 Reader := FakeReader;
 
 // Act。
 Snapshot(RuntimeConfig := Config, VariableNodeReader := Reader);
 
 // Assert：數值與字串轉換都取用當輪 snapshot，而不是再次呼叫 reader。
-AssertTrue(Condition := Snapshot.Ready AND NOT Snapshot.Error, Message := 'All configured reads must complete.');
-AssertTrue(Condition := Snapshot.M_GetLReal(SourceIndex := 1, Valid => bValid) = 1.0 AND bValid, Message := 'BOOL must convert to one.');
-AssertTrue(Condition := Snapshot.M_GetLReal(SourceIndex := 2, Valid => bValid) = -42.0 AND bValid, Message := 'DINT conversion must preserve sign.');
-AssertTrue(Condition := Snapshot.M_GetLReal(SourceIndex := 3, Valid => bValid) = 42.0 AND bValid, Message := 'UDINT conversion must preserve value.');
-AssertTrue(Condition := Snapshot.M_GetLReal(SourceIndex := 5, Valid => bValid) = 25.25 AND bValid, Message := 'LREAL conversion must preserve precision.');
-AssertTrue(Condition := Snapshot.M_GetValueString(SourceIndex := 6, Valid => bValid) = 'snapshot' AND bValid, Message := 'Alarm source follows all Variable sources.');
-AssertTrue(Condition := Snapshot.M_GetValueString(SourceIndex := 0, Valid => bValid) = '' AND NOT bValid, Message := 'Out-of-range source index must be invalid.');
+AssertTrue(
+	Condition := Snapshot.Ready AND NOT Snapshot.Error,
+	Message := 'All configured reads must complete.'
+);
+AssertTrue(
+	Condition := Snapshot.M_GetLReal(SourceIndex := 1, Valid => bValid) = 1.0 AND bValid,
+	Message := 'BOOL must convert to one.'
+);
+AssertTrue(
+	Condition := Snapshot.M_GetLReal(SourceIndex := 2, Valid => bValid) = -42.0 AND bValid,
+	Message := 'DINT conversion must preserve sign.'
+);
+AssertTrue(
+	Condition := Snapshot.M_GetLReal(SourceIndex := 3, Valid => bValid) = 42.0 AND bValid,
+	Message := 'UDINT conversion must preserve value.'
+);
+AssertTrue(
+	Condition := Snapshot.M_GetLReal(SourceIndex := 5, Valid => bValid) = 25.25 AND bValid,
+	Message := 'LREAL conversion must preserve precision.'
+);
+AssertTrue(
+	Condition := Snapshot.M_GetValueString(
+		SourceIndex := 6,
+		Valid => bValid
+	) = 'snapshot' AND bValid,
+	Message := 'Alarm source follows all Variable sources.'
+);
+AssertTrue(
+	Condition := Snapshot.M_GetValueString(
+		SourceIndex := 0,
+		Valid => bValid
+	) = '' AND NOT bValid,
+	Message := 'Out-of-range source index must be invalid.'
+);
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="DisabledInvalidAndUnavailableInputsAreNotReady" Id="{9c16da8d-3cd4-451a-ba90-bc174f392b19}">
       <Declaration><![CDATA[METHOD DisabledInvalidAndUnavailableInputsAreNotReady
-VAR_INST Snapshot : FB_ConfigValueSnapshotReader; Config : ST_ModuleRuntimeConfig; FakeReader : FB_FakeVariableNodeReader; Reader : I_VariableNodeReader; END_VAR
+VAR_INST
+	Snapshot : FB_ConfigValueSnapshotReader;
+	Config : ST_ModuleRuntimeConfig;
+	FakeReader : FB_FakeVariableNodeReader;
+	Reader : I_VariableNodeReader;
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[TEST('DisabledInvalidAndUnavailableInputsAreNotReady');
 
 // Arrange：disabled configuration 不應被視為錯誤，只是不 Ready。
-Config.Enabled := FALSE; Config.Valid := TRUE;
+Config.Enabled := FALSE;
+Config.Valid := TRUE;
 Snapshot(RuntimeConfig := Config, VariableNodeReader := Reader);
-AssertFalse(Condition := Snapshot.Ready OR Snapshot.Error, Message := 'A disabled configuration must remain quietly not ready.');
+AssertFalse(
+	Condition := Snapshot.Ready OR Snapshot.Error,
+	Message := 'A disabled configuration must remain quietly not ready.'
+);
 
 // Act：啟用有效 config，但不提供 reader。
 Config.Enabled := TRUE;
 Snapshot(RuntimeConfig := Config, VariableNodeReader := Reader);
-AssertTrue(Condition := Snapshot.Error AND (Snapshot.ErrorCode = E_ConfigValueError.ReaderUnavailable), Message := 'Missing reader must report ReaderUnavailable.');
+AssertTrue(
+	Condition := Snapshot.Error
+		AND (Snapshot.ErrorCode = E_ConfigValueError.ReaderUnavailable),
+	Message := 'Missing reader must report ReaderUnavailable.'
+);
 
 // Assert：總 source 數超過固定容量時，在讀 array 前即拒絕。
 Config.VariableCount := Param_Config.MaxModuleVariable;
 Config.AlarmCount := Param_Config.MaxConfiguredAlarmsPerModule + 1;
 Reader := FakeReader;
 Snapshot(RuntimeConfig := Config, VariableNodeReader := Reader);
-AssertTrue(Condition := Snapshot.Error AND (Snapshot.ErrorCode = E_ConfigValueError.SourceCapacityExceeded), Message := 'Source count beyond fixed capacity must be rejected before array reads.');
+AssertTrue(
+	Condition := Snapshot.Error
+		AND (Snapshot.ErrorCode = E_ConfigValueError.SourceCapacityExceeded),
+	Message := 'Source count beyond fixed capacity must be rejected before array reads.'
+);
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="FirstReadErrorWins" Id="{390ba43b-efc3-4604-b9b9-57d1e873f06f}">
       <Declaration><![CDATA[METHOD FirstReadErrorWins
-VAR_INST Snapshot : FB_ConfigValueSnapshotReader; Config : ST_ModuleRuntimeConfig; FakeReader : FB_FakeVariableNodeReader; Reader : I_VariableNodeReader; END_VAR
+VAR_INST
+	Snapshot : FB_ConfigValueSnapshotReader;
+	Config : ST_ModuleRuntimeConfig;
+	FakeReader : FB_FakeVariableNodeReader;
+	Reader : I_VariableNodeReader;
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[TEST('FirstReadErrorWins');
 
 // Arrange：第二筆讀取失敗，後續來源仍可被掃描，但公開錯誤保留第一筆來源。
-Config.Enabled := TRUE; Config.Valid := TRUE; Config.VariableCount := 3;
-Config.VariableBindings[1].NodeHandle := 1; Config.VariableBindings[1].Definition.DataType := E_ConfigDataType.Boolean; Config.VariableBindings[1].Definition.Source := 'first';
-Config.VariableBindings[2].NodeHandle := 2; Config.VariableBindings[2].Definition.DataType := E_ConfigDataType.Integer32; Config.VariableBindings[2].Definition.Source := 'second';
-Config.VariableBindings[3].NodeHandle := 3; Config.VariableBindings[3].Definition.DataType := E_ConfigDataType.UnsignedInteger32; Config.VariableBindings[3].Definition.Source := 'third';
-FakeReader.FailHandle := 2; Reader := FakeReader;
+Config.Enabled := TRUE;
+Config.Valid := TRUE;
+Config.VariableCount := 3;
+Config.VariableBindings[1].NodeHandle := 1;
+Config.VariableBindings[1].Definition.DataType := E_ConfigDataType.Boolean;
+Config.VariableBindings[1].Definition.Source := 'first';
+Config.VariableBindings[2].NodeHandle := 2;
+Config.VariableBindings[2].Definition.DataType := E_ConfigDataType.Integer32;
+Config.VariableBindings[2].Definition.Source := 'second';
+Config.VariableBindings[3].NodeHandle := 3;
+Config.VariableBindings[3].Definition.DataType := E_ConfigDataType.UnsignedInteger32;
+Config.VariableBindings[3].Definition.Source := 'third';
+FakeReader.FailHandle := 2;
+Reader := FakeReader;
 
 Snapshot(RuntimeConfig := Config, VariableNodeReader := Reader);
-AssertTrue(Condition := Snapshot.Error AND NOT Snapshot.Ready, Message := 'Any source failure must make the snapshot not ready.');
-AssertTrue(Condition := (Snapshot.ErrorCode = E_ConfigValueError.InvalidNodeHandle) AND (Snapshot.ErrorSource = 'second'), Message := 'The first failing source must own the diagnostic.');
+AssertTrue(
+	Condition := Snapshot.Error AND NOT Snapshot.Ready,
+	Message := 'Any source failure must make the snapshot not ready.'
+);
+AssertTrue(
+	Condition :=
+		(Snapshot.ErrorCode = E_ConfigValueError.InvalidNodeHandle)
+		AND (Snapshot.ErrorSource = 'second'),
+	Message := 'The first failing source must own the diagnostic.'
+);
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
   </POU>

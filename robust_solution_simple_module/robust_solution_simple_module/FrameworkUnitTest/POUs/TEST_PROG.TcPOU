@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_PROG" Id="{8ff9d161-157e-42ac-b3da-373105b7f816}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM TEST_PROG
@@ -28,7 +28,8 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[// 上述 FB_TestSuite instances 會向 TcUnit 註冊；runner 每個週期統一驅動測試。
-TcUnit.RUN();]]></ST>
+TcUnit.RUN();
+]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

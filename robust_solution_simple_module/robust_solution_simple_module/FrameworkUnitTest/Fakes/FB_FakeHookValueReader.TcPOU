@@ -8,7 +8,8 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[
+]]></ST>
     </Implementation>
     <Method Name="M_ReadNode" Id="{5c7ed2db-9f8f-4cd4-bb6b-d0b8ac8d66b7}">
       <Declaration><![CDATA[METHOD M_ReadNode : BOOL
@@ -30,19 +31,22 @@ END_VAR
         <ST><![CDATA[M_ReadNode := FALSE;
 MEMSET(ADR(Value), 0, SIZEOF(Value));
 ErrorCode := E_ConfigValueError.InvalidNodeHandle;
-IF NOT SampleValid OR (NodeHandle = 0) THEN RETURN; END_IF
+IF NOT SampleValid OR (NodeHandle = 0) THEN
+	RETURN;
+END_IF
 CASE ExpectedDataType OF
 	E_ConfigDataType.Float64:
 		MEMCPY(ADR(Value.Data), ADR(Sample), SIZEOF(Sample));
 	E_ConfigDataType.Integer32:
 		nSample := LREAL_TO_DINT(Sample);
 		MEMCPY(ADR(Value.Data), ADR(nSample), SIZEOF(nSample));
-ELSE
-	ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
-	RETURN;
+	ELSE
+		ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
+		RETURN;
 END_CASE
 ErrorCode := E_ConfigValueError.None;
-M_ReadNode := TRUE;]]></ST>
+M_ReadNode := TRUE;
+]]></ST>
       </Implementation>
     </Method>
   </POU>

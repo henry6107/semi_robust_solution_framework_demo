@@ -10,7 +10,8 @@ END_VAR
     <Implementation>
       <ST><![CDATA[StartCommandIsRejectedWhileStopped();
 ErrorListPreservesFirstOccurrenceAndCapacity();
-DataListSupportsUpsertClearAndOverflow();]]></ST>
+DataListSupportsUpsertClearAndOverflow();
+]]></ST>
     </Implementation>
     <Method Name="StartCommandIsRejectedWhileStopped" Id="{0675f0af-6974-4ab9-b7ad-5bef50694169}">
       <Declaration><![CDATA[METHOD StartCommandIsRejectedWhileStopped
@@ -35,8 +36,10 @@ CASE nPhase OF
 			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Aborted,
 			Message := 'Initial Service update must reach Aborted.');
 		AssertTrue(
-			Condition := TestService.Status.CompletionBehavior = E_ServiceCompletionBehavior.Unknown,
-			Message := 'The test Service must publish its configured Unknown completion behavior.');
+			Condition := TestService.Status.CompletionBehavior =
+				E_ServiceCompletionBehavior.Unknown,
+			Message :=
+				'The test Service must publish its configured Unknown completion behavior.');
 		nPhase := 1;
 
 	1:
@@ -95,7 +98,8 @@ CASE nPhase OF
 				AND NOT TestService.Status.PackMLOut.bCommandAccepted,
 			Message := 'Start must be rejected while the Service is Stopped.');
 		AssertTrue(
-			Condition := TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.StartNotAllowedFromCurrentState,
+			Condition := TestService.Status.PackMLOut.eStateErrorID =
+				E_PackMLErrorID.StartNotAllowedFromCurrentState,
 			Message := 'Rejected Start must report the state-specific PackML ErrorID.');
 		AssertTrue(
 			Condition := TestService.Status.ResponseId = 1002,
@@ -116,8 +120,10 @@ CASE nPhase OF
 			Message := 'A command request held TRUE must not be processed again.');
 		AssertTrue(
 			Condition := TestService.Status.PackMLOut.bCommandRejected
-				AND (TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.StartNotAllowedFromCurrentState),
-			Message := 'Rejected Start feedback must stay latched while the request remains TRUE.');
+				AND (TestService.Status.PackMLOut.eStateErrorID =
+					E_PackMLErrorID.StartNotAllowedFromCurrentState),
+			Message :=
+				'Rejected Start feedback must stay latched while the request remains TRUE.');
 		AssertTrue(
 			Condition := TestService.Status.ResponseId = 1002,
 			Message := 'Changing request data without a falling edge must not update ResponseId.');
@@ -161,12 +167,14 @@ CASE nPhase OF
 			Condition := TestService.Status.ResponseId = 1004,
 			Message := 'Service must acknowledge the fresh Reset request.');
 		AssertTrue(
-			Condition := TestService.Status.CompletionBehavior = E_ServiceCompletionBehavior.Unknown,
+			Condition := TestService.Status.CompletionBehavior =
+				E_ServiceCompletionBehavior.Unknown,
 			Message := 'Completion behavior must remain stable across PackML state transitions.');
 
 		nPhase := 0;
 		TEST_FINISHED();
-END_CASE]]></ST>
+END_CASE
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="ErrorListPreservesFirstOccurrenceAndCapacity" Id="{fb69b0c7-c9c3-4f61-91fb-274b0d58b712}">
@@ -177,7 +185,10 @@ VAR_INST
 	Context : ST_ServiceContext;
 	bInitialized : BOOL;
 END_VAR
-VAR nIndex : UINT; bAccepted : BOOL; END_VAR
+VAR
+	nIndex : UINT;
+	bAccepted : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('ErrorListPreservesFirstOccurrenceAndCapacity');
 
@@ -189,27 +200,74 @@ IF NOT bInitialized THEN
 	Service.M_TestClearErrors();
 
 	// Act：第一筆成立；同 MainErrorId 在同一輪不得重複新增。
-	AssertTrue(Condition := Service.M_TestAddError(MainErrorId := 100, SourceErrorId := 5, Message := 'first'), Message := 'First error must be accepted.');
-	AssertFalse(Condition := Service.M_TestAddError(MainErrorId := 100, SourceErrorId := 9, Message := 'duplicate'), Message := 'Duplicate MainErrorId must be rejected.');
+	AssertTrue(
+		Condition := Service.M_TestAddError(
+			MainErrorId := 100,
+			SourceErrorId := 5,
+			Message := 'first'
+		),
+		Message := 'First error must be accepted.'
+	);
+	AssertFalse(
+		Condition := Service.M_TestAddError(
+			MainErrorId := 100,
+			SourceErrorId := 9,
+			Message := 'duplicate'
+		),
+		Message := 'Duplicate MainErrorId must be rejected.'
+	);
 	FOR nIndex := 2 TO Param_Config.MaxServiceError DO
-		bAccepted := Service.M_TestAddError(MainErrorId := 99 + UINT_TO_UDINT(nIndex), SourceErrorId := 0, Message := 'fill');
+		bAccepted := Service.M_TestAddError(
+			MainErrorId := 99 + UINT_TO_UDINT(nIndex),
+			SourceErrorId := 0,
+			Message := 'fill'
+		);
 	END_FOR
-	AssertFalse(Condition := Service.M_TestAddError(MainErrorId := 999, SourceErrorId := 0, Message := 'overflow'), Message := 'The first ten errors must be preserved at capacity.');
+	AssertFalse(
+		Condition := Service.M_TestAddError(
+			MainErrorId := 999,
+			SourceErrorId := 0,
+			Message := 'overflow'
+		),
+		Message := 'The first ten errors must be preserved at capacity.'
+	);
 
 	// Assert：framework 補上的 Module、Service、時間與 lifecycle 欄位正確。
-	AssertTrue(Condition := (Service.Status.ErrorList[1].ModuleId = 41) AND (Service.Status.ErrorList[1].ServiceId = 7), Message := 'Error identity must include Module and Service.');
-	AssertTrue(Condition := (Service.Status.ErrorList[1].Message = 'first') AND (Service.Status.ErrorList[1].SourceErrorId = 5), Message := 'Duplicate submission must not replace the first snapshot.');
-	AssertTrue(Condition := Service.Status.ErrorList[1].Active AND NOT Service.Status.ErrorList[1].Acknowledged, Message := 'A new Service error must be active and unacknowledged.');
+	AssertTrue(
+		Condition := (Service.Status.ErrorList[1].ModuleId = 41)
+			AND (Service.Status.ErrorList[1].ServiceId = 7),
+		Message := 'Error identity must include Module and Service.'
+	);
+	AssertTrue(
+		Condition :=
+			(Service.Status.ErrorList[1].Message = 'first')
+			AND (Service.Status.ErrorList[1].SourceErrorId = 5),
+		Message := 'Duplicate submission must not replace the first snapshot.'
+	);
+	AssertTrue(
+		Condition := Service.Status.ErrorList[1].Active
+			AND NOT Service.Status.ErrorList[1].Acknowledged,
+		Message := 'A new Service error must be active and unacknowledged.'
+	);
 	bInitialized := TRUE;
 END_IF
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="DataListSupportsUpsertClearAndOverflow" Id="{71e7239f-d06a-4c74-a2bb-0ba7f9f5bdef}">
       <Declaration><![CDATA[METHOD DataListSupportsUpsertClearAndOverflow
-VAR_INST Service : FB_TestableServiceBase; Ctrl : ST_ServiceCtrl; Context : ST_ServiceContext; bInitialized : BOOL; END_VAR
-VAR nIndex : UINT; bAccepted : BOOL; END_VAR
+VAR_INST
+	Service : FB_TestableServiceBase;
+	Ctrl : ST_ServiceCtrl;
+	Context : ST_ServiceContext;
+	bInitialized : BOOL;
+END_VAR
+VAR
+	nIndex : UINT;
+	bAccepted : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('DataListSupportsUpsertClearAndOverflow');
 
@@ -218,23 +276,80 @@ IF NOT bInitialized THEN
 	Service.M_TestClearAllData();
 
 	// Arrange / Act：相同 DataId 是更新，不增加 Count。
-	AssertFalse(Condition := Service.M_TestUpdateData(DataId := 0, Name := 'invalid', DataType := E_DescriptorType.Integer_32bit, Unit := '', Value := '0'), Message := 'DataId zero must be rejected.');
-	AssertTrue(Condition := Service.M_TestUpdateData(DataId := 1, Name := 'speed', DataType := E_DescriptorType.Float_64bit, Unit := 'rpm', Value := '10'), Message := 'First data value must be accepted.');
-	AssertTrue(Condition := Service.M_TestUpdateData(DataId := 1, Name := 'speed', DataType := E_DescriptorType.Float_64bit, Unit := 'rpm', Value := '20'), Message := 'Existing data must be updated.');
-	AssertTrue(Condition := (Service.Status.Data.Count = 1) AND (Service.Status.Data.DataList[1].Value = '20'), Message := 'Upsert must retain one entry with the latest value.');
+	AssertFalse(
+		Condition := Service.M_TestUpdateData(
+			DataId := 0,
+			Name := 'invalid',
+			DataType := E_DescriptorType.Integer_32bit,
+			Unit := '',
+			Value := '0'
+		),
+		Message := 'DataId zero must be rejected.'
+	);
+	AssertTrue(
+		Condition := Service.M_TestUpdateData(
+			DataId := 1,
+			Name := 'speed',
+			DataType := E_DescriptorType.Float_64bit,
+			Unit := 'rpm',
+			Value := '10'
+		),
+		Message := 'First data value must be accepted.'
+	);
+	AssertTrue(
+		Condition := Service.M_TestUpdateData(
+			DataId := 1,
+			Name := 'speed',
+			DataType := E_DescriptorType.Float_64bit,
+			Unit := 'rpm',
+			Value := '20'
+		),
+		Message := 'Existing data must be updated.'
+	);
+	AssertTrue(
+		Condition := (Service.Status.Data.Count = 1)
+			AND (Service.Status.Data.DataList[1].Value = '20'),
+		Message := 'Upsert must retain one entry with the latest value.'
+	);
 
 	// Act：清除會釋放容量並重設 overflow。
-	AssertTrue(Condition := Service.M_TestClearData(DataId := 1), Message := 'Existing data must be removable.');
-	AssertFalse(Condition := Service.M_TestClearData(DataId := 1), Message := 'Clearing a missing data ID must report false.');
+	AssertTrue(
+		Condition := Service.M_TestClearData(DataId := 1),
+		Message := 'Existing data must be removable.'
+	);
+	AssertFalse(
+		Condition := Service.M_TestClearData(DataId := 1),
+		Message := 'Clearing a missing data ID must report false.'
+	);
 	FOR nIndex := 1 TO Param_Config.MaxServiceData DO
-		bAccepted := Service.M_TestUpdateData(DataId := UINT_TO_UDINT(nIndex), Name := 'fill', DataType := E_DescriptorType.Integer_32bit, Unit := '', Value := '1');
+		bAccepted := Service.M_TestUpdateData(
+			DataId := UINT_TO_UDINT(nIndex),
+			Name := 'fill',
+			DataType := E_DescriptorType.Integer_32bit,
+			Unit := '',
+			Value := '1'
+		);
 	END_FOR
-	AssertFalse(Condition := Service.M_TestUpdateData(DataId := 999, Name := 'overflow', DataType := E_DescriptorType.Integer_32bit, Unit := '', Value := '1'), Message := 'Data beyond capacity must be rejected.');
-	AssertTrue(Condition := Service.Status.Data.Overflow AND (Service.Status.Data.Count = Param_Config.MaxServiceData), Message := 'Capacity rejection must set Overflow without changing Count.');
+	AssertFalse(
+		Condition := Service.M_TestUpdateData(
+			DataId := 999,
+			Name := 'overflow',
+			DataType := E_DescriptorType.Integer_32bit,
+			Unit := '',
+			Value := '1'
+		),
+		Message := 'Data beyond capacity must be rejected.'
+	);
+	AssertTrue(
+		Condition := Service.Status.Data.Overflow
+			AND (Service.Status.Data.Count = Param_Config.MaxServiceData),
+		Message := 'Capacity rejection must set Overflow without changing Count.'
+	);
 	bInitialized := TRUE;
 END_IF
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
   </POU>

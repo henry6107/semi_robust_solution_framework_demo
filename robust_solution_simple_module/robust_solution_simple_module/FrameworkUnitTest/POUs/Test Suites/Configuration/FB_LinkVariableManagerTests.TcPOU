@@ -5,97 +5,318 @@
 ]]></Declaration>
     <Implementation><ST><![CDATA[RegistrationSessionsEnforceOrderAndRollback();
 MemcpyAndNumericTransformRunOnlyInTheirPhase();
-ReadableNodeAndSingleWriterValidationAreExplicit();]]></ST></Implementation>
+ReadableNodeAndSingleWriterValidationAreExplicit();
+]]></ST></Implementation>
     <Method Name="RegistrationSessionsEnforceOrderAndRollback" Id="{9ef3c9e6-9ce0-46f2-839d-044a24176e0a}">
       <Declaration><![CDATA[METHOD RegistrationSessionsEnforceOrderAndRollback
-VAR_INST Manager : FB_LinkVariableManager; END_VAR
-VAR bOk : BOOL; END_VAR
+VAR_INST
+	Manager : FB_LinkVariableManager;
+END_VAR
+VAR
+	bOk : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('RegistrationSessionsEnforceOrderAndRollback');
 
 // Act / Assert：session 外註冊必須失敗。
-bOk := Manager.M_RegisterInfrastructureNode(Variable := GVL_TestSymbols.InfrastructureBool, Access := E_VariableAccess.ReadOnly);
-AssertFalse(Condition := bOk, Message := 'Infrastructure node requires an active session.');
+bOk := Manager.M_RegisterInfrastructureNode(
+	Variable := GVL_TestSymbols.InfrastructureBool,
+	Access := E_VariableAccess.ReadOnly
+);
+AssertFalse(
+	Condition := bOk,
+	Message := 'Infrastructure node requires an active session.'
+);
 
 // Begin 會清除先前錯誤；重複 Begin 產生 first-error，Seal 則 rollback 未完成內容。
-AssertTrue(Condition := Manager.M_BeginInfrastructureRegistration(), Message := 'Infrastructure session must begin.');
-AssertFalse(Condition := Manager.M_BeginInfrastructureRegistration(), Message := 'A second active infrastructure session must be rejected.');
-AssertFalse(Condition := Manager.M_SealInfrastructureRegistration(), Message := 'Sealing a failed session must rollback.');
+AssertTrue(
+	Condition := Manager.M_BeginInfrastructureRegistration(),
+	Message := 'Infrastructure session must begin.'
+);
+AssertFalse(
+	Condition := Manager.M_BeginInfrastructureRegistration(),
+	Message := 'A second active infrastructure session must be rejected.'
+);
+AssertFalse(
+	Condition := Manager.M_SealInfrastructureRegistration(),
+	Message := 'Sealing a failed session must rollback.'
+);
 
 // rollback 後可以從乾淨狀態重新註冊並 seal。
-AssertTrue(Condition := Manager.M_BeginInfrastructureRegistration(), Message := 'A rolled-back manager must allow a new session.');
-AssertTrue(Condition := Manager.M_RegisterInfrastructureNode(Variable := GVL_TestSymbols.InfrastructureBool, Access := E_VariableAccess.ReadOnly), Message := 'Supported BOOL node must register.');
-AssertTrue(Condition := Manager.M_SealInfrastructureRegistration(), Message := 'Valid infrastructure registration must seal.');
+AssertTrue(
+	Condition := Manager.M_BeginInfrastructureRegistration(),
+	Message := 'A rolled-back manager must allow a new session.'
+);
+AssertTrue(
+	Condition := Manager.M_RegisterInfrastructureNode(
+		Variable := GVL_TestSymbols.InfrastructureBool,
+		Access := E_VariableAccess.ReadOnly
+	),
+	Message := 'Supported BOOL node must register.'
+);
+AssertTrue(
+	Condition := Manager.M_SealInfrastructureRegistration(),
+	Message := 'Valid infrastructure registration must seal.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
     <Method Name="MemcpyAndNumericTransformRunOnlyInTheirPhase" Id="{c28d4fd0-0cf1-4908-bee4-2c85fc62f3b2}">
       <Declaration><![CDATA[METHOD MemcpyAndNumericTransformRunOnlyInTheirPhase
-VAR_INST Manager : FB_LinkVariableManager; Json : FB_JsonReadWriteDataType; ModuleConfig : ST_ModuleFileConfig; bInitialized : BOOL; END_VAR
-VAR bOk : BOOL; sInfraBool : STRING(255); sInfraLReal : STRING(255); sModule : STRING(255); sInput : STRING(255); sLongReal : STRING(255); hr : HRESULT; END_VAR
+VAR_INST
+	Manager : FB_LinkVariableManager;
+	Json : FB_JsonReadWriteDataType;
+	ModuleConfig : ST_ModuleFileConfig;
+	bInitialized : BOOL;
+END_VAR
+VAR
+	bOk : BOOL;
+	sInfraBool : STRING(255);
+	sInfraLReal : STRING(255);
+	sModule : STRING(255);
+	sInput : STRING(255);
+	sLongReal : STRING(255);
+	hr : HRESULT;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('MemcpyAndNumericTransformRunOnlyInTheirPhase');
 
 IF NOT bInitialized THEN
 	// Arrange：建立 Infrastructure 與 Module node registry。
-	AssertTrue(Condition := Manager.M_BeginInfrastructureRegistration(), Message := 'Infrastructure registration must begin.');
-	AssertTrue(Condition := Manager.M_RegisterInfrastructureNode(Variable := GVL_TestSymbols.InfrastructureBool, Access := E_VariableAccess.ReadOnly), Message := 'BOOL source must register.');
-	AssertTrue(Condition := Manager.M_RegisterInfrastructureNode(Variable := GVL_TestSymbols.InfrastructureLReal, Access := E_VariableAccess.ReadOnly), Message := 'LREAL source must register.');
-	AssertTrue(Condition := Manager.M_SealInfrastructureRegistration(), Message := 'Infrastructure nodes must seal.');
-	AssertTrue(Condition := Manager.M_BeginModuleRegistration(Address := ADR(GVL_TestSymbols.ModuleOne), Size := SIZEOF(GVL_TestSymbols.ModuleOne), ModuleConfig := ModuleConfig), Message := 'Module registration must begin.');
-	AssertTrue(Condition := Manager.M_RegisterModuleNode(Variable := GVL_TestSymbols.ModuleOne.InputBool, Access := E_VariableAccess.ReadWrite), Message := 'Module BOOL target must register.');
-	AssertTrue(Condition := Manager.M_RegisterModuleNode(Variable := GVL_TestSymbols.ModuleOne.LongRealValue, Access := E_VariableAccess.ReadWrite), Message := 'Module numeric target must register.');
-	AssertTrue(Condition := Manager.M_EndModuleRegistration(ModuleSymbol => sModule), Message := 'Module registration must end.');
+	AssertTrue(
+		Condition := Manager.M_BeginInfrastructureRegistration(),
+		Message := 'Infrastructure registration must begin.'
+	);
+	AssertTrue(
+		Condition := Manager.M_RegisterInfrastructureNode(
+			Variable := GVL_TestSymbols.InfrastructureBool,
+			Access := E_VariableAccess.ReadOnly
+		),
+		Message := 'BOOL source must register.'
+	);
+	AssertTrue(
+		Condition := Manager.M_RegisterInfrastructureNode(
+			Variable := GVL_TestSymbols.InfrastructureLReal,
+			Access := E_VariableAccess.ReadOnly
+		),
+		Message := 'LREAL source must register.'
+	);
+	AssertTrue(
+		Condition := Manager.M_SealInfrastructureRegistration(),
+		Message := 'Infrastructure nodes must seal.'
+	);
+	AssertTrue(
+		Condition := Manager.M_BeginModuleRegistration(
+			Address := ADR(GVL_TestSymbols.ModuleOne),
+			Size := SIZEOF(GVL_TestSymbols.ModuleOne),
+			ModuleConfig := ModuleConfig
+		),
+		Message := 'Module registration must begin.'
+	);
+	AssertTrue(
+		Condition := Manager.M_RegisterModuleNode(
+			Variable := GVL_TestSymbols.ModuleOne.InputBool,
+			Access := E_VariableAccess.ReadWrite
+		),
+		Message := 'Module BOOL target must register.'
+	);
+	AssertTrue(
+		Condition := Manager.M_RegisterModuleNode(
+			Variable := GVL_TestSymbols.ModuleOne.LongRealValue,
+			Access := E_VariableAccess.ReadWrite
+		),
+		Message := 'Module numeric target must register.'
+	);
+	AssertTrue(
+		Condition := Manager.M_EndModuleRegistration(ModuleSymbol => sModule),
+		Message := 'Module registration must end.'
+	);
 
-	sInfraBool := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.InfrastructureBool), pData := ADR(GVL_TestSymbols.InfrastructureBool), hrErrorCode => hr);
-	sInfraLReal := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.InfrastructureLReal), pData := ADR(GVL_TestSymbols.InfrastructureLReal), hrErrorCode => hr);
-	sInput := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.ModuleOne.InputBool), pData := ADR(GVL_TestSymbols.ModuleOne.InputBool), hrErrorCode => hr);
-	sLongReal := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.ModuleOne.LongRealValue), pData := ADR(GVL_TestSymbols.ModuleOne.LongRealValue), hrErrorCode => hr);
-	AssertTrue(Condition := Manager.M_AddLink(SourceName := sInfraBool, TargetName := sInput, SourceDataType := E_ConfigDataType.Boolean, TargetDataType := E_ConfigDataType.Boolean, Phase := E_LinkPhase.InputToModule, HasTransform := FALSE, Scale := 1, Offset := 0), Message := 'Identical BOOL nodes must create a MEMCPY link.');
-	AssertTrue(Condition := Manager.M_AddLink(SourceName := sInfraLReal, TargetName := sLongReal, SourceDataType := E_ConfigDataType.Float64, TargetDataType := E_ConfigDataType.Float64, Phase := E_LinkPhase.InputToModule, HasTransform := TRUE, Scale := 2, Offset := 1), Message := 'Numeric transform link must be accepted.');
+	sInfraBool := Json.GetSymbolNameByAddress(
+		nData := SIZEOF(GVL_TestSymbols.InfrastructureBool),
+		pData := ADR(GVL_TestSymbols.InfrastructureBool),
+		hrErrorCode => hr
+	);
+	sInfraLReal := Json.GetSymbolNameByAddress(
+		nData := SIZEOF(GVL_TestSymbols.InfrastructureLReal),
+		pData := ADR(GVL_TestSymbols.InfrastructureLReal),
+		hrErrorCode => hr
+	);
+	sInput := Json.GetSymbolNameByAddress(
+		nData := SIZEOF(GVL_TestSymbols.ModuleOne.InputBool),
+		pData := ADR(GVL_TestSymbols.ModuleOne.InputBool),
+		hrErrorCode => hr
+	);
+	sLongReal := Json.GetSymbolNameByAddress(
+		nData := SIZEOF(GVL_TestSymbols.ModuleOne.LongRealValue),
+		pData := ADR(GVL_TestSymbols.ModuleOne.LongRealValue),
+		hrErrorCode => hr
+	);
+	AssertTrue(
+		Condition := Manager.M_AddLink(
+			SourceName := sInfraBool,
+			TargetName := sInput,
+			SourceDataType := E_ConfigDataType.Boolean,
+			TargetDataType := E_ConfigDataType.Boolean,
+			Phase := E_LinkPhase.InputToModule,
+			HasTransform := FALSE,
+			Scale := 1,
+			Offset := 0
+		),
+		Message := 'Identical BOOL nodes must create a MEMCPY link.'
+	);
+	AssertTrue(
+		Condition := Manager.M_AddLink(
+			SourceName := sInfraLReal,
+			TargetName := sLongReal,
+			SourceDataType := E_ConfigDataType.Float64,
+			TargetDataType := E_ConfigDataType.Float64,
+			Phase := E_LinkPhase.InputToModule,
+			HasTransform := TRUE,
+			Scale := 2,
+			Offset := 1
+		),
+		Message := 'Numeric transform link must be accepted.'
+	);
 	bInitialized := TRUE;
 END_IF
 
 // Act：Output phase 不得提前複製 Input link；Input phase 才套用兩種路徑。
-GVL_TestSymbols.InfrastructureBool := TRUE; GVL_TestSymbols.InfrastructureLReal := 10.0;
-GVL_TestSymbols.ModuleOne.InputBool := FALSE; GVL_TestSymbols.ModuleOne.LongRealValue := 0.0;
+GVL_TestSymbols.InfrastructureBool := TRUE;
+GVL_TestSymbols.InfrastructureLReal := 10.0;
+GVL_TestSymbols.ModuleOne.InputBool := FALSE;
+GVL_TestSymbols.ModuleOne.LongRealValue := 0.0;
 Manager.M_CyclicOutput();
-AssertFalse(Condition := GVL_TestSymbols.ModuleOne.InputBool, Message := 'Wrong phase must not copy input data.');
+AssertFalse(
+	Condition := GVL_TestSymbols.ModuleOne.InputBool,
+	Message := 'Wrong phase must not copy input data.'
+);
 Manager.M_CyclicInput();
-AssertTrue(Condition := GVL_TestSymbols.ModuleOne.InputBool, Message := 'Input phase must copy BOOL data.');
-AssertTrue(Condition := GVL_TestSymbols.ModuleOne.LongRealValue = 21.0, Message := 'Scale and offset must be applied in LREAL.');
+AssertTrue(
+	Condition := GVL_TestSymbols.ModuleOne.InputBool,
+	Message := 'Input phase must copy BOOL data.'
+);
+AssertTrue(
+	Condition := GVL_TestSymbols.ModuleOne.LongRealValue = 21.0,
+	Message := 'Scale and offset must be applied in LREAL.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
     <Method Name="ReadableNodeAndSingleWriterValidationAreExplicit" Id="{8003789b-18e1-417b-abb6-2a9606129a5e}">
       <Declaration><![CDATA[METHOD ReadableNodeAndSingleWriterValidationAreExplicit
-VAR_INST Manager : FB_LinkVariableManager; Json : FB_JsonReadWriteDataType; Config : ST_ModuleFileConfig; bInitialized : BOOL; END_VAR
-VAR sSource : STRING(255); sTarget : STRING(255); sModule : STRING(255); hr : HRESULT; nHandle : UINT; Raw : ST_ConfigRawValue; eRead : E_ConfigValueError; bOk : BOOL; END_VAR
+VAR_INST
+	Manager : FB_LinkVariableManager;
+	Json : FB_JsonReadWriteDataType;
+	Config : ST_ModuleFileConfig;
+	bInitialized : BOOL;
+END_VAR
+VAR
+	sSource : STRING(255);
+	sTarget : STRING(255);
+	sModule : STRING(255);
+	hr : HRESULT;
+	nHandle : UINT;
+	Raw : ST_ConfigRawValue;
+	eRead : E_ConfigValueError;
+	bOk : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('ReadableNodeAndSingleWriterValidationAreExplicit');
 
 IF NOT bInitialized THEN
 	Manager.M_BeginInfrastructureRegistration();
-	Manager.M_RegisterInfrastructureNode(Variable := GVL_TestSymbols.InfrastructureBool, Access := E_VariableAccess.ReadOnly);
+	Manager.M_RegisterInfrastructureNode(
+		Variable := GVL_TestSymbols.InfrastructureBool,
+		Access := E_VariableAccess.ReadOnly
+	);
 	Manager.M_SealInfrastructureRegistration();
-	Manager.M_BeginModuleRegistration(Address := ADR(GVL_TestSymbols.ModuleTwo), Size := SIZEOF(GVL_TestSymbols.ModuleTwo), ModuleConfig := Config);
-	Manager.M_RegisterModuleNode(Variable := GVL_TestSymbols.ModuleTwo.InputBool, Access := E_VariableAccess.ReadWrite);
+	Manager.M_BeginModuleRegistration(
+		Address := ADR(GVL_TestSymbols.ModuleTwo),
+		Size := SIZEOF(GVL_TestSymbols.ModuleTwo),
+		ModuleConfig := Config
+	);
+	Manager.M_RegisterModuleNode(
+		Variable := GVL_TestSymbols.ModuleTwo.InputBool,
+		Access := E_VariableAccess.ReadWrite
+	);
 	Manager.M_EndModuleRegistration(ModuleSymbol => sModule);
-	sSource := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.InfrastructureBool), pData := ADR(GVL_TestSymbols.InfrastructureBool), hrErrorCode => hr);
-	sTarget := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.ModuleTwo.InputBool), pData := ADR(GVL_TestSymbols.ModuleTwo.InputBool), hrErrorCode => hr);
+	sSource := Json.GetSymbolNameByAddress(
+		nData := SIZEOF(GVL_TestSymbols.InfrastructureBool),
+		pData := ADR(GVL_TestSymbols.InfrastructureBool),
+		hrErrorCode => hr
+	);
+	sTarget := Json.GetSymbolNameByAddress(
+		nData := SIZEOF(GVL_TestSymbols.ModuleTwo.InputBool),
+		pData := ADR(GVL_TestSymbols.ModuleTwo.InputBool),
+		hrErrorCode => hr
+	);
 	bInitialized := TRUE;
 END_IF
 
-AssertTrue(Condition := Manager.M_ResolveReadableNode(Name := sSource, ExpectedDataType := E_ConfigDataType.Boolean, NodeHandle => nHandle), Message := 'Readable registered source must resolve to a handle.');
+AssertTrue(
+	Condition := Manager.M_ResolveReadableNode(
+		Name := sSource,
+		ExpectedDataType := E_ConfigDataType.Boolean,
+		NodeHandle => nHandle
+	),
+	Message := 'Readable registered source must resolve to a handle.'
+);
 GVL_TestSymbols.InfrastructureBool := TRUE;
-AssertTrue(Condition := Manager.M_ReadNode(NodeHandle := nHandle, ExpectedDataType := E_ConfigDataType.Boolean, Value := Raw, ErrorCode => eRead), Message := 'Resolved handle must read its local value.');
-AssertFalse(Condition := Manager.M_ReadNode(NodeHandle := 0, ExpectedDataType := E_ConfigDataType.Boolean, Value := Raw, ErrorCode => eRead), Message := 'Handle zero must be rejected.');
-AssertTrue(Condition := eRead = E_ConfigValueError.InvalidNodeHandle, Message := 'Invalid handle must return a stable error code.');
+AssertTrue(
+	Condition := Manager.M_ReadNode(
+		NodeHandle := nHandle,
+		ExpectedDataType := E_ConfigDataType.Boolean,
+		Value := Raw,
+		ErrorCode => eRead
+	),
+	Message := 'Resolved handle must read its local value.'
+);
+AssertFalse(
+	Condition := Manager.M_ReadNode(
+		NodeHandle := 0,
+		ExpectedDataType := E_ConfigDataType.Boolean,
+		Value := Raw,
+		ErrorCode => eRead
+	),
+	Message := 'Handle zero must be rejected.'
+);
+AssertTrue(
+	Condition := eRead = E_ConfigValueError.InvalidNodeHandle,
+	Message := 'Invalid handle must return a stable error code.'
+);
 
-AssertTrue(Condition := Manager.M_AddLink(SourceName := sSource, TargetName := sTarget, SourceDataType := E_ConfigDataType.Boolean, TargetDataType := E_ConfigDataType.Boolean, Phase := E_LinkPhase.InputToModule, HasTransform := FALSE, Scale := 1, Offset := 0), Message := 'First target writer must be accepted.');
-AssertFalse(Condition := Manager.M_AddLink(SourceName := sSource, TargetName := sTarget, SourceDataType := E_ConfigDataType.Boolean, TargetDataType := E_ConfigDataType.Boolean, Phase := E_LinkPhase.ModuleToOutput, HasTransform := FALSE, Scale := 1, Offset := 0), Message := 'Second writer for the same target must be rejected.');
+AssertTrue(
+	Condition := Manager.M_AddLink(
+		SourceName := sSource,
+		TargetName := sTarget,
+		SourceDataType := E_ConfigDataType.Boolean,
+		TargetDataType := E_ConfigDataType.Boolean,
+		Phase := E_LinkPhase.InputToModule,
+		HasTransform := FALSE,
+		Scale := 1,
+		Offset := 0
+	),
+	Message := 'First target writer must be accepted.'
+);
+AssertFalse(
+	Condition := Manager.M_AddLink(
+		SourceName := sSource,
+		TargetName := sTarget,
+		SourceDataType := E_ConfigDataType.Boolean,
+		TargetDataType := E_ConfigDataType.Boolean,
+		Phase := E_LinkPhase.ModuleToOutput,
+		HasTransform := FALSE,
+		Scale := 1,
+		Offset := 0
+	),
+	Message := 'Second writer for the same target must be rejected.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
   </POU>
 </TcPlcObject>

@@ -8,7 +8,8 @@ END_VAR
 ]]></Declaration>
     <Implementation><ST><![CDATA[InitialStateAndZeroOwnerAreSafe();
 OwnershipIsExclusiveAndReleaseIsOwnerOnly();
-AdsMetadataDescribesTheInstance();]]></ST></Implementation>
+AdsMetadataDescribesTheInstance();
+]]></ST></Implementation>
     <Method Name="InitialStateAndZeroOwnerAreSafe" Id="{93dfc359-99d6-42bb-9f17-16ad428d70d1}">
       <Declaration><![CDATA[METHOD InitialStateAndZeroOwnerAreSafe
 ]]></Declaration>
@@ -16,13 +17,29 @@ AdsMetadataDescribesTheInstance();]]></ST></Implementation>
 
 // Arrange：新建立的 BaseUnit 尚未被任何 Service 占用。
 // Act / Assert：OwnerId=0 代表未占用，永遠不能取得、擁有或釋放資源。
-AssertFalse(Condition := _BaseUnit.ResourceIsAcquired, Message := 'A new BaseUnit must be unowned.');
-AssertTrue(Condition := _BaseUnit.ResourceOwnerId = 0, Message := 'The unowned sentinel must be zero.');
-AssertFalse(Condition := _BaseUnit.M_AcquireResource(OwnerId := 0), Message := 'Owner zero must not acquire a resource.');
-AssertFalse(Condition := _BaseUnit.M_IsResourceOwner(OwnerId := 0), Message := 'Owner zero must never be reported as owner.');
-AssertFalse(Condition := _BaseUnit.M_ReleaseResource(OwnerId := 0), Message := 'Owner zero must not release a resource.');
+AssertFalse(
+	Condition := _BaseUnit.ResourceIsAcquired,
+	Message := 'A new BaseUnit must be unowned.'
+);
+AssertTrue(
+	Condition := _BaseUnit.ResourceOwnerId = 0,
+	Message := 'The unowned sentinel must be zero.'
+);
+AssertFalse(
+	Condition := _BaseUnit.M_AcquireResource(OwnerId := 0),
+	Message := 'Owner zero must not acquire a resource.'
+);
+AssertFalse(
+	Condition := _BaseUnit.M_IsResourceOwner(OwnerId := 0),
+	Message := 'Owner zero must never be reported as owner.'
+);
+AssertFalse(
+	Condition := _BaseUnit.M_ReleaseResource(OwnerId := 0),
+	Message := 'Owner zero must not release a resource.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
     <Method Name="OwnershipIsExclusiveAndReleaseIsOwnerOnly" Id="{1a1a38a8-20a7-4539-a62b-03272e03c8fb}">
       <Declaration><![CDATA[METHOD OwnershipIsExclusiveAndReleaseIsOwnerOnly
@@ -30,32 +47,67 @@ TEST_FINISHED();]]></ST></Implementation>
       <Implementation><ST><![CDATA[TEST('OwnershipIsExclusiveAndReleaseIsOwnerOnly');
 
 // Arrange / Act：Owner 11 先取得資源；同 Owner 重入應維持冪等。
-AssertTrue(Condition := _BaseUnit.M_AcquireResource(OwnerId := 11), Message := 'The first valid owner must acquire the resource.');
-AssertTrue(Condition := _BaseUnit.M_AcquireResource(OwnerId := 11), Message := 'Re-acquiring by the owner must be idempotent.');
+AssertTrue(
+	Condition := _BaseUnit.M_AcquireResource(OwnerId := 11),
+	Message := 'The first valid owner must acquire the resource.'
+);
+AssertTrue(
+	Condition := _BaseUnit.M_AcquireResource(OwnerId := 11),
+	Message := 'Re-acquiring by the owner must be idempotent.'
+);
 
 // Assert：競爭者不能取得或釋放；目前 Owner 可正常釋放。
-AssertFalse(Condition := _BaseUnit.M_AcquireResource(OwnerId := 12), Message := 'A competing owner must be rejected.');
-AssertFalse(Condition := _BaseUnit.M_ReleaseResource(OwnerId := 12), Message := 'A non-owner must not release the resource.');
-AssertTrue(Condition := _BaseUnit.ResourceIsAcquired AND (_BaseUnit.ResourceOwnerId = 11), Message := 'Rejected operations must preserve ownership.');
-AssertTrue(Condition := _BaseUnit.M_ReleaseResource(OwnerId := 11), Message := 'The current owner must release the resource.');
-AssertFalse(Condition := _BaseUnit.ResourceIsAcquired, Message := 'Release must restore the unowned state.');
+AssertFalse(
+	Condition := _BaseUnit.M_AcquireResource(OwnerId := 12),
+	Message := 'A competing owner must be rejected.'
+);
+AssertFalse(
+	Condition := _BaseUnit.M_ReleaseResource(OwnerId := 12),
+	Message := 'A non-owner must not release the resource.'
+);
+AssertTrue(
+	Condition := _BaseUnit.ResourceIsAcquired AND (_BaseUnit.ResourceOwnerId = 11),
+	Message := 'Rejected operations must preserve ownership.'
+);
+AssertTrue(
+	Condition := _BaseUnit.M_ReleaseResource(OwnerId := 11),
+	Message := 'The current owner must release the resource.'
+);
+AssertFalse(
+	Condition := _BaseUnit.ResourceIsAcquired,
+	Message := 'Release must restore the unowned state.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
     <Method Name="AdsMetadataDescribesTheInstance" Id="{3d819b4d-2601-4694-ac8c-a137770f52ca}">
       <Declaration><![CDATA[METHOD AdsMetadataDescribesTheInstance
-VAR pData : PVOID; nData : UDINT; END_VAR
+VAR
+	pData : PVOID;
+	nData : UDINT;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('AdsMetadataDescribesTheInstance');
 
 // Act：取得 framework 對外提供的 ADS metadata。
-AssertTrue(Condition := _BaseUnit.M_GetAdsSymbolMetadata(Address => pData, Size => nData), Message := 'BaseUnit metadata must be available.');
+AssertTrue(
+	Condition := _BaseUnit.M_GetAdsSymbolMetadata(Address => pData, Size => nData),
+	Message := 'BaseUnit metadata must be available.'
+);
 
 // Assert：位址必須指向目前 instance，大小必須涵蓋整個 FB。
-AssertTrue(Condition := pData = ADR(_BaseUnit), Message := 'Metadata address must identify this BaseUnit instance.');
-AssertTrue(Condition := nData = SIZEOF(_BaseUnit), Message := 'Metadata size must match the BaseUnit instance.');
+AssertTrue(
+	Condition := pData = ADR(_BaseUnit),
+	Message := 'Metadata address must identify this BaseUnit instance.'
+);
+AssertTrue(
+	Condition := nData = SIZEOF(_BaseUnit),
+	Message := 'Metadata size must match the BaseUnit instance.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
   </POU>
 </TcPlcObject>

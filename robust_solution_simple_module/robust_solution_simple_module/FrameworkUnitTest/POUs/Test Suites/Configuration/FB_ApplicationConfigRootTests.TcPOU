@@ -8,7 +8,8 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[RegistrationHooksRunOnceInOrderAndLatchFailure();
-ReadyCycleCopiesInputRunsModuleAndCopiesOutput();]]></ST>
+ReadyCycleCopiesInputRunsModuleAndCopiesOutput();
+]]></ST>
     </Implementation>
     <Method Name="RegistrationHooksRunOnceInOrderAndLatchFailure" Id="{a8d9f959-15b2-4f7e-9de7-06bf40a17bdc}">
       <Declaration><![CDATA[METHOD RegistrationHooksRunOnceInOrderAndLatchFailure
@@ -31,7 +32,8 @@ AssertTrue(
 		AND NOT _ConfigRoot.Ready
 		AND (_ConfigRoot.ErrorCode = 0)
 		AND (_ConfigRoot.ErrorMessage = 'A Module Type name and adapter are required.'),
-	Message := 'The first registration failure must be exposed by the ConfigRoot properties.');
+	Message :=
+		'The first registration failure must be exposed by the ConfigRoot properties.');
 
 // A second cycle must neither retry registration nor enter configuration loading.
 _ConfigRoot.Run();
@@ -44,17 +46,24 @@ AssertTrue(
 // The public Run seam is gated by Ready.
 AssertTrue(
 	Condition := _ConfigRoot.ModuleCycleCalls = 0,
-	Message := 'Module polling must remain disabled after configuration initialization fails.');
+	Message :=
+		'Module polling must remain disabled after configuration initialization fails.');
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="ReadyCycleCopiesInputRunsModuleAndCopiesOutput" Id="{876c1e34-8237-4ea1-ba02-187f03b73399}">
       <Declaration><![CDATA[METHOD ReadyCycleCopiesInputRunsModuleAndCopiesOutput
-VAR_INST Root : FB_TestApplicationConfigRoot; nCycles : UINT; END_VAR
+VAR_INST
+	Root : FB_TestApplicationConfigRoot;
+	nCycles : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[// RuntimeDependent：需將 library parameter 的 ModuleConfigFilePath 指向 application-root.json。
-IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN RETURN; END_IF
+IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN
+	RETURN;
+END_IF
 TEST('ReadyCycleCopiesInputRunsModuleAndCopiesOutput');
 
 // Arrange：使用有效 adapter，並準備可辨識的 input/output 初值。
@@ -67,15 +76,34 @@ Root.Run();
 nCycles := nCycles + 1;
 IF Root.Ready THEN
 	// Assert：hook 看到 input-copy 結果，外部節點看到 hook 產生的 output-copy 結果。
-	AssertTrue(Condition := Root.ModuleObservedInput, Message := 'Input mapping must complete before the Module hook runs.');
-	AssertTrue(Condition := GVL_TestSymbols.InfrastructureOutputBool, Message := 'Output mapping must run after the Module hook.');
-	AssertTrue(Condition := (Root.ModuleCycleCalls > 0) AND (LEN(Root.LastSystemUtcDateTime) = 17), Message := 'Ready cycle must run Modules with an updated UTC context.');
-	AssertTrue(Condition := Root.LastHeartbeatTimeout = Param_Config.ModuleHeartbeat_Timeout, Message := 'SystemContext must carry the configured heartbeat timeout.');
-	nCycles := 0; TEST_FINISHED();
+	AssertTrue(
+		Condition := Root.ModuleObservedInput,
+		Message := 'Input mapping must complete before the Module hook runs.'
+	);
+	AssertTrue(
+		Condition := GVL_TestSymbols.InfrastructureOutputBool,
+		Message := 'Output mapping must run after the Module hook.'
+	);
+	AssertTrue(
+		Condition := (Root.ModuleCycleCalls > 0) AND (LEN(Root.LastSystemUtcDateTime) = 17),
+		Message := 'Ready cycle must run Modules with an updated UTC context.'
+	);
+	AssertTrue(
+		Condition := Root.LastHeartbeatTimeout = Param_Config.ModuleHeartbeat_Timeout,
+		Message := 'SystemContext must carry the configured heartbeat timeout.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
 ELSIF Root.Error OR (nCycles > 1000) THEN
-	AssertTrue(Condition := FALSE, Message := 'Application root fixture failed or timed out; verify library parameter and fixture deployment.');
-	nCycles := 0; TEST_FINISHED();
-END_IF]]></ST></Implementation>
+	AssertTrue(
+		Condition := FALSE,
+		Message :=
+			'Application root fixture failed or timed out; verify library parameter and fixture deployment.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
+END_IF
+]]></ST></Implementation>
     </Method>
   </POU>
 </TcPlcObject>

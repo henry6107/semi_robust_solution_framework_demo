@@ -21,7 +21,8 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[
+]]></ST>
     </Implementation>
     <Method Name="H_RegisterBaseUnits" Id="{3ca42fbd-31b2-4f1b-96bb-9c46e0435a54}">
       <Declaration><![CDATA[METHOD PROTECTED H_RegisterBaseUnits
@@ -30,7 +31,8 @@ END_VAR
         <ST><![CDATA[BaseUnitRegistrationCalls := BaseUnitRegistrationCalls + 1;
 _nRegistrationStep := _nRegistrationStep + 1;
 RegistrationOrderValid := RegistrationOrderValid AND (_nRegistrationStep = 2);
-M_RegisterBaseUnit(BaseUnit := GVL_TestSymbols.RegisteredBaseUnit);]]></ST>
+M_RegisterBaseUnit(BaseUnit := GVL_TestSymbols.RegisteredBaseUnit);
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_RegisterIo" Id="{065f8bf1-a169-4678-bca4-01b22ccc6b39}">
@@ -45,7 +47,8 @@ M_RegisterIoNode(
 	Access := E_VariableAccess.ReadOnly);
 M_RegisterIoNode(
 	Variable := GVL_TestSymbols.InfrastructureOutputBool,
-	Access := E_VariableAccess.WriteOnly);]]></ST>
+	Access := E_VariableAccess.WriteOnly);
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_RegisterModuleTypes" Id="{befe120e-3f23-4a08-abb5-2157056b9ffd}">
@@ -62,7 +65,8 @@ IF UseValidModuleTypeRegistration THEN
 ELSE
 	// Deterministic failure seam: do not touch a target-dependent JSON file.
 	M_RegisterModuleType(ModuleTypeName := '', Adapter := 0);
-END_IF]]></ST>
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_RunModules" Id="{f9ad22a2-295d-4247-ab88-07e642fac0f1}">
@@ -80,7 +84,8 @@ END_VAR
 ModuleObservedInput := GVL_TestSymbols.ModuleOne.InputBool;
 GVL_TestSymbols.ModuleOne.OutputBool := TRUE;
 LastSystemUtcDateTime := SystemContext.UtcDateTime;
-LastHeartbeatTimeout := SystemContext.ModuleHeartbeatTimeout;]]></ST>
+LastHeartbeatTimeout := SystemContext.ModuleHeartbeatTimeout;
+]]></ST>
       </Implementation>
     </Method>
   </POU>

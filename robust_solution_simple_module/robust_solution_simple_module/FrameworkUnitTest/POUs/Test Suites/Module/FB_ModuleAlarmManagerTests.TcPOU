@@ -22,7 +22,8 @@ ServiceOccurrenceCountChangesOnlyOnActiveEdges();
 AcknowledgeOneUsesCompositeIdentityAndRemovalPredicate();
 AcknowledgementPrecedesNewSourcesAndResetsHaveSeparateScopes();
 ConfiguredOccurrencesAndDuplicateRequestsFollowTheSameContract();
-ServiceOverflowPreservesExistingLifecycles();]]></ST>
+ServiceOverflowPreservesExistingLifecycles();
+]]></ST>
     </Implementation>
     <Method Name="ServiceOccurrenceCountChangesOnlyOnActiveEdges" Id="{ba35bd4a-1c3b-45e1-86ee-c4a82e2daad2}">
       <Declaration><![CDATA[METHOD ServiceOccurrenceCountChangesOnlyOnActiveEdges
@@ -47,23 +48,36 @@ _LifecycleManager.M_BeginCycle(ModuleId := 1, ConfigurationRevision := 1);
 _LifecycleManager.M_ObserveServiceAlarm(Alarm := Alarm);
 _LifecycleManager.M_EndCycle();
 _LifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].Active, Message := 'First observation must publish an active alarm.');
-AssertTrue(Condition := _AlarmList[1].OccurrenceCount = 1, Message := 'First active edge must set occurrence count to one.');
+AssertTrue(
+	Condition := _AlarmList[1].Active,
+	Message := 'First observation must publish an active alarm.'
+);
+AssertTrue(
+	Condition := _AlarmList[1].OccurrenceCount = 1,
+	Message := 'First active edge must set occurrence count to one.'
+);
 
 // Continuous presence is not another active edge.
 _LifecycleManager.M_BeginCycle(ModuleId := 1, ConfigurationRevision := 1);
 _LifecycleManager.M_ObserveServiceAlarm(Alarm := Alarm);
 _LifecycleManager.M_EndCycle();
 _LifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].OccurrenceCount = 1, Message := 'Continuous active scans must not increase occurrence count.');
+AssertTrue(
+	Condition := _AlarmList[1].OccurrenceCount = 1,
+	Message := 'Continuous active scans must not increase occurrence count.'
+);
 
 // Absence makes the retained lifecycle inactive.
 _LifecycleManager.M_BeginCycle(ModuleId := 1, ConfigurationRevision := 1);
 _LifecycleManager.M_EndCycle();
 _LifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertFalse(Condition := _AlarmList[1].Active, Message := 'A missing Service source must make the retained alarm inactive.');
+AssertFalse(
+	Condition := _AlarmList[1].Active,
+	Message := 'A missing Service source must make the retained alarm inactive.'
+);
 
-// Reappearance before acknowledgement is a second active edge, while first metadata remains latched.
+// Reappearance before acknowledgement is a second active edge.
+// The first occurrence metadata remains latched.
 Alarm.SourceErrorId := 16#5678;
 Alarm.Message := 'Later occurrence';
 Alarm.DateTime := '20260828090100000';
@@ -71,14 +85,33 @@ _LifecycleManager.M_BeginCycle(ModuleId := 1, ConfigurationRevision := 1);
 _LifecycleManager.M_ObserveServiceAlarm(Alarm := Alarm);
 _LifecycleManager.M_EndCycle();
 _LifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].Active, Message := 'A recurring source must become active again.');
-AssertTrue(Condition := _AlarmList[1].OccurrenceCount = 2, Message := 'Only the recurring active edge may increase occurrence count.');
-AssertFalse(Condition := _AlarmList[1].Acknowledged, Message := 'A recurrence must require acknowledgement again.');
-AssertTrue(Condition := _AlarmList[1].SourceErrorId = 16#1234, Message := 'A recurrence must retain the first source error ID.');
-AssertTrue(Condition := _AlarmList[1].Message = 'First occurrence', Message := 'A recurrence must retain the first message.');
-AssertTrue(Condition := _AlarmList[1].DateTime = '20260828090000000', Message := 'A recurrence must retain the first timestamp.');
+AssertTrue(
+	Condition := _AlarmList[1].Active,
+	Message := 'A recurring source must become active again.'
+);
+AssertTrue(
+	Condition := _AlarmList[1].OccurrenceCount = 2,
+	Message := 'Only the recurring active edge may increase occurrence count.'
+);
+AssertFalse(
+	Condition := _AlarmList[1].Acknowledged,
+	Message := 'A recurrence must require acknowledgement again.'
+);
+AssertTrue(
+	Condition := _AlarmList[1].SourceErrorId = 16#1234,
+	Message := 'A recurrence must retain the first source error ID.'
+);
+AssertTrue(
+	Condition := _AlarmList[1].Message = 'First occurrence',
+	Message := 'A recurrence must retain the first message.'
+);
+AssertTrue(
+	Condition := _AlarmList[1].DateTime = '20260828090000000',
+	Message := 'A recurrence must retain the first timestamp.'
+);
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="AcknowledgeOneUsesCompositeIdentityAndRemovalPredicate" Id="{544bef04-7576-4890-a070-b231f9821e94}">
@@ -117,9 +150,18 @@ _AckManager.M_ObserveServiceAlarm(Alarm := AlarmOne);
 _AckManager.M_ObserveServiceAlarm(Alarm := AlarmTwo);
 _AckManager.M_EndCycle();
 _AckManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AckManager.AckAccepted, Message := 'A matching composite identity must be acknowledged.');
-AssertTrue(Condition := _AlarmList[1].ServiceId = 21 AND _AlarmList[1].Acknowledged, Message := 'Only Service 21 must be acknowledged.');
-AssertTrue(Condition := _AlarmList[2].ServiceId = 22 AND NOT _AlarmList[2].Acknowledged, Message := 'The same error ID from Service 22 must remain unacknowledged.');
+AssertTrue(
+	Condition := _AckManager.AckAccepted,
+	Message := 'A matching composite identity must be acknowledged.'
+);
+AssertTrue(
+	Condition := _AlarmList[1].ServiceId = 21 AND _AlarmList[1].Acknowledged,
+	Message := 'Only Service 21 must be acknowledged.'
+);
+AssertTrue(
+	Condition := _AlarmList[2].ServiceId = 22 AND NOT _AlarmList[2].Acknowledged,
+	Message := 'The same error ID from Service 22 must remain unacknowledged.'
+);
 
 // Release the request and remove only the acknowledged alarm by making it inactive.
 Request.bChangeRequest := FALSE;
@@ -128,14 +170,23 @@ _AckManager.M_ProcessAcknowledgement(Request := Request);
 _AckManager.M_ObserveServiceAlarm(Alarm := AlarmTwo);
 _AckManager.M_EndCycle();
 _AckManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].ServiceId = 22, Message := 'Inactive and acknowledged Service 21 must be removed in the same scan.');
-AssertTrue(Condition := _AlarmList[2].MainErrorId = 0, Message := 'Published alarms must remain dense after removal.');
+AssertTrue(
+	Condition := _AlarmList[1].ServiceId = 22,
+	Message := 'Inactive and acknowledged Service 21 must be removed in the same scan.'
+);
+AssertTrue(
+	Condition := _AlarmList[2].MainErrorId = 0,
+	Message := 'Published alarms must remain dense after removal.'
+);
 
 // Reset-before-Ack retains Service 22 as inactive until its exact identity is acknowledged.
 _AckManager.M_BeginCycle(ModuleId := 2, ConfigurationRevision := 1);
 _AckManager.M_EndCycle();
 _AckManager.M_Publish(AlarmList := _AlarmList);
-AssertFalse(Condition := _AlarmList[1].Active, Message := 'An inactive unacknowledged alarm must remain published.');
+AssertFalse(
+	Condition := _AlarmList[1].Active,
+	Message := 'An inactive unacknowledged alarm must remain published.'
+);
 
 Request.RequestId := 2;
 Request.ServiceId := 22;
@@ -144,10 +195,17 @@ _AckManager.M_BeginCycle(ModuleId := 2, ConfigurationRevision := 1);
 _AckManager.M_ProcessAcknowledgement(Request := Request);
 _AckManager.M_EndCycle();
 _AckManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].MainErrorId = 0, Message := 'Acknowledging an inactive alarm must remove it in the same scan.');
-AssertTrue(Condition := _AckManager.AckResponseId = 2 AND _AckManager.AckAccepted, Message := 'Ack response must identify the accepted request.');
+AssertTrue(
+	Condition := _AlarmList[1].MainErrorId = 0,
+	Message := 'Acknowledging an inactive alarm must remove it in the same scan.'
+);
+AssertTrue(
+	Condition := _AckManager.AckResponseId = 2 AND _AckManager.AckAccepted,
+	Message := 'Ack response must identify the accepted request.'
+);
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="AcknowledgementPrecedesNewSourcesAndResetsHaveSeparateScopes" Id="{e1ba9431-bf03-4634-9ef8-257bca0519a5}">
@@ -187,10 +245,22 @@ _ScopeManager.M_UpdateConfiguredAlarm(
 _ScopeManager.M_ObserveServiceAlarm(Alarm := ServiceAlarm);
 _ScopeManager.M_EndCycle();
 _ScopeManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].ServiceId = 31 AND NOT _AlarmList[1].Acknowledged, Message := 'AckAll must not consume a new Service alarm from the same scan.');
-AssertTrue(Condition := _AlarmList[2].ServiceId = 0 AND NOT _AlarmList[2].Acknowledged, Message := 'Configured alarms must publish with ServiceId zero and require a later Ack.');
-AssertTrue(Condition := _ScopeManager.ServiceLatchedCount = 1, Message := 'Service latched count must include the Service lifecycle.');
-AssertTrue(Condition := _ScopeManager.ConfiguredLatchedCount = 1, Message := 'Configured latched count must include the configured lifecycle.');
+AssertTrue(
+	Condition := _AlarmList[1].ServiceId = 31 AND NOT _AlarmList[1].Acknowledged,
+	Message := 'AckAll must not consume a new Service alarm from the same scan.'
+);
+AssertTrue(
+	Condition := _AlarmList[2].ServiceId = 0 AND NOT _AlarmList[2].Acknowledged,
+	Message := 'Configured alarms must publish with ServiceId zero and require a later Ack.'
+);
+AssertTrue(
+	Condition := _ScopeManager.ServiceLatchedCount = 1,
+	Message := 'Service latched count must include the Service lifecycle.'
+);
+AssertTrue(
+	Condition := _ScopeManager.ConfiguredLatchedCount = 1,
+	Message := 'Configured latched count must include the configured lifecycle.'
+);
 
 // A configuration revision clears only configured state and preserves the Service lifecycle.
 Request.bChangeRequest := FALSE;
@@ -199,17 +269,31 @@ _ScopeManager.M_ProcessAcknowledgement(Request := Request);
 _ScopeManager.M_ObserveServiceAlarm(Alarm := ServiceAlarm);
 _ScopeManager.M_EndCycle();
 _ScopeManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _ScopeManager.ServiceLatchedCount = 1, Message := 'Configuration revision changes must preserve Service alarms.');
-AssertTrue(Condition := _ScopeManager.ConfiguredLatchedCount = 0, Message := 'Configuration revision changes must clear configured alarms.');
+AssertTrue(
+	Condition := _ScopeManager.ServiceLatchedCount = 1,
+	Message := 'Configuration revision changes must preserve Service alarms.'
+);
+AssertTrue(
+	Condition := _ScopeManager.ConfiguredLatchedCount = 0,
+	Message := 'Configuration revision changes must clear configured alarms.'
+);
 
 // Reassigning the FB instance to another Module identity clears both scopes.
 _ScopeManager.M_BeginCycle(ModuleId := 4, ConfigurationRevision := 2);
 _ScopeManager.M_EndCycle();
 _ScopeManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _ScopeManager.ServiceLatchedCount = 0 AND _ScopeManager.ConfiguredLatchedCount = 0, Message := 'A ModuleId change must clear every alarm lifecycle.');
-AssertTrue(Condition := _AlarmList[1].MainErrorId = 0, Message := 'A ModuleId change must publish an empty list.');
+AssertTrue(
+	Condition := _ScopeManager.ServiceLatchedCount = 0
+		AND _ScopeManager.ConfiguredLatchedCount = 0,
+	Message := 'A ModuleId change must clear every alarm lifecycle.'
+);
+AssertTrue(
+	Condition := _AlarmList[1].MainErrorId = 0,
+	Message := 'A ModuleId change must publish an empty list.'
+);
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="ServiceOverflowPreservesExistingLifecycles" Id="{f3e3dc94-343f-4a48-a99a-8f658c4bd940}">
@@ -234,12 +318,26 @@ END_FOR
 _OverflowManager.M_EndCycle();
 _OverflowManager.M_Publish(AlarmList := _AlarmList);
 
-AssertTrue(Condition := _OverflowManager.ServiceLatchedCount = Param_Config.MaxServiceAlarmsPerModule, Message := 'Service alarm storage must stop at its fixed capacity.');
-AssertTrue(Condition := _OverflowManager.Overflow, Message := 'Rejecting a new alarm at capacity must set Overflow.');
-AssertTrue(Condition := _AlarmList[Param_Config.MaxServiceAlarmsPerModule].MainErrorId <> 0, Message := 'The final available slot must remain published.');
-AssertTrue(Condition := _AlarmList[Param_Config.MaxServiceAlarmsPerModule + 1].MainErrorId = 0, Message := 'Overflow must not overwrite or publish beyond the reserved Service capacity.');
+AssertTrue(
+	Condition := _OverflowManager.ServiceLatchedCount =
+		Param_Config.MaxServiceAlarmsPerModule,
+	Message := 'Service alarm storage must stop at its fixed capacity.'
+);
+AssertTrue(
+	Condition := _OverflowManager.Overflow,
+	Message := 'Rejecting a new alarm at capacity must set Overflow.'
+);
+AssertTrue(
+	Condition := _AlarmList[Param_Config.MaxServiceAlarmsPerModule].MainErrorId <> 0,
+	Message := 'The final available slot must remain published.'
+);
+AssertTrue(
+	Condition := _AlarmList[Param_Config.MaxServiceAlarmsPerModule + 1].MainErrorId = 0,
+	Message := 'Overflow must not overwrite or publish beyond the reserved Service capacity.'
+);
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="ConfiguredOccurrencesAndDuplicateRequestsFollowTheSameContract" Id="{51627c65-86ed-454e-be08-327e602103eb}">
@@ -261,27 +359,64 @@ Alarm.Path := 'GVL.Condition';
 Alarm.Severity := E_Severity.Alarm;
 
 _ConfiguredManager.M_BeginCycle(ModuleId := 6, ConfigurationRevision := 1);
-_ConfiguredManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := TRUE, Alarm := Alarm, UtcDateTime := '20260828140000000');
+_ConfiguredManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := TRUE,
+	Alarm := Alarm,
+	UtcDateTime := '20260828140000000'
+);
 _ConfiguredManager.M_EndCycle();
 _ConfiguredManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := (_AlarmList[1].ServiceId = 0) AND (_AlarmList[1].OccurrenceCount = 1), Message := 'Configured alarm first edge must use ServiceId zero and count one.');
+AssertTrue(
+	Condition := (_AlarmList[1].ServiceId = 0) AND (_AlarmList[1].OccurrenceCount = 1),
+	Message := 'Configured alarm first edge must use ServiceId zero and count one.'
+);
 
 // Continuous true does not count; false followed by true before removal does.
 _ConfiguredManager.M_BeginCycle(ModuleId := 6, ConfigurationRevision := 1);
-_ConfiguredManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := TRUE, Alarm := Alarm, UtcDateTime := '20260828140100000');
+_ConfiguredManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := TRUE,
+	Alarm := Alarm,
+	UtcDateTime := '20260828140100000'
+);
 _ConfiguredManager.M_EndCycle();
 _ConfiguredManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].OccurrenceCount = 1, Message := 'Continuous configured condition must not increase occurrence count.');
+AssertTrue(
+	Condition := _AlarmList[1].OccurrenceCount = 1,
+	Message := 'Continuous configured condition must not increase occurrence count.'
+);
 
 _ConfiguredManager.M_BeginCycle(ModuleId := 6, ConfigurationRevision := 1);
-_ConfiguredManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := FALSE, Alarm := Alarm, UtcDateTime := '20260828140200000');
+_ConfiguredManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := FALSE,
+	Alarm := Alarm,
+	UtcDateTime := '20260828140200000'
+);
 _ConfiguredManager.M_EndCycle();
 _ConfiguredManager.M_BeginCycle(ModuleId := 6, ConfigurationRevision := 1);
-_ConfiguredManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := TRUE, Alarm := Alarm, UtcDateTime := '20260828140300000');
+_ConfiguredManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := TRUE,
+	Alarm := Alarm,
+	UtcDateTime := '20260828140300000'
+);
 _ConfiguredManager.M_EndCycle();
 _ConfiguredManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].OccurrenceCount = 2, Message := 'Configured recurrence before removal must increment only on the new active edge.');
-AssertTrue(Condition := _AlarmList[1].DateTime = '20260828140000000', Message := 'Configured recurrence must retain the first lifecycle timestamp.');
+AssertTrue(
+	Condition := _AlarmList[1].OccurrenceCount = 2,
+	Message :=
+		'Configured recurrence before removal must increment only on the new active edge.'
+);
+AssertTrue(
+	Condition := _AlarmList[1].DateTime = '20260828140000000',
+	Message := 'Configured recurrence must retain the first lifecycle timestamp.'
+);
 
 Request.RequestId := 20;
 Request.Command := E_AlarmAckCommand.AcknowledgeOne;
@@ -290,32 +425,66 @@ Request.ServiceId := 0;
 Request.bChangeRequest := TRUE;
 _ConfiguredManager.M_BeginCycle(ModuleId := 6, ConfigurationRevision := 1);
 _ConfiguredManager.M_ProcessAcknowledgement(Request := Request);
-_ConfiguredManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := TRUE, Alarm := Alarm, UtcDateTime := '20260828140400000');
+_ConfiguredManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := TRUE,
+	Alarm := Alarm,
+	UtcDateTime := '20260828140400000'
+);
 _ConfiguredManager.M_EndCycle();
-AssertTrue(Condition := _ConfiguredManager.AckAccepted, Message := 'Configured AcknowledgeOne must accept ServiceId zero.');
+AssertTrue(
+	Condition := _ConfiguredManager.AckAccepted,
+	Message := 'Configured AcknowledgeOne must accept ServiceId zero.'
+);
 
 Request.bChangeRequest := FALSE;
 _ConfiguredManager.M_BeginCycle(ModuleId := 6, ConfigurationRevision := 1);
 _ConfiguredManager.M_ProcessAcknowledgement(Request := Request);
-_ConfiguredManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := TRUE, Alarm := Alarm, UtcDateTime := '20260828140500000');
+_ConfiguredManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := TRUE,
+	Alarm := Alarm,
+	UtcDateTime := '20260828140500000'
+);
 _ConfiguredManager.M_EndCycle();
 Request.bChangeRequest := TRUE;
 _ConfiguredManager.M_BeginCycle(ModuleId := 6, ConfigurationRevision := 1);
 _ConfiguredManager.M_ProcessAcknowledgement(Request := Request);
-_ConfiguredManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := TRUE, Alarm := Alarm, UtcDateTime := '20260828140600000');
+_ConfiguredManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := TRUE,
+	Alarm := Alarm,
+	UtcDateTime := '20260828140600000'
+);
 _ConfiguredManager.M_EndCycle();
-AssertTrue(Condition := _ConfiguredManager.AckError = E_AlarmAckError.DuplicateRequest, Message := 'A repeated nonzero RequestId after a new request edge must be rejected.');
+AssertTrue(
+	Condition := _ConfiguredManager.AckError = E_AlarmAckError.DuplicateRequest,
+	Message := 'A repeated nonzero RequestId after a new request edge must be rejected.'
+);
 
 // The accepted Ack remains on the active alarm; the later false sample removes it immediately.
 Request.bChangeRequest := FALSE;
 _ConfiguredManager.M_BeginCycle(ModuleId := 6, ConfigurationRevision := 1);
 _ConfiguredManager.M_ProcessAcknowledgement(Request := Request);
-_ConfiguredManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := FALSE, Alarm := Alarm, UtcDateTime := '20260828140700000');
+_ConfiguredManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := FALSE,
+	Alarm := Alarm,
+	UtcDateTime := '20260828140700000'
+);
 _ConfiguredManager.M_EndCycle();
 _ConfiguredManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].MainErrorId = 0, Message := 'Acknowledged configured alarm must be removed in the false sample scan.');
+AssertTrue(
+	Condition := _AlarmList[1].MainErrorId = 0,
+	Message := 'Acknowledged configured alarm must be removed in the false sample scan.'
+);
 
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="HookOccurrencesUseTheExistingAcknowledgementLifecycle" Id="{5d6c2afc-ba4b-4481-8bf9-82023fb7862b}">
@@ -331,7 +500,9 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[TEST('HookOccurrencesUseTheExistingAcknowledgementLifecycle');
-IF bFinished THEN RETURN; END_IF
+IF bFinished THEN
+	RETURN;
+END_IF
 
 Alarm.MainErrorId := 400;
 Alarm.Message := 'First Hook occurrence';
@@ -342,7 +513,13 @@ _HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
 _HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
 _HookLifecycleManager.M_EndCycle();
 _HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].ModuleId = 91 AND _AlarmList[1].ServiceId = 0 AND _AlarmList[1].OccurrenceCount = 1, Message := 'Hook lifecycle uses the Module identity and starts at one.');
+AssertTrue(
+	Condition :=
+		_AlarmList[1].ModuleId = 91
+		AND _AlarmList[1].ServiceId = 0
+		AND _AlarmList[1].OccurrenceCount = 1,
+	Message := 'Hook lifecycle uses the Module identity and starts at one.'
+);
 Alarm.Message := 'Must not refresh the lifecycle snapshot';
 Alarm.DateTime := '20260912100100000';
 _HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
@@ -350,17 +527,36 @@ _HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
 Accepted := _HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
 _HookLifecycleManager.M_EndCycle();
 _HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := NOT Accepted AND _HookLifecycleManager.DuplicateId = 400, Message := 'Repeated submission in one scan is rejected.');
-AssertTrue(Condition := _AlarmList[1].OccurrenceCount = 1 AND _AlarmList[1].Message = 'First Hook occurrence' AND _AlarmList[1].DateTime = '20260912100000000', Message := 'Continuous observation and duplicates preserve the first snapshot.');
+AssertTrue(
+	Condition := NOT Accepted AND _HookLifecycleManager.DuplicateId = 400,
+	Message := 'Repeated submission in one scan is rejected.'
+);
+AssertTrue(
+	Condition :=
+		_AlarmList[1].OccurrenceCount = 1
+		AND _AlarmList[1].Message = 'First Hook occurrence'
+		AND _AlarmList[1].DateTime = '20260912100000000',
+	Message := 'Continuous observation and duplicates preserve the first snapshot.'
+);
 _HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
 _HookLifecycleManager.M_EndCycle();
 _HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].MainErrorId = 400 AND NOT _AlarmList[1].Active AND NOT _AlarmList[1].Acknowledged, Message := 'An unobserved Hook condition is inactive and latched.');
+AssertTrue(
+	Condition := _AlarmList[1].MainErrorId = 400
+		AND NOT _AlarmList[1].Active
+		AND NOT _AlarmList[1].Acknowledged,
+	Message := 'An unobserved Hook condition is inactive and latched.'
+);
 _HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
 _HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
 _HookLifecycleManager.M_EndCycle();
 _HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].Active AND NOT _AlarmList[1].Acknowledged AND _AlarmList[1].OccurrenceCount = 2, Message := 'Recurrence increments the count and clears acknowledgement.');
+AssertTrue(
+	Condition := _AlarmList[1].Active
+		AND NOT _AlarmList[1].Acknowledged
+		AND _AlarmList[1].OccurrenceCount = 2,
+	Message := 'Recurrence increments the count and clears acknowledgement.'
+);
 
 Request.Command := E_AlarmAckCommand.AcknowledgeOne;
 Request.MainErrorId := 400;
@@ -372,21 +568,37 @@ _HookLifecycleManager.M_ProcessAcknowledgement(Request := Request);
 _HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
 _HookLifecycleManager.M_EndCycle();
 _HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _HookLifecycleManager.AckAccepted AND _AlarmList[1].Active AND _AlarmList[1].Acknowledged, Message := 'Acknowledging an active Hook does not remove it.');
+AssertTrue(
+	Condition := _HookLifecycleManager.AckAccepted
+		AND _AlarmList[1].Active
+		AND _AlarmList[1].Acknowledged,
+	Message := 'Acknowledging an active Hook does not remove it.'
+);
 Request.bChangeRequest := FALSE;
 _HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
 _HookLifecycleManager.M_ProcessAcknowledgement(Request := Request);
 _HookLifecycleManager.M_EndCycle();
 _HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _HookLifecycleManager.HookLatchedCount = 0 AND _AlarmList[1].MainErrorId = 0, Message := 'The first inactive scan removes an acknowledged Hook.');
+AssertTrue(
+	Condition := _HookLifecycleManager.HookLatchedCount = 0
+		AND _AlarmList[1].MainErrorId = 0,
+	Message := 'The first inactive scan removes an acknowledged Hook.'
+);
 _HookLifecycleManager.M_BeginCycle(ModuleId := 91, ConfigurationRevision := 1);
 _HookLifecycleManager.M_ObserveHookAlarm(Alarm := Alarm);
 _HookLifecycleManager.M_EndCycle();
 _HookLifecycleManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].OccurrenceCount = 1 AND NOT _AlarmList[1].Acknowledged AND _AlarmList[1].DateTime = '20260912100100000', Message := 'An occurrence after removal starts a new lifecycle.');
+AssertTrue(
+	Condition :=
+		_AlarmList[1].OccurrenceCount = 1
+		AND NOT _AlarmList[1].Acknowledged
+		AND _AlarmList[1].DateTime = '20260912100100000',
+	Message := 'An occurrence after removal starts a new lifecycle.'
+);
 
 bFinished := TRUE;
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="HookAcknowledgementsRespectIdentityAndNewEventOrdering" Id="{43afd1b3-6247-4013-a852-d94e3421e04f}">
@@ -403,7 +615,9 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[TEST('HookAcknowledgementsRespectIdentityAndNewEventOrdering');
-IF bFinished THEN RETURN; END_IF
+IF bFinished THEN
+	RETURN;
+END_IF
 
 HookAlarm.MainErrorId := 500;
 HookAlarm.DateTime := '20260912110000000';
@@ -413,10 +627,22 @@ ConfiguredAlarm.MainErrorId := 600;
 _HookAckManager.M_BeginCycle(ModuleId := 92, ConfigurationRevision := 1);
 _HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
 _HookAckManager.M_ObserveServiceAlarm(Alarm := ServiceAlarm);
-_HookAckManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := TRUE, Alarm := ConfiguredAlarm, UtcDateTime := '20260912110000000');
+_HookAckManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := TRUE,
+	Alarm := ConfiguredAlarm,
+	UtcDateTime := '20260912110000000'
+);
 _HookAckManager.M_EndCycle();
 _HookAckManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].ServiceId = 11 AND _AlarmList[2].MainErrorId = 600 AND _AlarmList[3].MainErrorId = 500, Message := 'Publish order is Service, JSON, Hook; matching numbers may coexist.');
+AssertTrue(
+	Condition :=
+		_AlarmList[1].ServiceId = 11
+		AND _AlarmList[2].MainErrorId = 600
+		AND _AlarmList[3].MainErrorId = 500,
+	Message := 'Publish order is Service, JSON, Hook; matching numbers may coexist.'
+);
 Request.Command := E_AlarmAckCommand.AcknowledgeOne;
 Request.ServiceId := 0;
 Request.MainErrorId := 500;
@@ -428,7 +654,14 @@ _HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
 _HookAckManager.M_ObserveServiceAlarm(Alarm := ServiceAlarm);
 _HookAckManager.M_EndCycle();
 _HookAckManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _HookAckManager.AckAccepted AND _AlarmList[3].Acknowledged AND NOT _AlarmList[1].Acknowledged AND NOT _AlarmList[2].Acknowledged, Message := 'AcknowledgeOne targets the composite identity, not just the error number.');
+AssertTrue(
+	Condition :=
+		_HookAckManager.AckAccepted
+		AND _AlarmList[3].Acknowledged
+		AND NOT _AlarmList[1].Acknowledged
+		AND NOT _AlarmList[2].Acknowledged,
+	Message := 'AcknowledgeOne targets the composite identity, not just the error number.'
+);
 Request.bChangeRequest := FALSE;
 _HookAckManager.M_BeginCycle(ModuleId := 92, ConfigurationRevision := 1);
 _HookAckManager.M_ProcessAcknowledgement(Request := Request);
@@ -447,16 +680,39 @@ HookAlarm.MainErrorId := 501;
 _HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
 _HookAckManager.M_EndCycle();
 _HookAckManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].Acknowledged AND _AlarmList[2].Acknowledged AND _AlarmList[3].Acknowledged, Message := 'AcknowledgeAll includes all three existing sources.');
-AssertTrue(Condition := _AlarmList[4].MainErrorId = 501 AND NOT _AlarmList[4].Acknowledged, Message := 'AcknowledgeAll cannot consume a new Hook event in the same scan.');
+AssertTrue(
+	Condition := _AlarmList[1].Acknowledged
+		AND _AlarmList[2].Acknowledged
+		AND _AlarmList[3].Acknowledged,
+	Message := 'AcknowledgeAll includes all three existing sources.'
+);
+AssertTrue(
+	Condition := _AlarmList[4].MainErrorId = 501 AND NOT _AlarmList[4].Acknowledged,
+	Message := 'AcknowledgeAll cannot consume a new Hook event in the same scan.'
+);
 Request.bChangeRequest := FALSE;
 _HookAckManager.M_BeginCycle(ModuleId := 92, ConfigurationRevision := 1);
 _HookAckManager.M_ProcessAcknowledgement(Request := Request);
-_HookAckManager.M_UpdateConfiguredAlarm(AlarmIndex := 1, SampleValid := TRUE, ConditionMet := FALSE, Alarm := ConfiguredAlarm, UtcDateTime := '20260912110100000');
+_HookAckManager.M_UpdateConfiguredAlarm(
+	AlarmIndex := 1,
+	SampleValid := TRUE,
+	ConditionMet := FALSE,
+	Alarm := ConfiguredAlarm,
+	UtcDateTime := '20260912110100000'
+);
 _HookAckManager.M_EndCycle();
 _HookAckManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _HookAckManager.ServiceLatchedCount = 0 AND _HookAckManager.ConfiguredLatchedCount = 0 AND _HookAckManager.HookLatchedCount = 1, Message := 'Inactive acknowledged identities are removed from all sources.');
-AssertTrue(Condition := _AlarmList[1].MainErrorId = 501 AND NOT _AlarmList[1].Active, Message := 'The new unacknowledged Hook event remains latched.');
+AssertTrue(
+	Condition :=
+		_HookAckManager.ServiceLatchedCount = 0
+		AND _HookAckManager.ConfiguredLatchedCount = 0
+		AND _HookAckManager.HookLatchedCount = 1,
+	Message := 'Inactive acknowledged identities are removed from all sources.'
+);
+AssertTrue(
+	Condition := _AlarmList[1].MainErrorId = 501 AND NOT _AlarmList[1].Active,
+	Message := 'The new unacknowledged Hook event remains latched.'
+);
 
 // Acknowledge an inactive identity before its next observation: start a fresh lifecycle.
 Request.Command := E_AlarmAckCommand.AcknowledgeOne;
@@ -468,10 +724,19 @@ _HookAckManager.M_ProcessAcknowledgement(Request := Request);
 _HookAckManager.M_ObserveHookAlarm(Alarm := HookAlarm);
 _HookAckManager.M_EndCycle();
 _HookAckManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _AlarmList[1].MainErrorId = 501 AND _AlarmList[1].Active AND NOT _AlarmList[1].Acknowledged AND _AlarmList[1].OccurrenceCount = 1, Message := 'Acknowledgement before a new observation cannot pre-acknowledge the new lifecycle.');
+AssertTrue(
+	Condition :=
+		_AlarmList[1].MainErrorId = 501
+		AND _AlarmList[1].Active
+		AND NOT _AlarmList[1].Acknowledged
+		AND _AlarmList[1].OccurrenceCount = 1,
+	Message :=
+		'Acknowledgement before a new observation cannot pre-acknowledge the new lifecycle.'
+);
 
 bFinished := TRUE;
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="HookCapacityAndConfigurationOwnershipHaveSeparateResetScopes" Id="{3b13ee73-9a15-4fd7-81e1-2dad4aca2381}">
@@ -488,13 +753,28 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[TEST('HookCapacityAndConfigurationOwnershipHaveSeparateResetScopes');
-IF bFinished THEN RETURN; END_IF
+IF bFinished THEN
+	RETURN;
+END_IF
 
-AssertTrue(Condition := Param_Config.MaxConfiguredAlarmsPerModule = 30 AND Param_Config.MaxHookAlarmsPerModule = 30 AND Param_Config.MaxServiceAlarmsPerModule = 40 AND Param_Config.MaxPublishedModuleAlarms = 100, Message := 'Alarm partitions are fixed at JSON 30, Hook 30, Service 40.');
+AssertTrue(
+	Condition :=
+		Param_Config.MaxConfiguredAlarmsPerModule = 30
+		AND Param_Config.MaxHookAlarmsPerModule = 30
+		AND Param_Config.MaxServiceAlarmsPerModule = 40
+		AND Param_Config.MaxPublishedModuleAlarms = 100,
+	Message := 'Alarm partitions are fixed at JSON 30, Hook 30, Service 40.'
+);
 _HookCapacityManager.M_BeginCycle(ModuleId := 93, ConfigurationRevision := 1);
 FOR nIndex := 1 TO Param_Config.MaxConfiguredAlarmsPerModule DO
 	Alarm.MainErrorId := 1000 + UINT_TO_UDINT(nIndex);
-	_HookCapacityManager.M_UpdateConfiguredAlarm(AlarmIndex := nIndex, SampleValid := TRUE, ConditionMet := TRUE, Alarm := Alarm, UtcDateTime := '20260912120000000');
+	_HookCapacityManager.M_UpdateConfiguredAlarm(
+		AlarmIndex := nIndex,
+		SampleValid := TRUE,
+		ConditionMet := TRUE,
+		Alarm := Alarm,
+		UtcDateTime := '20260912120000000'
+	);
 END_FOR
 Alarm.ServiceId := 0;
 FOR nIndex := 1 TO Param_Config.MaxHookAlarmsPerModule DO
@@ -508,36 +788,79 @@ FOR nIndex := 1 TO Param_Config.MaxServiceAlarmsPerModule DO
 END_FOR
 _HookCapacityManager.M_EndCycle();
 _HookCapacityManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _HookCapacityManager.ConfiguredLatchedCount = 30 AND _HookCapacityManager.HookLatchedCount = 30 AND _HookCapacityManager.ServiceLatchedCount = 40 AND NOT _HookCapacityManager.Overflow, Message := 'All reserved capacities can be filled simultaneously.');
-AssertTrue(Condition := _AlarmList[40].MainErrorId = 3040 AND _AlarmList[70].MainErrorId = 1030 AND _AlarmList[100].MainErrorId = 2030, Message := 'All 100 entries preserve the source ordering.');
+AssertTrue(
+	Condition :=
+		_HookCapacityManager.ConfiguredLatchedCount = 30
+		AND _HookCapacityManager.HookLatchedCount = 30
+		AND _HookCapacityManager.ServiceLatchedCount = 40
+		AND NOT _HookCapacityManager.Overflow,
+	Message := 'All reserved capacities can be filled simultaneously.'
+);
+AssertTrue(
+	Condition :=
+		_AlarmList[40].MainErrorId = 3040
+		AND _AlarmList[70].MainErrorId = 1030
+		AND _AlarmList[100].MainErrorId = 2030,
+	Message := 'All 100 entries preserve the source ordering.'
+);
 Alarm.MainErrorId := 9999;
 Accepted := _HookCapacityManager.M_ObserveServiceAlarm(Alarm := Alarm);
-AssertTrue(Condition := NOT Accepted, Message := 'The 41st Service lifecycle is rejected.');
+AssertTrue(
+	Condition := NOT Accepted,
+	Message := 'The 41st Service lifecycle is rejected.'
+);
 Alarm.ServiceId := 0;
 Accepted := _HookCapacityManager.M_ObserveHookAlarm(Alarm := Alarm);
 AssertTrue(Condition := NOT Accepted, Message := 'The 31st Hook lifecycle is rejected.');
 _HookCapacityManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _HookCapacityManager.Overflow AND _AlarmList[100].MainErrorId = 2030, Message := 'Overflow cannot overwrite a latched Hook identity.');
+AssertTrue(
+	Condition := _HookCapacityManager.Overflow AND _AlarmList[100].MainErrorId = 2030,
+	Message := 'Overflow cannot overwrite a latched Hook identity.'
+);
 _HookCapacityManager.M_BeginCycle(ModuleId := 93, ConfigurationRevision := 2);
 _HookCapacityManager.M_SuppressHookAlarm(MainErrorId := 2001);
 _HookCapacityManager.M_EndCycle();
 _HookCapacityManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _HookCapacityManager.ConfiguredLatchedCount = 0 AND _HookCapacityManager.HookLatchedCount = 29 AND _HookCapacityManager.ServiceLatchedCount = 40 AND NOT _HookCapacityManager.Overflow, Message := 'Revision resets JSON and only the explicitly overridden Hook; Services survive.');
-AssertTrue(Condition := _AlarmList[41].MainErrorId = 2002 AND NOT _AlarmList[41].Active, Message := 'Unrelated unacknowledged Hook lifecycles survive revisions.');
+AssertTrue(
+	Condition :=
+		_HookCapacityManager.ConfiguredLatchedCount = 0
+		AND _HookCapacityManager.HookLatchedCount = 29
+		AND _HookCapacityManager.ServiceLatchedCount = 40
+		AND NOT _HookCapacityManager.Overflow,
+	Message :=
+		'Revision resets JSON and only the explicitly overridden Hook; Services survive.'
+);
+AssertTrue(
+	Condition := _AlarmList[41].MainErrorId = 2002 AND NOT _AlarmList[41].Active,
+	Message := 'Unrelated unacknowledged Hook lifecycles survive revisions.'
+);
 // Suppressed Hook lifecycles cannot be acknowledged through a stale identity.
 Request.Command := E_AlarmAckCommand.AcknowledgeOne;
 Request.MainErrorId := 2001;
 Request.RequestId := 1;
 Request.bChangeRequest := TRUE;
 _HookCapacityManager.M_ProcessAcknowledgement(Request := Request);
-AssertTrue(Condition := NOT _HookCapacityManager.AckAccepted AND _HookCapacityManager.AckError = E_AlarmAckError.AlarmNotFound, Message := 'A JSON takeover removes the old Hook identity before acknowledgement.');
+AssertTrue(
+	Condition :=
+		NOT _HookCapacityManager.AckAccepted
+		AND _HookCapacityManager.AckError = E_AlarmAckError.AlarmNotFound,
+	Message := 'A JSON takeover removes the old Hook identity before acknowledgement.'
+);
 _HookCapacityManager.M_BeginCycle(ModuleId := 94, ConfigurationRevision := 2);
 _HookCapacityManager.M_EndCycle();
 _HookCapacityManager.M_Publish(AlarmList := _AlarmList);
-AssertTrue(Condition := _HookCapacityManager.ConfiguredLatchedCount = 0 AND _HookCapacityManager.HookLatchedCount = 0 AND _HookCapacityManager.ServiceLatchedCount = 0 AND _HookCapacityManager.AckResponseId = 0, Message := 'Changing Module identity clears every lifecycle and acknowledgement.');
+AssertTrue(
+	Condition :=
+		_HookCapacityManager.ConfiguredLatchedCount = 0
+		AND _HookCapacityManager.HookLatchedCount = 0
+		AND _HookCapacityManager.ServiceLatchedCount = 0
+		AND _HookCapacityManager.AckResponseId = 0,
+	Message := 'Changing Module identity clears every lifecycle and acknowledgement.'
+);
 
 bFinished := TRUE;
-TEST_FINISHED();]]></ST>
+TEST_FINISHED();
+]]></ST>
       </Implementation>
     </Method>
   </POU>

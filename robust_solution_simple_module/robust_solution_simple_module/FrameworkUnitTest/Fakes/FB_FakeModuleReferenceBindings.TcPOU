@@ -13,7 +13,8 @@ VAR
 	_RequiredResults : ARRAY[1..2] OF I_BaseUnit;
 END_VAR
 ]]></Declaration>
-    <Implementation><ST><![CDATA[]]></ST></Implementation>
+    <Implementation><ST><![CDATA[
+]]></ST></Implementation>
     <Method Name="M_SetRequiredResult" Id="{8c6254a9-fceb-4a0c-9066-0bfce0c377f7}">
       <Declaration><![CDATA[METHOD PUBLIC M_SetRequiredResult
 VAR_INPUT
@@ -21,7 +22,8 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[_RequiredResults[1] := BaseUnit;
-_RequiredResults[2] := BaseUnit;]]></ST></Implementation>
+_RequiredResults[2] := BaseUnit;
+]]></ST></Implementation>
     </Method>
     <Method Name="M_TakeOptional" Id="{885e7d7a-80d7-49fc-a25c-8351e71cf7f3}">
       <Declaration><![CDATA[METHOD PUBLIC M_TakeOptional : I_BaseUnit
@@ -42,7 +44,8 @@ IF TakeCount <= 2 THEN
 	TakenSizes[TakeCount] := Port.diSize;
 END_IF
 M_TakeOptional := 0;
-Present := FALSE;]]></ST></Implementation>
+Present := FALSE;
+]]></ST></Implementation>
     </Method>
     <Method Name="M_TakeRequired" Id="{ff07c556-8601-4428-ac01-0a4dbec26986}">
       <Declaration><![CDATA[METHOD PUBLIC M_TakeRequired : I_BaseUnit
@@ -67,7 +70,8 @@ IF TakeCount <= 2 THEN
 END_IF
 IF M_TakeRequired = 0 THEN
 	ErrorMessage := 'Injected required reference failure.';
-END_IF]]></ST></Implementation>
+END_IF
+]]></ST></Implementation>
     </Method>
     <Method Name="M_SetRequiredResults" Id="{7828fb66-a432-421b-b867-6bc4b415eb5e}">
       <Declaration><![CDATA[METHOD PUBLIC M_SetRequiredResults
@@ -78,7 +82,8 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[_RequiredResults[1] := First;
-_RequiredResults[2] := Second;]]></ST>
+_RequiredResults[2] := Second;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_SetModuleScope" Id="{9db3a805-f896-4772-8961-0f15d3615dae}">
@@ -97,7 +102,8 @@ TakeCount := 0;
 MEMSET(ADR(TakenAddresses), 0, SIZEOF(TakenAddresses));
 MEMSET(ADR(TakenSizes), 0, SIZEOF(TakenSizes));
 ErrorMessage := '';
-M_SetModuleScope := ModuleSymbol <> '';]]></ST>
+M_SetModuleScope := ModuleSymbol <> '';
+]]></ST>
       </Implementation>
     </Method>
   </POU>

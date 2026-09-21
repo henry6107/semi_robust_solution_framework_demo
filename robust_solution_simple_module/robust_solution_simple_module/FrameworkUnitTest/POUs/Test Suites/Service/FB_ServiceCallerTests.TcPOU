@@ -4,50 +4,151 @@
     <Declaration><![CDATA[FUNCTION_BLOCK FB_ServiceCallerTests EXTENDS TcUnit.FB_TestSuite
 ]]></Declaration>
     <Implementation><ST><![CDATA[UnconfiguredCallerRejectsRequests();
-ConfiguredCallerDelegatesAndAdvancesRequestIds();]]></ST></Implementation>
+ConfiguredCallerDelegatesAndAdvancesRequestIds();
+]]></ST></Implementation>
     <Method Name="UnconfiguredCallerRejectsRequests" Id="{fecfefe6-036a-4496-aa8e-5862f8da1f20}">
       <Declaration><![CDATA[METHOD UnconfiguredCallerRejectsRequests
-VAR_INST Caller : FB_ServiceCaller; Param : ST_TestServiceParam; Snapshot : ST_ServiceExecutionSnapshot; END_VAR
+VAR_INST
+	Caller : FB_ServiceCaller;
+	Param : ST_TestServiceParam;
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('UnconfiguredCallerRejectsRequests');
 
-AssertTrue(Condition := Caller.M_Start(ServiceId := 1, Parameters := Param) = E_ServiceCallSubmitResult.CallerNotConfigured, Message := 'Unconfigured Start must be rejected.');
-AssertTrue(Condition := Caller.M_Command(ServiceId := 1, Command := E_PackMLCommand.Stop) = E_ServiceCallSubmitResult.CallerNotConfigured, Message := 'Unconfigured command must be rejected.');
-AssertFalse(Condition := Caller.M_GetServiceSnapshot(ServiceId := 1, Snapshot => Snapshot), Message := 'Unconfigured snapshot query must fail.');
+AssertTrue(
+	Condition := Caller.M_Start(
+		ServiceId := 1,
+		Parameters := Param
+	) = E_ServiceCallSubmitResult.CallerNotConfigured,
+	Message := 'Unconfigured Start must be rejected.'
+);
+AssertTrue(
+	Condition := Caller.M_Command(
+		ServiceId := 1,
+		Command := E_PackMLCommand.Stop
+	) = E_ServiceCallSubmitResult.CallerNotConfigured,
+	Message := 'Unconfigured command must be rejected.'
+);
+AssertFalse(
+	Condition := Caller.M_GetServiceSnapshot(ServiceId := 1, Snapshot => Snapshot),
+	Message := 'Unconfigured snapshot query must fail.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
     <Method Name="ConfiguredCallerDelegatesAndAdvancesRequestIds" Id="{33f908de-a766-4a36-afad-bd7e3f544e57}">
       <Declaration><![CDATA[METHOD ConfiguredCallerDelegatesAndAdvancesRequestIds
-VAR_INST Caller : FB_ServiceCaller; Coordinator : FB_ServiceCoordinator; CompositeUpperCtrl : ST_ServiceCtrl; CompositeEffectiveCtrl : ST_ServiceCtrl; CompositeUpperParam : ST_TestServiceParam; CompositeEffectiveParam : ST_TestServiceParam; CompositeStatus : ST_ServiceStatus; ChildUpperCtrl : ST_ServiceCtrl; ChildEffectiveCtrl : ST_ServiceCtrl; ChildUpperParam : ST_TestServiceParam; ChildEffectiveParam : ST_TestServiceParam; ChildStatus : ST_ServiceStatus; ModuleCtrl : ST_ModuleCtrl; Dependencies : ARRAY[1..Param_Config.MaxCompositeDependencies] OF UDINT; Param : ST_TestServiceParam; bInitialized : BOOL; END_VAR
-VAR Snapshot : ST_ServiceExecutionSnapshot; END_VAR
+VAR_INST
+	Caller : FB_ServiceCaller;
+	Coordinator : FB_ServiceCoordinator;
+	CompositeUpperCtrl : ST_ServiceCtrl;
+	CompositeEffectiveCtrl : ST_ServiceCtrl;
+	CompositeUpperParam : ST_TestServiceParam;
+	CompositeEffectiveParam : ST_TestServiceParam;
+	CompositeStatus : ST_ServiceStatus;
+	ChildUpperCtrl : ST_ServiceCtrl;
+	ChildEffectiveCtrl : ST_ServiceCtrl;
+	ChildUpperParam : ST_TestServiceParam;
+	ChildEffectiveParam : ST_TestServiceParam;
+	ChildStatus : ST_ServiceStatus;
+	ModuleCtrl : ST_ModuleCtrl;
+	Dependencies : ARRAY[1..Param_Config.MaxCompositeDependencies] OF UDINT;
+	Param : ST_TestServiceParam;
+	bInitialized : BOOL;
+END_VAR
+VAR
+	Snapshot : ST_ServiceExecutionSnapshot;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('ConfiguredCallerDelegatesAndAdvancesRequestIds');
 
 IF NOT bInitialized THEN
 	Coordinator.M_BeginRegistration();
-	Coordinator.M_Register(ServiceId := 10, AllowCompositeCall := FALSE, UpperCtrl := CompositeUpperCtrl, EffectiveCtrl := CompositeEffectiveCtrl, UpperParam := CompositeUpperParam, EffectiveParam := CompositeEffectiveParam, Status := CompositeStatus);
-	Coordinator.M_Register(ServiceId := 20, AllowCompositeCall := TRUE, UpperCtrl := ChildUpperCtrl, EffectiveCtrl := ChildEffectiveCtrl, UpperParam := ChildUpperParam, EffectiveParam := ChildEffectiveParam, Status := ChildStatus);
-	Dependencies[1] := 20; Coordinator.M_RegisterCompositeDefinition(CompositeServiceId := 10, DependencyCount := 1, DependencyIds := Dependencies); Coordinator.M_Seal();
-	ChildStatus.PackMLOut.eStateCurrent := E_PackMLState.Idle; ChildStatus.CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion;
-	Coordinator.M_ObserveCycle(); Coordinator.M_RequestCompositeOwnership(CompositeServiceId := 10); Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
-	AssertTrue(Condition := Caller.M_Configure(CallerServiceId := 10, Coordinator := Coordinator), Message := 'Registered Composite caller must configure.');
+	Coordinator.M_Register(
+		ServiceId := 10,
+		AllowCompositeCall := FALSE,
+		UpperCtrl := CompositeUpperCtrl,
+		EffectiveCtrl := CompositeEffectiveCtrl,
+		UpperParam := CompositeUpperParam,
+		EffectiveParam := CompositeEffectiveParam,
+		Status := CompositeStatus
+	);
+	Coordinator.M_Register(
+		ServiceId := 20,
+		AllowCompositeCall := TRUE,
+		UpperCtrl := ChildUpperCtrl,
+		EffectiveCtrl := ChildEffectiveCtrl,
+		UpperParam := ChildUpperParam,
+		EffectiveParam := ChildEffectiveParam,
+		Status := ChildStatus
+	);
+	Dependencies[1] := 20;
+	Coordinator.M_RegisterCompositeDefinition(
+		CompositeServiceId := 10,
+		DependencyCount := 1,
+		DependencyIds := Dependencies
+	);
+	Coordinator.M_Seal();
+	ChildStatus.PackMLOut.eStateCurrent := E_PackMLState.Idle;
+	ChildStatus.CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion;
+	Coordinator.M_ObserveCycle();
+	Coordinator.M_RequestCompositeOwnership(CompositeServiceId := 10);
+	Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
+	AssertTrue(
+		Condition := Caller.M_Configure(CallerServiceId := 10, Coordinator := Coordinator),
+		Message := 'Registered Composite caller must configure.'
+	);
 	bInitialized := TRUE;
 END_IF
 
-Param.Value := 7; Param.Sequence := 8;
-AssertTrue(Condition := Caller.M_Start(ServiceId := 20, Parameters := Param) = E_ServiceCallSubmitResult.Queued, Message := 'Caller must delegate Start.');
+Param.Value := 7;
+Param.Sequence := 8;
+AssertTrue(
+	Condition := Caller.M_Start(
+		ServiceId := 20,
+		Parameters := Param
+	) = E_ServiceCallSubmitResult.Queued,
+	Message := 'Caller must delegate Start.'
+);
 Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
-AssertTrue(Condition := ChildEffectiveCtrl.RequestId = 1, Message := 'First successful caller request ID must be one.');
-ChildStatus.ResponseId := 1; ChildStatus.PackMLOut.bCommandAccepted := TRUE; Coordinator.M_ObserveCycle();
-AssertTrue(Condition := Caller.M_GetCommandState(ServiceId := 20) = E_ServiceInternalCommandState.Accepted, Message := 'Caller must expose Coordinator command state.');
-AssertTrue(Condition := Caller.M_GetServiceSnapshot(ServiceId := 20, Snapshot => Snapshot) AND Snapshot.Valid, Message := 'Caller must expose the observed Service snapshot.');
-Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl); // 強制 low 一掃描。
-AssertTrue(Condition := Caller.M_Command(ServiceId := 20, Command := E_PackMLCommand.Stop) = E_ServiceCallSubmitResult.Queued, Message := 'A later lifecycle command must queue.');
+AssertTrue(
+	Condition := ChildEffectiveCtrl.RequestId = 1,
+	Message := 'First successful caller request ID must be one.'
+);
+ChildStatus.ResponseId := 1;
+ChildStatus.PackMLOut.bCommandAccepted := TRUE;
+Coordinator.M_ObserveCycle();
+AssertTrue(
+	Condition := Caller.M_GetCommandState(ServiceId := 20) =
+		E_ServiceInternalCommandState.Accepted,
+	Message := 'Caller must expose Coordinator command state.'
+);
+AssertTrue(
+	Condition := Caller.M_GetServiceSnapshot(
+		ServiceId := 20,
+		Snapshot => Snapshot
+	) AND Snapshot.Valid,
+	Message := 'Caller must expose the observed Service snapshot.'
+);
 Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
-AssertTrue(Condition := ChildEffectiveCtrl.RequestId = 2, Message := 'Only successful queued requests advance the caller ID.');
+// 強制 low 一掃描。
+AssertTrue(
+	Condition := Caller.M_Command(
+		ServiceId := 20,
+		Command := E_PackMLCommand.Stop
+	) = E_ServiceCallSubmitResult.Queued,
+	Message := 'A later lifecycle command must queue.'
+);
+Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
+AssertTrue(
+	Condition := ChildEffectiveCtrl.RequestId = 2,
+	Message := 'Only successful queued requests advance the caller ID.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
   </POU>
 </TcPlcObject>

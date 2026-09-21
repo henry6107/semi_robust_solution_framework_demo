@@ -14,29 +14,65 @@ VAR
 	_StringValue : STRING(80) := 'snapshot';
 END_VAR
 ]]></Declaration>
-    <Implementation><ST><![CDATA[]]></ST></Implementation>
+    <Implementation><ST><![CDATA[
+]]></ST></Implementation>
     <Method Name="M_ReadNode" Id="{b8337af0-6f88-4cd1-b6f9-22f9ec2cb36e}">
       <Declaration><![CDATA[METHOD PUBLIC M_ReadNode : BOOL
-VAR_INPUT NodeHandle : UINT; ExpectedDataType : E_ConfigDataType; END_VAR
-VAR_IN_OUT Value : ST_ConfigRawValue; END_VAR
-VAR_OUTPUT ErrorCode : E_ConfigValueError; END_VAR
+VAR_INPUT
+	NodeHandle : UINT;
+	ExpectedDataType : E_ConfigDataType;
+END_VAR
+VAR_IN_OUT
+	Value : ST_ConfigRawValue;
+END_VAR
+VAR_OUTPUT
+	ErrorCode : E_ConfigValueError;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[M_ReadNode := FALSE;
 ErrorCode := E_ConfigValueError.None;
 MEMSET(ADR(Value), 0, SIZEOF(Value));
-IF NodeHandle = FailHandle THEN ErrorCode := E_ConfigValueError.InvalidNodeHandle; RETURN; END_IF
-CASE NodeHandle OF
-	1: IF ExpectedDataType <> E_ConfigDataType.Boolean THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch; RETURN; END_IF MEMCPY(ADR(Value.Data), ADR(_BoolValue), SIZEOF(_BoolValue));
-	2: IF ExpectedDataType <> E_ConfigDataType.Integer32 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch; RETURN; END_IF MEMCPY(ADR(Value.Data), ADR(_DIntValue), SIZEOF(_DIntValue));
-	3: IF ExpectedDataType <> E_ConfigDataType.UnsignedInteger32 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch; RETURN; END_IF MEMCPY(ADR(Value.Data), ADR(_UDIntValue), SIZEOF(_UDIntValue));
-	4: IF ExpectedDataType <> E_ConfigDataType.Float32 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch; RETURN; END_IF MEMCPY(ADR(Value.Data), ADR(_RealValue), SIZEOF(_RealValue));
-	5: IF ExpectedDataType <> E_ConfigDataType.Float64 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch; RETURN; END_IF MEMCPY(ADR(Value.Data), ADR(_LRealValue), SIZEOF(_LRealValue));
-	6: IF ExpectedDataType <> E_ConfigDataType.String80 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch; RETURN; END_IF MEMCPY(ADR(Value.Data), ADR(_StringValue), SIZEOF(_StringValue));
-ELSE
+IF NodeHandle = FailHandle THEN
 	ErrorCode := E_ConfigValueError.InvalidNodeHandle;
 	RETURN;
+END_IF
+CASE NodeHandle OF
+	1:
+		IF ExpectedDataType <>
+			E_ConfigDataType.Boolean THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
+		RETURN;
+		END_IF MEMCPY(ADR(Value.Data), ADR(_BoolValue), SIZEOF(_BoolValue));
+	2:
+		IF ExpectedDataType <>
+			E_ConfigDataType.Integer32 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
+		RETURN;
+		END_IF MEMCPY(ADR(Value.Data), ADR(_DIntValue), SIZEOF(_DIntValue));
+	3:
+		IF ExpectedDataType <>
+			E_ConfigDataType.UnsignedInteger32 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
+		RETURN;
+		END_IF MEMCPY(ADR(Value.Data), ADR(_UDIntValue), SIZEOF(_UDIntValue));
+	4:
+		IF ExpectedDataType <>
+			E_ConfigDataType.Float32 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
+		RETURN;
+		END_IF MEMCPY(ADR(Value.Data), ADR(_RealValue), SIZEOF(_RealValue));
+	5:
+		IF ExpectedDataType <>
+			E_ConfigDataType.Float64 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
+		RETURN;
+		END_IF MEMCPY(ADR(Value.Data), ADR(_LRealValue), SIZEOF(_LRealValue));
+	6:
+		IF ExpectedDataType <>
+			E_ConfigDataType.String80 THEN ErrorCode := E_ConfigValueError.NodeDataTypeMismatch;
+		RETURN;
+		END_IF MEMCPY(ADR(Value.Data), ADR(_StringValue), SIZEOF(_StringValue));
+	ELSE
+		ErrorCode := E_ConfigValueError.InvalidNodeHandle;
+		RETURN;
 END_CASE
-M_ReadNode := TRUE;]]></ST></Implementation>
+M_ReadNode := TRUE;
+]]></ST></Implementation>
     </Method>
   </POU>
 </TcPlcObject>

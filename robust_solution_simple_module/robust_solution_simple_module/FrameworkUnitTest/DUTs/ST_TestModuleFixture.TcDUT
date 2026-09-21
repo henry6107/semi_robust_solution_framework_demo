@@ -3,15 +3,15 @@
   <DUT Name="ST_TestModuleFixture" Id="{1fb9a75b-0798-4bba-adf4-9d593759405c}">
     <Declaration><![CDATA[TYPE ST_TestModuleFixture :
 STRUCT
-	InputBool : BOOL;
-	OutputBool : BOOL;
-	SignedValue : DINT;
-	UnsignedValue : UDINT;
-	RealValue : REAL;
-	LongRealValue : LREAL;
-	TextValue : STRING(80);
-	BaseUnitPort : I_BaseUnit;
-	Nested : ST_ReferencePortTestBranch;
+InputBool : BOOL;
+OutputBool : BOOL;
+SignedValue : DINT;
+UnsignedValue : UDINT;
+RealValue : REAL;
+LongRealValue : LREAL;
+TextValue : STRING(80);
+BaseUnitPort : I_BaseUnit;
+Nested : ST_ReferencePortTestBranch;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

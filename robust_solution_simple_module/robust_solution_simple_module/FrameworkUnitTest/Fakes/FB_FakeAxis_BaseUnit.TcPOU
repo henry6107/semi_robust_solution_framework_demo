@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_FakeAxis_BaseUnit" Id="{e3e8b765-2c8e-48cb-88c1-18c6481deefe}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_FakeAxis_BaseUnit EXTENDS FB_BaseUnit IMPLEMENTS I_Axis_BaseUnit
@@ -53,15 +53,18 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[M_CyclicUpdate();]]></ST>
+      <ST><![CDATA[M_CyclicUpdate();
+]]></ST>
     </Implementation>
     <Property Name="AxisActualPosition" Id="{c803e875-2d0d-4296-9bc7-ab55d60b4a28}">
       <Declaration><![CDATA[PROPERTY AxisActualPosition : LREAL
 ]]></Declaration>
       <Get Name="Get" Id="{bb61b1fe-e7db-4677-a8e6-bd4dbf4da4e1}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[
+]]></Declaration>
         <Implementation>
-          <ST><![CDATA[AxisActualPosition := _fAxisActualPosition;]]></ST>
+          <ST><![CDATA[AxisActualPosition := _fAxisActualPosition;
+]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -69,9 +72,11 @@ END_VAR
       <Declaration><![CDATA[PROPERTY AxisActualVelocity : LREAL
 ]]></Declaration>
       <Get Name="Get" Id="{627ebdf8-75c0-44ee-8666-e67c59e60c18}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[
+]]></Declaration>
         <Implementation>
-          <ST><![CDATA[AxisActualVelocity := _fAxisActualVelocity;]]></ST>
+          <ST><![CDATA[AxisActualVelocity := _fAxisActualVelocity;
+]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -79,9 +84,11 @@ END_VAR
       <Declaration><![CDATA[PROPERTY AxisHasJob : BOOL
 ]]></Declaration>
       <Get Name="Get" Id="{d07beebe-b038-4ceb-8984-0b7cdced23b2}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[
+]]></Declaration>
         <Implementation>
-          <ST><![CDATA[AxisHasJob := _bAxisHasJob;]]></ST>
+          <ST><![CDATA[AxisHasJob := _bAxisHasJob;
+]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -89,9 +96,11 @@ END_VAR
       <Declaration><![CDATA[PROPERTY AxisIsDisabled : BOOL
 ]]></Declaration>
       <Get Name="Get" Id="{980df56c-f78c-4645-a521-29c7cb19d811}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[
+]]></Declaration>
         <Implementation>
-          <ST><![CDATA[AxisIsDisabled := _bAxisIsDisabled;]]></ST>
+          <ST><![CDATA[AxisIsDisabled := _bAxisIsDisabled;
+]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -99,9 +108,11 @@ END_VAR
       <Declaration><![CDATA[PROPERTY CurrentCycle : UDINT
 ]]></Declaration>
       <Get Name="Get" Id="{724f2233-06dd-4319-8477-e87fb17fa22d}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[
+]]></Declaration>
         <Implementation>
-          <ST><![CDATA[CurrentCycle := _nCycle;]]></ST>
+          <ST><![CDATA[CurrentCycle := _nCycle;
+]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -109,9 +120,11 @@ END_VAR
       <Declaration><![CDATA[PROPERTY HistoryCount : UINT
 ]]></Declaration>
       <Get Name="Get" Id="{a50cdb82-650a-4b79-9503-ce96d9a01cb3}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[
+]]></Declaration>
         <Implementation>
-          <ST><![CDATA[HistoryCount := _nHistoryCount;]]></ST>
+          <ST><![CDATA[HistoryCount := _nHistoryCount;
+]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -119,9 +132,11 @@ END_VAR
       <Declaration><![CDATA[PROPERTY HistoryOverflowed : BOOL
 ]]></Declaration>
       <Get Name="Get" Id="{6a144965-58c8-45ce-857b-8e1b1074555f}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[
+]]></Declaration>
         <Implementation>
-          <ST><![CDATA[HistoryOverflowed := _bHistoryOverflowed;]]></ST>
+          <ST><![CDATA[HistoryOverflowed := _bHistoryOverflowed;
+]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -134,7 +149,8 @@ END_VAR
         <ST><![CDATA[MEMSET(ADR(_aHistory), 0, SIZEOF(_aHistory));
 _nHistoryCount := 0;
 _nCallSequence := 0;
-_bHistoryOverflowed := FALSE;]]></ST>
+_bHistoryOverflowed := FALSE;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_CyclicUpdate" Id="{51353dc4-27da-4cdc-9e93-0412f19d6e2c}">
@@ -145,12 +161,55 @@ END_VAR
       <Implementation>
         <ST><![CDATA[_nCycle := _nCycle + 1;
 
-M_ProcessOperation(Operation := E_FakeAxisOperation.Jog, Active := _bJogActive, Done := _bJogDone, InVelocity := _bJogInVelocity, Error := _bJogError, ErrorId := _nJogErrorId);
-M_ProcessOperation(Operation := E_FakeAxisOperation.MoveAbs, Active := _bMoveAbsActive, Done := _bMoveAbsDone, InVelocity := _bMoveAbsInVelocity, Error := _bMoveAbsError, ErrorId := _nMoveAbsErrorId);
-M_ProcessOperation(Operation := E_FakeAxisOperation.MoveVel, Active := _bMoveVelActive, Done := _bMoveVelDone, InVelocity := _bMoveVelInVelocity, Error := _bMoveVelError, ErrorId := _nMoveVelErrorId);
-M_ProcessOperation(Operation := E_FakeAxisOperation.Stop, Active := _bStopActive, Done := _bStopDone, InVelocity := _bStopInVelocity, Error := _bStopError, ErrorId := _nStopErrorId);
-M_ProcessOperation(Operation := E_FakeAxisOperation.Reset, Active := _bResetActive, Done := _bResetDone, InVelocity := _bResetInVelocity, Error := _bResetError, ErrorId := _nResetErrorId);
-M_ProcessOperation(Operation := E_FakeAxisOperation.Halt, Active := _bHaltActive, Done := _bHaltDone, InVelocity := _bHaltInVelocity, Error := _bHaltError, ErrorId := _nHaltErrorId);]]></ST>
+M_ProcessOperation(
+	Operation := E_FakeAxisOperation.Jog,
+	Active := _bJogActive,
+	Done := _bJogDone,
+	InVelocity := _bJogInVelocity,
+	Error := _bJogError,
+	ErrorId := _nJogErrorId
+);
+M_ProcessOperation(
+	Operation := E_FakeAxisOperation.MoveAbs,
+	Active := _bMoveAbsActive,
+	Done := _bMoveAbsDone,
+	InVelocity := _bMoveAbsInVelocity,
+	Error := _bMoveAbsError,
+	ErrorId := _nMoveAbsErrorId
+);
+M_ProcessOperation(
+	Operation := E_FakeAxisOperation.MoveVel,
+	Active := _bMoveVelActive,
+	Done := _bMoveVelDone,
+	InVelocity := _bMoveVelInVelocity,
+	Error := _bMoveVelError,
+	ErrorId := _nMoveVelErrorId
+);
+M_ProcessOperation(
+	Operation := E_FakeAxisOperation.Stop,
+	Active := _bStopActive,
+	Done := _bStopDone,
+	InVelocity := _bStopInVelocity,
+	Error := _bStopError,
+	ErrorId := _nStopErrorId
+);
+M_ProcessOperation(
+	Operation := E_FakeAxisOperation.Reset,
+	Active := _bResetActive,
+	Done := _bResetDone,
+	InVelocity := _bResetInVelocity,
+	Error := _bResetError,
+	ErrorId := _nResetErrorId
+);
+M_ProcessOperation(
+	Operation := E_FakeAxisOperation.Halt,
+	Active := _bHaltActive,
+	Done := _bHaltDone,
+	InVelocity := _bHaltInVelocity,
+	Error := _bHaltError,
+	ErrorId := _nHaltErrorId
+);
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_GetCall" Id="{94ad7b50-f13b-43b4-a754-adcb1517e88f}">
@@ -169,7 +228,8 @@ IF (Index = 0) OR (Index > _nHistoryCount) THEN
 	RETURN;
 END_IF
 CallRecord := _aHistory[Index];
-M_GetCall := TRUE;]]></ST>
+M_GetCall := TRUE;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_Halt" Id="{6eead5a4-5f3f-43d9-aa96-68d42a79be0a}">
@@ -189,7 +249,20 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[bAccepted := M_IsResourceOwner(OwnerId := OwnerId);
-M_RecordCall(Operation := E_FakeAxisOperation.Halt, OwnerId := OwnerId, Accepted := bAccepted, Execute := Execute, JogForward := FALSE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Direction := MC_Direction.MC_Positive_Direction, Position := 0, Velocity := 0, Acceleration := 0, Deceleration := Deceleration);
+M_RecordCall(
+	Operation := E_FakeAxisOperation.Halt,
+	OwnerId := OwnerId,
+	Accepted := bAccepted,
+	Execute := Execute,
+	JogForward := FALSE,
+	JogBackwards := FALSE,
+	Mode := E_JogMode.MC_JOGMODE_CONTINOUS,
+	Direction := MC_Direction.MC_Positive_Direction,
+	Position := 0,
+	Velocity := 0,
+	Acceleration := 0,
+	Deceleration := Deceleration
+);
 
 M_Halt := bAccepted;
 IF NOT bAccepted THEN
@@ -200,7 +273,8 @@ END_IF
 
 _bHaltActive := Execute;
 Done := _bHaltDone;
-Error := _bHaltError;]]></ST>
+Error := _bHaltError;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_Jog" Id="{5e662ea3-bf75-47da-a7ed-fc6bb775a22a}">
@@ -226,7 +300,20 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[bAccepted := M_IsResourceOwner(OwnerId := OwnerId);
-M_RecordCall(Operation := E_FakeAxisOperation.Jog, OwnerId := OwnerId, Accepted := bAccepted, Execute := JogForward OR JogBackwards, JogForward := JogForward, JogBackwards := JogBackwards, Mode := Mode, Direction := MC_Direction.MC_Positive_Direction, Position := Position, Velocity := Velocity, Acceleration := Acceleration, Deceleration := Deceleration);
+M_RecordCall(
+	Operation := E_FakeAxisOperation.Jog,
+	OwnerId := OwnerId,
+	Accepted := bAccepted,
+	Execute := JogForward OR JogBackwards,
+	JogForward := JogForward,
+	JogBackwards := JogBackwards,
+	Mode := Mode,
+	Direction := MC_Direction.MC_Positive_Direction,
+	Position := Position,
+	Velocity := Velocity,
+	Acceleration := Acceleration,
+	Deceleration := Deceleration
+);
 
 M_Jog := bAccepted;
 IF NOT bAccepted THEN
@@ -239,7 +326,8 @@ END_IF
 _bJogActive := JogForward OR JogBackwards;
 Done := _bJogDone;
 Error := _bJogError;
-ErrorId := _nJogErrorId;]]></ST>
+ErrorId := _nJogErrorId;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_MoveAbs" Id="{799e5942-56df-4f9f-b9ff-c946088a2daf}">
@@ -263,7 +351,20 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[bAccepted := M_IsResourceOwner(OwnerId := OwnerId);
-M_RecordCall(Operation := E_FakeAxisOperation.MoveAbs, OwnerId := OwnerId, Accepted := bAccepted, Execute := Execute, JogForward := FALSE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Direction := MC_Direction.MC_Positive_Direction, Position := Position, Velocity := Velocity, Acceleration := Acceleration, Deceleration := Deceleration);
+M_RecordCall(
+	Operation := E_FakeAxisOperation.MoveAbs,
+	OwnerId := OwnerId,
+	Accepted := bAccepted,
+	Execute := Execute,
+	JogForward := FALSE,
+	JogBackwards := FALSE,
+	Mode := E_JogMode.MC_JOGMODE_CONTINOUS,
+	Direction := MC_Direction.MC_Positive_Direction,
+	Position := Position,
+	Velocity := Velocity,
+	Acceleration := Acceleration,
+	Deceleration := Deceleration
+);
 
 M_MoveAbs := bAccepted;
 IF NOT bAccepted THEN
@@ -276,7 +377,8 @@ END_IF
 _bMoveAbsActive := Execute;
 Done := _bMoveAbsDone;
 Error := _bMoveAbsError;
-ErrorId := _nMoveAbsErrorId;]]></ST>
+ErrorId := _nMoveAbsErrorId;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_MoveVel" Id="{0cc6eabc-5d4d-4943-826e-9307a0401b16}">
@@ -299,7 +401,20 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[bAccepted := M_IsResourceOwner(OwnerId := OwnerId);
-M_RecordCall(Operation := E_FakeAxisOperation.MoveVel, OwnerId := OwnerId, Accepted := bAccepted, Execute := Execute, JogForward := FALSE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Direction := Direction, Position := 0, Velocity := Velocity, Acceleration := Acceleration, Deceleration := Deceleration);
+M_RecordCall(
+	Operation := E_FakeAxisOperation.MoveVel,
+	OwnerId := OwnerId,
+	Accepted := bAccepted,
+	Execute := Execute,
+	JogForward := FALSE,
+	JogBackwards := FALSE,
+	Mode := E_JogMode.MC_JOGMODE_CONTINOUS,
+	Direction := Direction,
+	Position := 0,
+	Velocity := Velocity,
+	Acceleration := Acceleration,
+	Deceleration := Deceleration
+);
 
 M_MoveVel := bAccepted;
 IF NOT bAccepted THEN
@@ -310,7 +425,8 @@ END_IF
 
 _bMoveVelActive := Execute;
 InVelocity := _bMoveVelInVelocity;
-Error := _bMoveVelError;]]></ST>
+Error := _bMoveVelError;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_ProcessOperation" Id="{1ccb0dd7-a7b9-4452-8393-44608ab6d1e1}">
@@ -357,20 +473,21 @@ FOR nIndex := 1 TO _nScriptCount DO
 			_aScripts[nIndex].ActiveCycles := _aScripts[nIndex].ActiveCycles + 1;
 			IF (_aScripts[nIndex].AfterActiveCycles = 0)
 				OR (_aScripts[nIndex].ActiveCycles >= _aScripts[nIndex].AfterActiveCycles) THEN
-				_aScripts[nIndex].ResultLatched := TRUE;
-			END_IF
+			_aScripts[nIndex].ResultLatched := TRUE;
 		END_IF
-
-		// Output result if after certain active cycles
-		IF _aScripts[nIndex].ResultLatched THEN
-			Done := _aScripts[nIndex].Done;
-			InVelocity := _aScripts[nIndex].InVelocity;
-			Error := _aScripts[nIndex].Error;
-			ErrorId := _aScripts[nIndex].ErrorId;
-		END_IF
-		RETURN;
 	END_IF
-END_FOR]]></ST>
+
+	// Output result if after certain active cycles
+	IF _aScripts[nIndex].ResultLatched THEN
+		Done := _aScripts[nIndex].Done;
+		InVelocity := _aScripts[nIndex].InVelocity;
+		Error := _aScripts[nIndex].Error;
+		ErrorId := _aScripts[nIndex].ErrorId;
+	END_IF
+	RETURN;
+END_IF
+END_FOR
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_QueueResult" Id="{b0f97812-5ba5-4585-b056-83a9174ddfb3}">
@@ -404,7 +521,8 @@ _aScripts[_nScriptCount].Done := Done;
 _aScripts[_nScriptCount].InVelocity := InVelocity;
 _aScripts[_nScriptCount].Error := Error;
 _aScripts[_nScriptCount].ErrorId := ErrorId;
-M_QueueResult := TRUE;]]></ST>
+M_QueueResult := TRUE;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_RecordCall" Id="{46ae4ea2-55f9-42d6-af9b-1610838d9b64}">
@@ -445,7 +563,8 @@ _aHistory[_nHistoryCount].Direction := Direction;
 _aHistory[_nHistoryCount].Position := Position;
 _aHistory[_nHistoryCount].Velocity := Velocity;
 _aHistory[_nHistoryCount].Acceleration := Acceleration;
-_aHistory[_nHistoryCount].Deceleration := Deceleration;]]></ST>
+_aHistory[_nHistoryCount].Deceleration := Deceleration;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_Reset" Id="{1a644686-8406-49fb-9498-3fde4ac973cb}">
@@ -465,7 +584,20 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[bAccepted := M_IsResourceOwner(OwnerId := OwnerId);
-M_RecordCall(Operation := E_FakeAxisOperation.Reset, OwnerId := OwnerId, Accepted := bAccepted, Execute := Execute, JogForward := FALSE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Direction := MC_Direction.MC_Positive_Direction, Position := 0, Velocity := 0, Acceleration := 0, Deceleration := 0);
+M_RecordCall(
+	Operation := E_FakeAxisOperation.Reset,
+	OwnerId := OwnerId,
+	Accepted := bAccepted,
+	Execute := Execute,
+	JogForward := FALSE,
+	JogBackwards := FALSE,
+	Mode := E_JogMode.MC_JOGMODE_CONTINOUS,
+	Direction := MC_Direction.MC_Positive_Direction,
+	Position := 0,
+	Velocity := 0,
+	Acceleration := 0,
+	Deceleration := 0
+);
 
 M_Reset := bAccepted;
 IF NOT bAccepted THEN
@@ -478,7 +610,8 @@ END_IF
 _bResetActive := Execute;
 Done := _bResetDone;
 Error := _bResetError;
-ErrorId := _nResetErrorId;]]></ST>
+ErrorId := _nResetErrorId;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_ResetScenario" Id="{de0840d9-c339-43cb-8bf8-ae01686058c7}">
@@ -528,7 +661,8 @@ _nResetErrorId := 0;
 _bHaltDone := FALSE;
 _bHaltInVelocity := FALSE;
 _bHaltError := FALSE;
-_nHaltErrorId := 0;]]></ST>
+_nHaltErrorId := 0;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_SetAxisFeedback" Id="{82b4c35c-c729-464f-b941-dd0e760a7934}">
@@ -540,7 +674,8 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[_fAxisActualPosition := ActualPosition;
-_fAxisActualVelocity := ActualVelocity;]]></ST>
+_fAxisActualVelocity := ActualVelocity;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_SetAxisState" Id="{10c2eb70-a53b-4b94-8710-7bc4d3c0b6f3}">
@@ -552,7 +687,8 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[_bAxisIsDisabled := Disabled;
-_bAxisHasJob := HasJob;]]></ST>
+_bAxisHasJob := HasJob;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_Stop" Id="{51ed3baa-d27d-4af9-9931-fc510a406353}">
@@ -573,7 +709,20 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[bAccepted := M_IsResourceOwner(OwnerId := OwnerId);
-M_RecordCall(Operation := E_FakeAxisOperation.Stop, OwnerId := OwnerId, Accepted := bAccepted, Execute := Execute, JogForward := FALSE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Direction := MC_Direction.MC_Positive_Direction, Position := 0, Velocity := 0, Acceleration := 0, Deceleration := Deceleration);
+M_RecordCall(
+	Operation := E_FakeAxisOperation.Stop,
+	OwnerId := OwnerId,
+	Accepted := bAccepted,
+	Execute := Execute,
+	JogForward := FALSE,
+	JogBackwards := FALSE,
+	Mode := E_JogMode.MC_JOGMODE_CONTINOUS,
+	Direction := MC_Direction.MC_Positive_Direction,
+	Position := 0,
+	Velocity := 0,
+	Acceleration := 0,
+	Deceleration := Deceleration
+);
 
 M_Stop := bAccepted;
 IF NOT bAccepted THEN
@@ -586,16 +735,19 @@ END_IF
 _bStopActive := Execute;
 Done := _bStopDone;
 Error := _bStopError;
-ErrorId := _nStopErrorId;]]></ST>
+ErrorId := _nStopErrorId;
+]]></ST>
       </Implementation>
     </Method>
     <Property Name="ScriptConfigurationError" Id="{6c11b652-02b9-4680-a22d-45f650b44c03}">
       <Declaration><![CDATA[PROPERTY ScriptConfigurationError : BOOL
 ]]></Declaration>
       <Get Name="Get" Id="{2082a054-a11a-4812-aab3-726089b22a5c}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[
+]]></Declaration>
         <Implementation>
-          <ST><![CDATA[ScriptConfigurationError := _bScriptConfigurationError;]]></ST>
+          <ST><![CDATA[ScriptConfigurationError := _bScriptConfigurationError;
+]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -603,9 +755,11 @@ ErrorId := _nStopErrorId;]]></ST>
       <Declaration><![CDATA[PROPERTY ScriptOverflowed : BOOL
 ]]></Declaration>
       <Get Name="Get" Id="{2e632f4c-7e78-46e5-91f0-8619a0fa4555}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[
+]]></Declaration>
         <Implementation>
-          <ST><![CDATA[ScriptOverflowed := _bScriptOverflowed;]]></ST>
+          <ST><![CDATA[ScriptOverflowed := _bScriptOverflowed;
+]]></ST>
         </Implementation>
       </Get>
     </Property>

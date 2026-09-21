@@ -6,10 +6,15 @@
     <Implementation><ST><![CDATA[DefaultLifecycleHonoursBusyHooksAndCompletes();
 RejectedCommandFeedbackLatchesUntilRequestFalls();
 DisableFreezesStateAndExternalFaultHasPriority();
-HoldSuspendStopAndAbortFollowTheStateGuards();]]></ST></Implementation>
+HoldSuspendStopAndAbortFollowTheStateGuards();
+]]></ST></Implementation>
     <Method Name="DefaultLifecycleHonoursBusyHooksAndCompletes" Id="{c8ddf634-8569-4ddd-beba-22c8f5508e10}">
       <Declaration><![CDATA[METHOD DefaultLifecycleHonoursBusyHooksAndCompletes
-VAR_INST Machine : FB_TestPackMLBase; Input : ST_PML_Base_In; nPhase : UINT; END_VAR
+VAR_INST
+	Machine : FB_TestPackMLBase;
+	Input : ST_PML_Base_In;
+	nPhase : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('DefaultLifecycleHonoursBusyHooksAndCompletes');
 
@@ -17,139 +22,279 @@ CASE nPhase OF
 	0:
 		// Arrange：第一次掃描由 Undefined 自動完成到 Aborted。
 		Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Default Undefined hook must enter Aborted.');
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted,
+			Message := 'Default Undefined hook must enter Aborted.'
+		);
 		nPhase := 1;
 	1:
 		// Act：Clear 後的 transient hook 預設立即完成。
-		Input.eCommand := E_PackMLCommand.Clear; Input.bCommandChangeRequest := TRUE;
+		Input.eCommand := E_PackMLCommand.Clear;
+		Input.bCommandChangeRequest := TRUE;
 		Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Clear must reach Stopped.');
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Stopped,
+			Message := 'Clear must reach Stopped.'
+		);
 		nPhase := 2;
 	2:
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input); nPhase := 3;
-	3:
-		Input.eCommand := E_PackMLCommand.Reset; Input.bCommandChangeRequest := TRUE;
+		Input.bCommandChangeRequest := FALSE;
 		Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Idle, Message := 'Reset must reach Idle.');
+		nPhase := 3;
+	3:
+		Input.eCommand := E_PackMLCommand.Reset;
+		Input.bCommandChangeRequest := TRUE;
+		Machine(PackMLIn := Input);
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Idle,
+			Message := 'Reset must reach Idle.'
+		);
 		nPhase := 4;
 	4:
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input); nPhase := 5;
+		Input.bCommandChangeRequest := FALSE;
+		Machine(PackMLIn := Input);
+		nPhase := 5;
 	5:
 		// StartingDone=FALSE 驗證 transient state 會跨掃描保持 Busy。
-		Input.eCommand := E_PackMLCommand.Start; Input.bCommandChangeRequest := TRUE;
+		Input.eCommand := E_PackMLCommand.Start;
+		Input.bCommandChangeRequest := TRUE;
 		Machine(PackMLIn := Input, StartingDone := FALSE);
-		AssertTrue(Condition := (Machine.PackMLOut.eStateCurrent = E_PackMLState.Starting) AND Machine.bTransitionActive, Message := 'Busy Starting must stay active.');
+		AssertTrue(
+			Condition := (Machine.PackMLOut.eStateCurrent = E_PackMLState.Starting)
+				AND Machine.bTransitionActive,
+			Message := 'Busy Starting must stay active.'
+		);
 		nPhase := 6;
 	6:
 		// request 保持 TRUE 時即使 payload 改變，也不能重新消費。
 		Input.eCommand := E_PackMLCommand.Abort;
 		Machine(PackMLIn := Input, StartingDone := FALSE);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Starting, Message := 'A held request must not dispatch a new command.');
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Starting,
+			Message := 'A held request must not dispatch a new command.'
+		);
 		nPhase := 7;
 	7:
 		Input.bCommandChangeRequest := FALSE;
 		Machine(PackMLIn := Input, StartingDone := TRUE);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Done Starting must enter Execute.');
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Execute,
+			Message := 'Done Starting must enter Execute.'
+		);
 		nPhase := 8;
 	8:
 		Machine(PackMLIn := Input, ExecuteDone := TRUE);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Completing, Message := 'Done Execute must enter Completing.');
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Completing,
+			Message := 'Done Execute must enter Completing.'
+		);
 		nPhase := 9;
 	9:
 		Machine(PackMLIn := Input, ExecuteDone := TRUE, CompletingDone := TRUE);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Complete, Message := 'Done Completing must enter Complete.');
-		AssertTrue(Condition := Machine.FirstScanCalls >= 3, Message := 'Each entered hook must expose its first scan exactly through the hook argument.');
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Complete,
+			Message := 'Done Completing must enter Complete.'
+		);
+		AssertTrue(
+			Condition := Machine.FirstScanCalls >= 3,
+			Message :=
+				'Each entered hook must expose its first scan exactly through the hook argument.'
+		);
 		nPhase := 0;
 		TEST_FINISHED();
-END_CASE]]></ST></Implementation>
+END_CASE
+]]></ST></Implementation>
     </Method>
     <Method Name="RejectedCommandFeedbackLatchesUntilRequestFalls" Id="{771e8966-3ab6-4853-b24e-4e64d8a69d49}">
       <Declaration><![CDATA[METHOD RejectedCommandFeedbackLatchesUntilRequestFalls
-VAR_INST Machine : FB_TestPackMLBase; Input : ST_PML_Base_In; nPhase : UINT; END_VAR
+VAR_INST
+	Machine : FB_TestPackMLBase;
+	Input : ST_PML_Base_In;
+	nPhase : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('RejectedCommandFeedbackLatchesUntilRequestFalls');
 
 CASE nPhase OF
 	0:
-		Machine(PackMLIn := Input); // Aborted
-		Input.eCommand := E_PackMLCommand.Start; Input.bCommandChangeRequest := TRUE;
 		Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.bCommandRejected AND (Machine.PackMLOut.eStateErrorID = E_PackMLErrorID.StartNotAllowedFromCurrentState), Message := 'Start from Aborted must report the state-specific error.');
+		// Aborted
+		Input.eCommand := E_PackMLCommand.Start;
+		Input.bCommandChangeRequest := TRUE;
+		Machine(PackMLIn := Input);
+		AssertTrue(
+			Condition :=
+				Machine.PackMLOut.bCommandRejected
+				AND (Machine.PackMLOut.eStateErrorID =
+					E_PackMLErrorID.StartNotAllowedFromCurrentState),
+			Message := 'Start from Aborted must report the state-specific error.'
+		);
 		nPhase := 1;
 	1:
 		// Act：保持 request 為 TRUE，拒絕結果必須鎖存。
-		Input.eCommand := E_PackMLCommand.Clear; Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.bCommandRejected AND (Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted), Message := 'Held request must preserve rejection and state.');
+		Input.eCommand := E_PackMLCommand.Clear;
+		Machine(PackMLIn := Input);
+		AssertTrue(
+			Condition :=
+				Machine.PackMLOut.bCommandRejected
+				AND (Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted),
+			Message := 'Held request must preserve rejection and state.'
+		);
 		nPhase := 2;
 	2:
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input);
-		AssertFalse(Condition := Machine.PackMLOut.bCommandRejected OR Machine.PackMLOut.bCommandAccepted, Message := 'Falling edge must clear command feedback.');
-		nPhase := 0; TEST_FINISHED();
-END_CASE]]></ST></Implementation>
+		Input.bCommandChangeRequest := FALSE;
+		Machine(PackMLIn := Input);
+		AssertFalse(
+			Condition := Machine.PackMLOut.bCommandRejected OR Machine.PackMLOut.bCommandAccepted,
+			Message := 'Falling edge must clear command feedback.'
+		);
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE
+]]></ST></Implementation>
     </Method>
     <Method Name="DisableFreezesStateAndExternalFaultHasPriority" Id="{0f17534d-4316-45e2-bcb4-3d855f5714ae}">
       <Declaration><![CDATA[METHOD DisableFreezesStateAndExternalFaultHasPriority
-VAR_INST Machine : FB_TestPackMLBase; Input : ST_PML_Base_In; nPhase : UINT; END_VAR
+VAR_INST
+	Machine : FB_TestPackMLBase;
+	Input : ST_PML_Base_In;
+	nPhase : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('DisableFreezesStateAndExternalFaultHasPriority');
 
 CASE nPhase OF
 	0:
-		Machine(PackMLIn := Input); // Aborted
-		Input.eCommand := E_PackMLCommand.Clear; Input.bCommandChangeRequest := TRUE;
-		Machine(PackMLIn := Input); // Stopped
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input);
+		Machine(PackMLIn := Input);
+		// Aborted
+		Input.eCommand := E_PackMLCommand.Clear;
+		Input.bCommandChangeRequest := TRUE;
+		Machine(PackMLIn := Input);
+		// Stopped
+		Input.bCommandChangeRequest := FALSE;
+		Machine(PackMLIn := Input);
 		nPhase := 1;
 	1:
 		// Arrange：送 Reset 的同時發生 external fault；Abort 必須優先。
-		Input.eCommand := E_PackMLCommand.Reset; Input.bCommandChangeRequest := TRUE;
+		Input.eCommand := E_PackMLCommand.Reset;
+		Input.bCommandChangeRequest := TRUE;
 		Machine(PackMLIn := Input, bExternalFault := TRUE);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'External fault must pre-empt a normal command.');
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted,
+			Message := 'External fault must pre-empt a normal command.'
+		);
 		nPhase := 2;
 	2:
 		// Disable 只凍結目前狀態，不可製造 transition activity。
 		Machine(PackMLIn := Input, bEnable := FALSE, bExternalFault := FALSE);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'Disable must preserve state.');
-		AssertFalse(Condition := Machine.bTransitionActive, Message := 'Disable must suppress transition activity.');
-		nPhase := 0; TEST_FINISHED();
-END_CASE]]></ST></Implementation>
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted,
+			Message := 'Disable must preserve state.'
+		);
+		AssertFalse(
+			Condition := Machine.bTransitionActive,
+			Message := 'Disable must suppress transition activity.'
+		);
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE
+]]></ST></Implementation>
     </Method>
     <Method Name="HoldSuspendStopAndAbortFollowTheStateGuards" Id="{b1016fca-08a3-4e32-af7f-ec710f7d75ce}">
       <Declaration><![CDATA[METHOD HoldSuspendStopAndAbortFollowTheStateGuards
-VAR_INST Machine : FB_TestPackMLBase; Input : ST_PML_Base_In; nPhase : UINT; END_VAR
+VAR_INST
+	Machine : FB_TestPackMLBase;
+	Input : ST_PML_Base_In;
+	nPhase : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('HoldSuspendStopAndAbortFollowTheStateGuards');
 
 CASE nPhase OF
-	0: Machine(PackMLIn := Input); Input.eCommand := E_PackMLCommand.Clear; Input.bCommandChangeRequest := TRUE; Machine(PackMLIn := Input); nPhase := 1;
-	1: Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input); Input.eCommand := E_PackMLCommand.Reset; Input.bCommandChangeRequest := TRUE; Machine(PackMLIn := Input); nPhase := 2;
-	2: Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input); Input.eCommand := E_PackMLCommand.Start; Input.bCommandChangeRequest := TRUE; Machine(PackMLIn := Input); nPhase := 3;
+	0: Machine(PackMLIn := Input);
+	Input.eCommand := E_PackMLCommand.Clear;
+	Input.bCommandChangeRequest := TRUE;
+	Machine(PackMLIn := Input);
+	nPhase := 1;
+	1: Input.bCommandChangeRequest := FALSE;
+	Machine(PackMLIn := Input);
+	Input.eCommand := E_PackMLCommand.Reset;
+	Input.bCommandChangeRequest := TRUE;
+	Machine(PackMLIn := Input);
+	nPhase := 2;
+	2: Input.bCommandChangeRequest := FALSE;
+	Machine(PackMLIn := Input);
+	Input.eCommand := E_PackMLCommand.Start;
+	Input.bCommandChangeRequest := TRUE;
+	Machine(PackMLIn := Input);
+	nPhase := 3;
 	3:
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input);
-		Input.eCommand := E_PackMLCommand.Hold; Input.bCommandChangeRequest := TRUE; Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Held, Message := 'Hold from Execute must reach Held.'); nPhase := 4;
+		Input.bCommandChangeRequest := FALSE;
+		Machine(PackMLIn := Input);
+		Input.eCommand := E_PackMLCommand.Hold;
+		Input.bCommandChangeRequest := TRUE;
+		Machine(PackMLIn := Input);
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Held,
+			Message := 'Hold from Execute must reach Held.'
+		);
+		nPhase := 4;
 	4:
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input);
-		Input.eCommand := E_PackMLCommand.Unhold; Input.bCommandChangeRequest := TRUE; Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Unhold from Held must resume Execute.'); nPhase := 5;
+		Input.bCommandChangeRequest := FALSE;
+		Machine(PackMLIn := Input);
+		Input.eCommand := E_PackMLCommand.Unhold;
+		Input.bCommandChangeRequest := TRUE;
+		Machine(PackMLIn := Input);
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Execute,
+			Message := 'Unhold from Held must resume Execute.'
+		);
+		nPhase := 5;
 	5:
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input);
-		Input.eCommand := E_PackMLCommand.Suspend; Input.bCommandChangeRequest := TRUE; Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Suspended, Message := 'Suspend from Execute must reach Suspended.'); nPhase := 6;
+		Input.bCommandChangeRequest := FALSE;
+		Machine(PackMLIn := Input);
+		Input.eCommand := E_PackMLCommand.Suspend;
+		Input.bCommandChangeRequest := TRUE;
+		Machine(PackMLIn := Input);
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Suspended,
+			Message := 'Suspend from Execute must reach Suspended.'
+		);
+		nPhase := 6;
 	6:
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input);
-		Input.eCommand := E_PackMLCommand.Unsuspend; Input.bCommandChangeRequest := TRUE; Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Execute, Message := 'Unsuspend must resume Execute.'); nPhase := 7;
+		Input.bCommandChangeRequest := FALSE;
+		Machine(PackMLIn := Input);
+		Input.eCommand := E_PackMLCommand.Unsuspend;
+		Input.bCommandChangeRequest := TRUE;
+		Machine(PackMLIn := Input);
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Execute,
+			Message := 'Unsuspend must resume Execute.'
+		);
+		nPhase := 7;
 	7:
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input);
-		Input.eCommand := E_PackMLCommand.Stop; Input.bCommandChangeRequest := TRUE; Machine(PackMLIn := Input);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Stop from Execute must reach Stopped.'); nPhase := 8;
+		Input.bCommandChangeRequest := FALSE;
+		Machine(PackMLIn := Input);
+		Input.eCommand := E_PackMLCommand.Stop;
+		Input.bCommandChangeRequest := TRUE;
+		Machine(PackMLIn := Input);
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Stopped,
+			Message := 'Stop from Execute must reach Stopped.'
+		);
+		nPhase := 8;
 	8:
-		Input.bCommandChangeRequest := FALSE; Machine(PackMLIn := Input);
+		Input.bCommandChangeRequest := FALSE;
+		Machine(PackMLIn := Input);
 		Machine(PackMLIn := Input, bExternalFault := TRUE);
-		AssertTrue(Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted, Message := 'External fault from Stopped must reach Aborted.');
-		nPhase := 0; TEST_FINISHED();
-END_CASE]]></ST>
+		AssertTrue(
+			Condition := Machine.PackMLOut.eStateCurrent = E_PackMLState.Aborted,
+			Message := 'External fault from Stopped must reach Aborted.'
+		);
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE
+]]></ST>
       </Implementation>
     </Method>
   </POU>

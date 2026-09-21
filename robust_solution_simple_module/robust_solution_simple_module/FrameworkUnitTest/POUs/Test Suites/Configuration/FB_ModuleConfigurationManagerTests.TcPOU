@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_ModuleConfigurationManagerTests" Id="{714e3e37-7a3f-4076-a08a-047167ea118b}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleConfigurationManagerTests EXTENDS TcUnit.FB_TestSuite
@@ -9,166 +9,343 @@ UnsupportedSchemaIsRejectedWhenRuntimeOptedIn();
 LegacyAdsPortIsRejectedWhenRuntimeOptedIn();
 DuplicateEnabledModuleIdIsRejectedWhenRuntimeOptedIn();
 MalformedJsonIsRejectedWhenRuntimeOptedIn();
-ValidFixtureAppliesOneRevisionWhenRuntimeOptedIn();]]></ST>
+ValidFixtureAppliesOneRevisionWhenRuntimeOptedIn();
+]]></ST>
     </Implementation>
     <Method Name="DuplicateEnabledModuleIdIsRejectedWhenRuntimeOptedIn" Id="{6da820cc-2be3-4ecb-b496-4033aa02f253}">
       <Declaration><![CDATA[METHOD DuplicateEnabledModuleIdIsRejectedWhenRuntimeOptedIn
-VAR_INST Manager : FB_ModuleConfigurationManager; Links : FB_LinkVariableManager; References : FB_ReferenceManager; Registry : FB_ModuleTypeRegistry; Adapter : FB_FakeModuleConfigurationAdapter; bPrepared : BOOL; nCycles : UINT; END_VAR
-VAR sPath : STRING(255); END_VAR
+VAR_INST
+	Manager : FB_ModuleConfigurationManager;
+	Links : FB_LinkVariableManager;
+	References : FB_ReferenceManager;
+	Registry : FB_ModuleTypeRegistry;
+	Adapter : FB_FakeModuleConfigurationAdapter;
+	bPrepared : BOOL;
+	nCycles : UINT;
+END_VAR
+VAR
+	sPath : STRING(255);
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN RETURN; END_IF
+        <ST><![CDATA[IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN
+	RETURN;
+END_IF
 TEST('DuplicateEnabledModuleIdIsRejectedWhenRuntimeOptedIn');
 
 IF NOT bPrepared THEN
 	// Arrange：先滿足 infrastructure 與 adapter 前置條件，讓驗證能走到 ModuleId 唯一性規則。
-	Links.M_BeginInfrastructureRegistration(); Links.M_SealInfrastructureRegistration();
+	Links.M_BeginInfrastructureRegistration();
+	Links.M_SealInfrastructureRegistration();
 	Registry.M_Register(ModuleTypeName := 'TestModule', Adapter := Adapter);
 	bPrepared := TRUE;
 END_IF
 sPath := CONCAT(GVL_TestConfig.ConfigurationFixtureRoot, 'duplicate-enabled-id.json');
 // Act
-Manager(Execute := TRUE, FilePath := sPath, LinkVariableManager := Links, ReferenceManager := References, ModuleTypeRegistry := Registry);
+Manager(
+	Execute := TRUE,
+	FilePath := sPath,
+	LinkVariableManager := Links,
+	ReferenceManager := References,
+	ModuleTypeRegistry := Registry
+);
 nCycles := nCycles + 1;
 IF Manager.Error THEN
 	// Assert
-	AssertTrue(Condition := Manager.ErrorMessage = 'Duplicate enabled module ID in configuration.', Message := 'Enabled ModuleId must be globally unique.');
-	AssertTrue(Condition := Adapter.ApplyCalls = 0, Message := 'Duplicate ModuleId must fail before adapter apply.');
-	nCycles := 0; TEST_FINISHED();
+	AssertTrue(
+		Condition := Manager.ErrorMessage = 'Duplicate enabled module ID in configuration.',
+		Message := 'Enabled ModuleId must be globally unique.'
+	);
+	AssertTrue(
+		Condition := Adapter.ApplyCalls = 0,
+		Message := 'Duplicate ModuleId must fail before adapter apply.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
 ELSIF nCycles > 1000 THEN
-	AssertTrue(Condition := FALSE, Message := 'Duplicate-ID fixture timed out; verify fixture deployment.');
-	nCycles := 0; TEST_FINISHED();
-END_IF]]></ST>
+	AssertTrue(
+		Condition := FALSE,
+		Message := 'Duplicate-ID fixture timed out; verify fixture deployment.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="LegacyAdsPortIsRejectedWhenRuntimeOptedIn" Id="{f0f805e2-3f80-457e-9eed-95d096e5d654}">
       <Declaration><![CDATA[METHOD LegacyAdsPortIsRejectedWhenRuntimeOptedIn
-VAR_INST Manager : FB_ModuleConfigurationManager; Links : FB_LinkVariableManager; References : FB_ReferenceManager; Registry : FB_ModuleTypeRegistry; nCycles : UINT; END_VAR
-VAR sPath : STRING(255); END_VAR
+VAR_INST
+	Manager : FB_ModuleConfigurationManager;
+	Links : FB_LinkVariableManager;
+	References : FB_ReferenceManager;
+	Registry : FB_ModuleTypeRegistry;
+	nCycles : UINT;
+END_VAR
+VAR
+	sPath : STRING(255);
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN RETURN; END_IF
+        <ST><![CDATA[IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN
+	RETURN;
+END_IF
 TEST('LegacyAdsPortIsRejectedWhenRuntimeOptedIn');
 
 // Arrange：schemaVersion 4 明確禁止舊版 adsPort 欄位。
 sPath := CONCAT(GVL_TestConfig.ConfigurationFixtureRoot, 'legacy-ads-port.json');
 // Act
-Manager(Execute := TRUE, FilePath := sPath, LinkVariableManager := Links, ReferenceManager := References, ModuleTypeRegistry := Registry);
+Manager(
+	Execute := TRUE,
+	FilePath := sPath,
+	LinkVariableManager := Links,
+	ReferenceManager := References,
+	ModuleTypeRegistry := Registry
+);
 nCycles := nCycles + 1;
 IF Manager.Error THEN
 	// Assert
-	AssertTrue(Condition := Manager.ErrorMessage = 'adsPort is not supported by schemaVersion 4; configured values use registered local nodes.', Message := 'Legacy adsPort must be rejected with the documented diagnostic.');
-	nCycles := 0; TEST_FINISHED();
+	AssertTrue(
+		Condition :=
+			Manager.ErrorMessage =
+			'adsPort is not supported by schemaVersion 4; configured values use registered local nodes.',
+		Message := 'Legacy adsPort must be rejected with the documented diagnostic.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
 ELSIF nCycles > 1000 THEN
-	AssertTrue(Condition := FALSE, Message := 'Legacy-adsPort fixture timed out; verify fixture deployment.');
-	nCycles := 0; TEST_FINISHED();
-END_IF]]></ST>
+	AssertTrue(
+		Condition := FALSE,
+		Message := 'Legacy-adsPort fixture timed out; verify fixture deployment.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="MalformedJsonIsRejectedWhenRuntimeOptedIn" Id="{5a908680-605d-492f-a979-217d1a620f38}">
       <Declaration><![CDATA[METHOD MalformedJsonIsRejectedWhenRuntimeOptedIn
-VAR_INST Manager : FB_ModuleConfigurationManager; Links : FB_LinkVariableManager; References : FB_ReferenceManager; Registry : FB_ModuleTypeRegistry; nCycles : UINT; END_VAR
-VAR sPath : STRING(255); END_VAR
+VAR_INST
+	Manager : FB_ModuleConfigurationManager;
+	Links : FB_LinkVariableManager;
+	References : FB_ReferenceManager;
+	Registry : FB_ModuleTypeRegistry;
+	nCycles : UINT;
+END_VAR
+VAR
+	sPath : STRING(255);
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN RETURN; END_IF
+        <ST><![CDATA[IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN
+	RETURN;
+END_IF
 TEST('MalformedJsonIsRejectedWhenRuntimeOptedIn');
 
 // Arrange：fixture 故意缺少合法的陣列結尾；副檔名保留 .invalid，避免被 JSON lint 誤當有效資料。
 sPath := CONCAT(GVL_TestConfig.ConfigurationFixtureRoot, 'malformed.json.invalid');
 // Act
-Manager(Execute := TRUE, FilePath := sPath, LinkVariableManager := Links, ReferenceManager := References, ModuleTypeRegistry := Registry);
+Manager(
+	Execute := TRUE,
+	FilePath := sPath,
+	LinkVariableManager := Links,
+	ReferenceManager := References,
+	ModuleTypeRegistry := Registry
+);
 nCycles := nCycles + 1;
 IF Manager.Error THEN
 	// Assert：parser HRESULT 可能因 runtime 版本不同；穩定契約是 Error、非 Ready、且有診斷內容。
-	AssertFalse(Condition := Manager.Ready OR Manager.Busy, Message := 'Malformed JSON must end in Error only.');
-	AssertTrue(Condition := Manager.ErrorMessage <> '', Message := 'Malformed JSON must expose a diagnostic message.');
-	nCycles := 0; TEST_FINISHED();
+	AssertFalse(
+		Condition := Manager.Ready OR Manager.Busy,
+		Message := 'Malformed JSON must end in Error only.'
+	);
+	AssertTrue(
+		Condition := Manager.ErrorMessage <> '',
+		Message := 'Malformed JSON must expose a diagnostic message.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
 ELSIF nCycles > 1000 THEN
-	AssertTrue(Condition := FALSE, Message := 'Malformed-JSON fixture timed out; verify fixture deployment.');
-	nCycles := 0; TEST_FINISHED();
-END_IF]]></ST>
+	AssertTrue(
+		Condition := FALSE,
+		Message := 'Malformed-JSON fixture timed out; verify fixture deployment.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="MissingConfigurationFileReturnsAStableError" Id="{4c856957-93ac-46e2-ad76-e603406fbd7a}">
       <Declaration><![CDATA[METHOD MissingConfigurationFileReturnsAStableError
-VAR_INST Manager : FB_ModuleConfigurationManager; Links : FB_LinkVariableManager; References : FB_ReferenceManager; Registry : FB_ModuleTypeRegistry; nCycles : UINT; END_VAR
+VAR_INST
+	Manager : FB_ModuleConfigurationManager;
+	Links : FB_LinkVariableManager;
+	References : FB_ReferenceManager;
+	Registry : FB_ModuleTypeRegistry;
+	nCycles : UINT;
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[TEST('MissingConfigurationFileReturnsAStableError');
 
 // Arrange / Act：以必定不存在的 fixture 路徑維持 Execute，高階 JSON loader 可能需要多個 PLC scan 才完成。
-Manager(Execute := TRUE, FilePath := 'C:\ProgramData\RobustSolution\Tests\does-not-exist.json', LinkVariableManager := Links, ReferenceManager := References, ModuleTypeRegistry := Registry);
+Manager(
+	Execute := TRUE,
+	FilePath := 'C:\ProgramData\RobustSolution\Tests\does-not-exist.json',
+	LinkVariableManager := Links,
+	ReferenceManager := References,
+	ModuleTypeRegistry := Registry
+);
 nCycles := nCycles + 1;
 
-IF Manager.Error THEN	
+IF Manager.Error THEN
 	// 實作當 Error 發生時，下一個 scan 才會將 Busy 設為 False
-	Manager(Execute := TRUE, FilePath := 'C:\ProgramData\RobustSolution\Tests\does-not-exist.json', LinkVariableManager := Links, ReferenceManager := References, ModuleTypeRegistry := Registry);
-	
+	Manager(
+		Execute := TRUE,
+		FilePath := 'C:\ProgramData\RobustSolution\Tests\does-not-exist.json',
+		LinkVariableManager := Links,
+		ReferenceManager := References,
+		ModuleTypeRegistry := Registry
+	);
+
 	// Assert：I/O error 必須結束 Busy 並提供固定診斷。
-	AssertFalse(Condition := Manager.Busy OR Manager.Ready, Message := 'A missing file must end in Error only.');
-	AssertTrue(Condition := Manager.ErrorMessage = 'Unable to load the UTF-8 JSON module configuration file.', Message := 'Missing file must expose the documented diagnostic.');
+	AssertFalse(
+		Condition := Manager.Busy OR Manager.Ready,
+		Message := 'A missing file must end in Error only.'
+	);
+	AssertTrue(
+		Condition := Manager.ErrorMessage =
+			'Unable to load the UTF-8 JSON module configuration file.',
+		Message := 'Missing file must expose the documented diagnostic.'
+	);
 	nCycles := 0;
 	TEST_FINISHED();
 ELSIF nCycles > 1000 THEN
-	AssertTrue(Condition := FALSE, Message := 'Configuration file error did not complete within 1000 scans.');
+	AssertTrue(
+		Condition := FALSE,
+		Message := 'Configuration file error did not complete within 1000 scans.'
+	);
 	nCycles := 0;
 	TEST_FINISHED();
-END_IF]]></ST>
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="UnsupportedSchemaIsRejectedWhenRuntimeOptedIn" Id="{d0d18ae3-0ac3-4646-ba6f-c59cd59d5496}">
       <Declaration><![CDATA[METHOD UnsupportedSchemaIsRejectedWhenRuntimeOptedIn
-VAR_INST Manager : FB_ModuleConfigurationManager; Links : FB_LinkVariableManager; References : FB_ReferenceManager; Registry : FB_ModuleTypeRegistry; nCycles : UINT; END_VAR
-VAR sPath : STRING(255); END_VAR
+VAR_INST
+	Manager : FB_ModuleConfigurationManager;
+	Links : FB_LinkVariableManager;
+	References : FB_ReferenceManager;
+	Registry : FB_ModuleTypeRegistry;
+	nCycles : UINT;
+END_VAR
+VAR
+	sPath : STRING(255);
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN RETURN; END_IF
+        <ST><![CDATA[IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN
+	RETURN;
+END_IF
 TEST('UnsupportedSchemaIsRejectedWhenRuntimeOptedIn');
 
 // Arrange：fixture 使用 framework 不支援的 schemaVersion 3。
 sPath := CONCAT(GVL_TestConfig.ConfigurationFixtureRoot, 'unsupported-schema.json');
 // Act：檔案解析是非同步流程，因此跨 scan 保持 Execute。
-Manager(Execute := TRUE, FilePath := sPath, LinkVariableManager := Links, ReferenceManager := References, ModuleTypeRegistry := Registry);
+Manager(
+	Execute := TRUE,
+	FilePath := sPath,
+	LinkVariableManager := Links,
+	ReferenceManager := References,
+	ModuleTypeRegistry := Registry
+);
 nCycles := nCycles + 1;
 IF Manager.Error THEN
 	// Assert：錯誤必須停在 schema 驗證，不可進入套用階段。
-	AssertTrue(Condition := Manager.ErrorMessage = 'Unsupported module configuration schemaVersion.', Message := 'Unsupported schema must return its documented diagnostic.');
-	nCycles := 0; TEST_FINISHED();
+	AssertTrue(
+		Condition := Manager.ErrorMessage = 'Unsupported module configuration schemaVersion.',
+		Message := 'Unsupported schema must return its documented diagnostic.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
 ELSIF nCycles > 1000 THEN
-	AssertTrue(Condition := FALSE, Message := 'Unsupported-schema fixture timed out; verify fixture deployment.');
-	nCycles := 0; TEST_FINISHED();
-END_IF]]></ST>
+	AssertTrue(
+		Condition := FALSE,
+		Message := 'Unsupported-schema fixture timed out; verify fixture deployment.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="ValidFixtureAppliesOneRevisionWhenRuntimeOptedIn" Id="{6c04b384-1d7e-45c7-b0b8-087f5c80b49f}">
       <Declaration><![CDATA[METHOD ValidFixtureAppliesOneRevisionWhenRuntimeOptedIn
-VAR_INST Manager : FB_ModuleConfigurationManager; Links : FB_LinkVariableManager; References : FB_ReferenceManager; Registry : FB_ModuleTypeRegistry; Adapter : FB_FakeModuleConfigurationAdapter; bPrepared : BOOL; nCycles : UINT; END_VAR
-VAR sPath : STRING(255); END_VAR
+VAR_INST
+	Manager : FB_ModuleConfigurationManager;
+	Links : FB_LinkVariableManager;
+	References : FB_ReferenceManager;
+	Registry : FB_ModuleTypeRegistry;
+	Adapter : FB_FakeModuleConfigurationAdapter;
+	bPrepared : BOOL;
+	nCycles : UINT;
+END_VAR
+VAR
+	sPath : STRING(255);
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// RuntimeDependent：fixture 未部署時不註冊此 case，避免將環境缺失算成產品失敗。
-IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN RETURN; END_IF
+IF NOT GVL_TestConfig.RunConfigurationFileRuntimeTests THEN
+	RETURN;
+END_IF
 TEST('ValidFixtureAppliesOneRevisionWhenRuntimeOptedIn');
 
 IF NOT bPrepared THEN
 	// Arrange：Configuration Manager 要求 infrastructure 已 seal，並有可解析的 Module adapter。
-	Links.M_BeginInfrastructureRegistration(); Links.M_SealInfrastructureRegistration();
+	Links.M_BeginInfrastructureRegistration();
+	Links.M_SealInfrastructureRegistration();
 	Registry.M_Register(ModuleTypeName := 'TestModule', Adapter := Adapter);
 	bPrepared := TRUE;
 END_IF
 sPath := CONCAT(GVL_TestConfig.ConfigurationFixtureRoot, 'valid-minimal.json');
-Manager(Execute := TRUE, FilePath := sPath, LinkVariableManager := Links, ReferenceManager := References, ModuleTypeRegistry := Registry);
+Manager(
+	Execute := TRUE,
+	FilePath := sPath,
+	LinkVariableManager := Links,
+	ReferenceManager := References,
+	ModuleTypeRegistry := Registry
+);
 nCycles := nCycles + 1;
 
 IF Manager.Ready THEN
-	AssertFalse(Condition := Manager.Error OR Manager.Busy, Message := 'Valid fixture must finish Ready.');
-	AssertTrue(Condition := (Adapter.PrepareCalls = 1) AND (Adapter.ApplyCalls = 1) AND (Adapter.LastSlot = 1) AND (Adapter.LastRevision = 1), Message := 'Valid fixture must prepare and apply exactly one runtime revision.');
-	nCycles := 0; TEST_FINISHED();
+	AssertFalse(
+		Condition := Manager.Error OR Manager.Busy,
+		Message := 'Valid fixture must finish Ready.'
+	);
+	AssertTrue(
+		Condition :=
+			(Adapter.PrepareCalls = 1)
+			AND (Adapter.ApplyCalls = 1)
+			AND (Adapter.LastSlot = 1)
+			AND (Adapter.LastRevision = 1),
+		Message := 'Valid fixture must prepare and apply exactly one runtime revision.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
 ELSIF Manager.Error OR (nCycles > 1000) THEN
-	AssertTrue(Condition := FALSE, Message := 'Valid runtime fixture failed or timed out; verify deployment and installed Framework library.');
-	nCycles := 0; TEST_FINISHED();
-END_IF]]></ST>
+	AssertTrue(
+		Condition := FALSE,
+		Message :=
+			'Valid runtime fixture failed or timed out; verify deployment and installed Framework library.'
+	);
+	nCycles := 0;
+	TEST_FINISHED();
+END_IF
+]]></ST>
       </Implementation>
     </Method>
   </POU>

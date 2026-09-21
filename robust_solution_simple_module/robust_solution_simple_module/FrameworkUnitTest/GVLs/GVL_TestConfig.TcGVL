@@ -3,10 +3,10 @@
   <GVL Name="GVL_TestConfig" Id="{c222d9d0-82ac-48ec-a1a0-9181f525aac0}" ParameterList="True">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 VAR_GLOBAL CONSTANT
-	// 預設不註冊需要外部 NC 與測試檔案的案例，避免把缺少前置條件誤報為成功。
-	RunNcAxisRuntimeTests : BOOL := FALSE;
-	RunConfigurationFileRuntimeTests : BOOL := FALSE;
-	ConfigurationFixtureRoot : STRING(255) := 'C:\ProgramData\RobustSolution\Tests\';
+// 預設不註冊需要外部 NC 與測試檔案的案例，避免把缺少前置條件誤報為成功。
+RunNcAxisRuntimeTests : BOOL := FALSE;
+RunConfigurationFileRuntimeTests : BOOL := FALSE;
+ConfigurationFixtureRoot : STRING(255) := 'C:\ProgramData\RobustSolution\Tests\';
 END_VAR
 ]]></Declaration>
   </GVL>

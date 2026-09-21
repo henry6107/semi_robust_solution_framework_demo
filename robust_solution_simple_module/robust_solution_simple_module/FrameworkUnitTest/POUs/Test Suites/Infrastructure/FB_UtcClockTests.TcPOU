@@ -6,10 +6,16 @@ VAR
 	_Clock : FB_UtcClock;
 END_VAR
 ]]></Declaration>
-    <Implementation><ST><![CDATA[UtcTimestampHasFixedSortableFormat();]]></ST></Implementation>
+    <Implementation><ST><![CDATA[UtcTimestampHasFixedSortableFormat();
+]]></ST></Implementation>
     <Method Name="UtcTimestampHasFixedSortableFormat" Id="{4812c6fb-3f3a-4576-86e0-2c19d2d5250b}">
       <Declaration><![CDATA[METHOD UtcTimestampHasFixedSortableFormat
-VAR nIndex : INT; sDigit : STRING(1); sFirst : STRING(20); bDigitsOnly : BOOL; END_VAR
+VAR
+	nIndex : INT;
+	sDigit : STRING(1);
+	sFirst : STRING(20);
+	bDigitsOnly : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation><ST><![CDATA[TEST('UtcTimestampHasFixedSortableFormat');
 
@@ -24,10 +30,17 @@ FOR nIndex := 1 TO 17 DO
 	sDigit := MID(_Clock.UtcDateTime, 1, nIndex);
 	bDigitsOnly := bDigitsOnly AND (FIND('0123456789', sDigit) > 0);
 END_FOR
-AssertTrue(Condition := bDigitsOnly, Message := 'UTC timestamp must contain exactly 17 digits.');
-AssertTrue(Condition := _Clock.UtcDateTime >= sFirst, Message := 'Consecutive UTC timestamps must not move backwards.');
+AssertTrue(
+	Condition := bDigitsOnly,
+	Message := 'UTC timestamp must contain exactly 17 digits.'
+);
+AssertTrue(
+	Condition := _Clock.UtcDateTime >= sFirst,
+	Message := 'Consecutive UTC timestamps must not move backwards.'
+);
 
-TEST_FINISHED();]]></ST></Implementation>
+TEST_FINISHED();
+]]></ST></Implementation>
     </Method>
   </POU>
 </TcPlcObject>

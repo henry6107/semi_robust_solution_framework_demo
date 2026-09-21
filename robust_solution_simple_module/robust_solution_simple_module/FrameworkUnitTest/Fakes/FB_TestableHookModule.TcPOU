@@ -39,10 +39,23 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[IF ProbeInvalidCalls THEN
-	OutsideAlarmAccepted := M_AddAlarm(MainErrorId := AlarmId, SourceErrorId := 0, Message := 'Axis disabled', Path := 'Test.Axis', Severity := E_Severity.Alarm);
-	OutsideVariableAccepted := M_AddVariable(Id := VariableId, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := 'outside');
+	OutsideAlarmAccepted := M_AddAlarm(
+		MainErrorId := AlarmId,
+		SourceErrorId := 0,
+		Message := 'Axis disabled',
+		Path := 'Test.Axis',
+		Severity := E_Severity.Alarm
+	);
+	OutsideVariableAccepted := M_AddVariable(
+		Id := VariableId,
+		Name := 'Axis position',
+		DataType := E_DescriptorType.Float_64bit,
+		Unit := 'mm',
+		Value := 'outside'
+	);
 END_IF
-M_UpdateModule();]]></ST>
+M_UpdateModule();
+]]></ST>
     </Implementation>
     <Method Name="H_RegisterServices" Id="{170591fd-ea12-4d26-88ad-6ef63bd55190}">
       <Declaration><![CDATA[METHOD PROTECTED H_RegisterServices
@@ -55,7 +68,8 @@ M_UpdateModule();]]></ST>
 	EffectiveCtrl := _EffectiveServiceCtrl,
 	UpperParam := _UpperServiceParam,
 	EffectiveParam := _EffectiveServiceParam,
-	Status := _ServiceStatus);]]></ST>
+	Status := _ServiceStatus);
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_UpdateAlarm" Id="{64fbc36b-fa1b-445f-8357-177ea6c3b833}">
@@ -70,18 +84,45 @@ AlarmObservedScan := BaseUnitScans;
 AlarmAccepted := FALSE;
 DuplicateAlarmAccepted := FALSE;
 IF ProbeInvalidCalls THEN
-	CrossVariableAccepted := M_AddVariable(Id := VariableId, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := 'wrong hook');
-	ZeroAlarmAccepted := M_AddAlarm(MainErrorId := 0, SourceErrorId := 0, Message := 'Axis disabled', Path := 'Test.Axis', Severity := E_Severity.Alarm);
+	CrossVariableAccepted := M_AddVariable(
+		Id := VariableId,
+		Name := 'Axis position',
+		DataType := E_DescriptorType.Float_64bit,
+		Unit := 'mm',
+		Value := 'wrong hook'
+	);
+	ZeroAlarmAccepted := M_AddAlarm(
+		MainErrorId := 0,
+		SourceErrorId := 0,
+		Message := 'Axis disabled',
+		Path := 'Test.Axis',
+		Severity := E_Severity.Alarm
+	);
 END_IF
-IF Axis = 0 THEN RETURN; END_IF
+IF Axis = 0 THEN
+	RETURN;
+END_IF
 IF Axis.AxisIsDisabled THEN
 	FOR nIndex := 1 TO AlarmCount DO
-		AlarmAccepted := M_AddAlarm(MainErrorId := AlarmId + UINT_TO_UDINT(nIndex) - 1, SourceErrorId := 0, Message := 'Axis disabled', Path := 'Test.Axis', Severity := E_Severity.Alarm);
+		AlarmAccepted := M_AddAlarm(
+			MainErrorId := AlarmId + UINT_TO_UDINT(nIndex) - 1,
+			SourceErrorId := 0,
+			Message := 'Axis disabled',
+			Path := 'Test.Axis',
+			Severity := E_Severity.Alarm
+		);
 	END_FOR
 	IF DuplicateAlarm THEN
-		DuplicateAlarmAccepted := M_AddAlarm(MainErrorId := AlarmId, SourceErrorId := 0, Message := 'Must not replace first', Path := 'Test.Axis', Severity := E_Severity.Alarm);
+		DuplicateAlarmAccepted := M_AddAlarm(
+			MainErrorId := AlarmId,
+			SourceErrorId := 0,
+			Message := 'Must not replace first',
+			Path := 'Test.Axis',
+			Severity := E_Severity.Alarm
+		);
 	END_IF
-END_IF]]></ST>
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_UpdateBaseUnit" Id="{7a1efb23-b9a5-427c-bac8-e392a0870288}">
@@ -91,7 +132,8 @@ END_IF]]></ST>
         <ST><![CDATA[IF Axis <> 0 THEN
 	Axis.M_CyclicUpdate();
 END_IF
-BaseUnitScans := BaseUnitScans + 1;]]></ST>
+BaseUnitScans := BaseUnitScans + 1;
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_UpdateVariable" Id="{28f21b3c-50a2-4fc5-a443-3c7109fb2e83}">
@@ -106,16 +148,43 @@ VariableObservedScan := BaseUnitScans;
 VariableAccepted := FALSE;
 DuplicateVariableAccepted := FALSE;
 IF ProbeInvalidCalls THEN
-	CrossAlarmAccepted := M_AddAlarm(MainErrorId := AlarmId, SourceErrorId := 0, Message := 'Axis disabled', Path := 'Test.Axis', Severity := E_Severity.Alarm);
-	ZeroVariableAccepted := M_AddVariable(Id := 0, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := 'zero');
+	CrossAlarmAccepted := M_AddAlarm(
+		MainErrorId := AlarmId,
+		SourceErrorId := 0,
+		Message := 'Axis disabled',
+		Path := 'Test.Axis',
+		Severity := E_Severity.Alarm
+	);
+	ZeroVariableAccepted := M_AddVariable(
+		Id := 0,
+		Name := 'Axis position',
+		DataType := E_DescriptorType.Float_64bit,
+		Unit := 'mm',
+		Value := 'zero'
+	);
 END_IF
-IF Axis = 0 THEN RETURN; END_IF
+IF Axis = 0 THEN
+	RETURN;
+END_IF
 FOR nIndex := 1 TO VariableCount DO
-	VariableAccepted := M_AddVariable(Id := VariableId + UINT_TO_UDINT(nIndex) - 1, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := LREAL_TO_STRING(Axis.AxisActualPosition));
+	VariableAccepted := M_AddVariable(
+		Id := VariableId + UINT_TO_UDINT(nIndex) - 1,
+		Name := 'Axis position',
+		DataType := E_DescriptorType.Float_64bit,
+		Unit := 'mm',
+		Value := LREAL_TO_STRING(Axis.AxisActualPosition)
+	);
 END_FOR
 IF DuplicateVariable THEN
-	DuplicateVariableAccepted := M_AddVariable(Id := VariableId, Name := 'Axis position', DataType := E_DescriptorType.Float_64bit, Unit := 'mm', Value := 'must not replace first');
-END_IF]]></ST>
+	DuplicateVariableAccepted := M_AddVariable(
+		Id := VariableId,
+		Name := 'Axis position',
+		DataType := E_DescriptorType.Float_64bit,
+		Unit := 'mm',
+		Value := 'must not replace first'
+	);
+END_IF
+]]></ST>
       </Implementation>
     </Method>
   </POU>
