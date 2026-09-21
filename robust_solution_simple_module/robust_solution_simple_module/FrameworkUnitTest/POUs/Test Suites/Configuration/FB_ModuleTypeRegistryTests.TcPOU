@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ModuleTypeRegistryTests" Id="{3321273a-7804-4e10-be87-62679c9544e6}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleTypeRegistryTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RegistrationResolveAndReplacementAreDeterministic();
+CapacityAndClearFailuresAreExplicit();]]></ST>
+    </Implementation>
+    <Method Name="CapacityAndClearFailuresAreExplicit" Id="{0c9b3fdf-9a0a-4889-9161-93ba79283d2a}">
+      <Declaration><![CDATA[METHOD CapacityAndClearFailuresAreExplicit
+VAR_INST Registry : FB_ModuleTypeRegistry; Adapter : FB_FakeModuleConfigurationAdapter; END_VAR
+VAR nIndex : UINT; sName : T_ModuleTypeName; bOk : BOOL; END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('CapacityAndClearFailuresAreExplicit');
+
+// Arrange：同一 adapter 可用不同 type name 填滿 registry。
+FOR nIndex := 1 TO Param_Config.MaxModuleTypes DO
+	sName := CONCAT('Type', UINT_TO_STRING(nIndex));
+	bOk := Registry.M_Register(ModuleTypeName := sName, Adapter := Adapter);
+END_FOR
+AssertFalse(Condition := Registry.M_Register(ModuleTypeName := 'Overflow', Adapter := Adapter), Message := 'Registry entry beyond capacity must be rejected.');
+
+// Act / Assert：adapter 的清除錯誤必須由 registry 原樣揭露。
+Adapter.FailClear := TRUE;
+AssertFalse(Condition := Registry.M_ClearAll(), Message := 'Adapter clear failure must fail ClearAll.');
+AssertTrue(Condition := Registry.Error AND (Registry.ErrorMessage = 'Fake adapter clear failure.'), Message := 'ClearAll must preserve the adapter diagnostic.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RegistrationResolveAndReplacementAreDeterministic" Id="{d0a94f23-292d-48ad-9700-8755ca4d1a1b}">
+      <Declaration><![CDATA[METHOD RegistrationResolveAndReplacementAreDeterministic
+VAR_INST
+	Registry : FB_ModuleTypeRegistry;
+	AdapterOne : FB_FakeModuleConfigurationAdapter;
+	AdapterTwo : FB_FakeModuleConfigurationAdapter;
+	Resolved : I_ModuleConfigurationAdapter;
+	pResolved : POINTER TO FB_FakeModuleConfigurationAdapter;
+	EmptyAdapter : I_ModuleConfigurationAdapter;
+END_VAR
+VAR
+	bResult : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('RegistrationResolveAndReplacementAreDeterministic');
+
+// Arrange / Assert：名稱與 adapter 都是必要條件。
+AssertFalse(Condition := Registry.M_Register(ModuleTypeName := '', Adapter := AdapterOne), Message := 'Empty module type name must be rejected.');
+AssertFalse(Condition := Registry.M_Register(ModuleTypeName := 'Missing', Adapter := EmptyAdapter), Message := 'Unbound adapter must be rejected.');
+
+// Act：同名第二次註冊應替換 adapter，不增加容量。
+AssertTrue(Condition := Registry.M_Register(ModuleTypeName := 'TestModule', Adapter := AdapterOne), Message := 'A valid module type must register.');
+Resolved := Registry.M_Resolve(ModuleTypeName := 'TestModule');
+AssertTrue( Condition:= __QUERYPOINTER(Resolved, pResolved), Message:= 'Resolved adapter can not get pointer from interface.');
+AssertTrue(Condition := pResolved = ADR(AdapterOne), Message := 'Resolve must return the registered adapter.');
+
+AssertTrue(Condition := Registry.M_Register(ModuleTypeName := 'TestModule', Adapter := AdapterTwo), Message := 'Same-name registration must replace the adapter.');
+Resolved := Registry.M_Resolve(ModuleTypeName := 'TestModule');
+AssertTrue( Condition:= __QUERYPOINTER(Resolved, pResolved), Message:= 'Resolved adapter can not get pointer from interface.');
+AssertTrue(Condition := pResolved = ADR(AdapterTwo), Message := 'Resolve must return the replacement adapter.');
+
+Resolved := Registry.M_Resolve(ModuleTypeName := 'Unknown');
+AssertTrue(Condition := (Resolved = 0) AND Registry.Error, Message := 'Unknown type must return an error and no adapter.');
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

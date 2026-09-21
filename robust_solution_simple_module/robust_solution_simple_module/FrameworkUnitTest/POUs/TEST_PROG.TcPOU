@@ -3,11 +3,32 @@
   <POU Name="TEST_PROG" Id="{8ff9d161-157e-42ac-b3da-373105b7f816}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM TEST_PROG
 VAR
+	BaseUnitTests : FB_BaseUnitTests;
+	AxisBaseUnitTests : FB_Axis_BaseUnitTests;
 	FakeAxisContractTests : FB_FakeAxis_BaseUnitTests;
+	UtcClockTests : FB_UtcClockTests;
+	PackMLBaseTests : FB_PackMLBaseTests;
+	PackMLModeSetTests : FB_PackMLModeSetTests;
+	ServiceBaseTests : FB_ServiceBaseTests;
+	ServiceExecuteSubStateTests : FB_ServiceExecuteSubStateTests;
+	CompositeServiceBaseTests : FB_CompositeServiceBaseTests;
+	SetMaterialServiceTests : FB_SetMaterialServiceTests;
+	ServiceCallerTests : FB_ServiceCallerTests;
+	ServiceCoordinatorTests : FB_ServiceCoordinatorTests;
+	ModuleAlarmManagerTests : FB_ModuleAlarmManagerTests;
+	ModuleBaseTests : FB_ModuleBaseTests;
+	ConfigValueSnapshotReaderTests : FB_ConfigValueSnapshotReaderTests;
+	LinkVariableManagerTests : FB_LinkVariableManagerTests;
+	ReferenceManagerTests : FB_ReferenceManagerTests;
+	ModuleReferenceBindingContextTests : FB_ModuleReferenceBindingContextTests;
+	ModuleTypeRegistryTests : FB_ModuleTypeRegistryTests;
+	ModuleConfigurationManagerTests : FB_ModuleConfigurationManagerTests;
+	ApplicationConfigRootTests : FB_ApplicationConfigRootTests;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[TcUnit.RUN();]]></ST>
+      <ST><![CDATA[// 上述 FB_TestSuite instances 會向 TcUnit 註冊；runner 每個週期統一驅動測試。
+TcUnit.RUN();]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

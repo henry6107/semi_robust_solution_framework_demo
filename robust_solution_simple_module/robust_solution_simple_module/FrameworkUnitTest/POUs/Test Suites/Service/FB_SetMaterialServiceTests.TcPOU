@@ -1,0 +1,200 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_SetMaterialServiceTests" Id="{2439137c-9389-4e7c-92a5-b0d9a7cd6034}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_SetMaterialServiceTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ModifyUsesTheStartingSnapshot();
+ClearAndClearAllAffectOnlyTheirDocumentedScope();
+InvalidTargetStopsWithAStableError();
+MissingTargetIsRejected();
+DuplicateTargetIsRejected();
+UnsupportedCommandIsRejected();]]></ST>
+    </Implementation>
+    <Method Name="ClearAndClearAllAffectOnlyTheirDocumentedScope" Id="{7ce34418-8bca-4626-b243-a6755079082c}">
+      <Declaration><![CDATA[METHOD ClearAndClearAllAffectOnlyTheirDocumentedScope
+VAR_INST Service : FB_SetMaterialService; Ctrl : ST_ServiceCtrl; Context : ST_ServiceContext; Param : ST_MaterialParam; Wafers : ARRAY[1..2] OF ST_WaferStatus; nPhase : UINT; END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ClearAndClearAllAffectOnlyTheirDocumentedScope');
+
+CASE nPhase OF
+	0:
+		Wafers[1].EndpointId := 1; Wafers[2].EndpointId := 2; Wafers[1].MaterialContext.Id := 'A'; Wafers[2].MaterialContext.Id := 'B';
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 1;
+	1: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 2;
+	2: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 3;
+	3: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 4;
+	4: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 5;
+	5:
+		Param.CmdType := E_SetMaterialCmdType.Clear; Param.TargetEndpointId := 1; Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 6;
+	6:
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers);
+		AssertTrue(Condition := (Wafers[1].MaterialContext.Id = '') AND (Wafers[2].MaterialContext.Id = 'B'), Message := 'Clear must affect only the selected endpoint.');
+		nPhase := 7;
+	7:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 8;
+	8:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 9;
+	9:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 10;
+	10:
+		Wafers[1].MaterialContext.Id := 'A2'; Param.CmdType := E_SetMaterialCmdType.ClearAll; Param.TargetEndpointId := 0;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers); nPhase := 11;
+	11:
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 2, Param := Param, WaferStatusList := Wafers);
+		AssertTrue(Condition := (Wafers[1].MaterialContext.Id = '') AND (Wafers[2].MaterialContext.Id = ''), Message := 'ClearAll must clear every material context and ignore TargetEndpointId.');
+		nPhase := 0; TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="DuplicateTargetIsRejected" Id="{66eae6e9-418f-41f6-a890-37da24f4e07d}">
+      <Declaration><![CDATA[METHOD DuplicateTargetIsRejected
+VAR_INST Service : FB_SetMaterialService; Ctrl : ST_ServiceCtrl; Context : ST_ServiceContext; Param : ST_MaterialParam; Wafers : ARRAY[1..2] OF ST_WaferStatus; nPhase : UINT; END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('DuplicateTargetIsRejected');
+
+CASE nPhase OF
+	0: Wafers[1].EndpointId := 7; Wafers[2].EndpointId := 7; Service(Ctrl := Ctrl, Context := Context, ServiceId := 5, Param := Param, WaferStatusList := Wafers); nPhase := 1;
+	1: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 5, Param := Param, WaferStatusList := Wafers); nPhase := 2;
+	2: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 5, Param := Param, WaferStatusList := Wafers); nPhase := 3;
+	3: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 5, Param := Param, WaferStatusList := Wafers); nPhase := 4;
+	4: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 5, Param := Param, WaferStatusList := Wafers); nPhase := 5;
+	5:
+		// Arrange：兩個 storage slot 宣告同一個外部 EndpointId。
+		Param.CmdType := E_SetMaterialCmdType.Modify; Param.TargetEndpointId := 7;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		// Act
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 5, Param := Param, WaferStatusList := Wafers);
+		// Assert
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = TO_UDINT(E_FrameworkServiceErrorCode.SetMaterial_DuplicateTaEpId), Message := 'Duplicate target identity must be rejected before modifying either wafer.');
+		AssertTrue(Condition := (Wafers[1].MaterialContext.Id = '') AND (Wafers[2].MaterialContext.Id = ''), Message := 'Rejected duplicate target must not mutate material state.');
+		nPhase := 0; TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="InvalidTargetStopsWithAStableError" Id="{be6cef22-3baa-4fbd-8e1d-640dc470c6a8}">
+      <Declaration><![CDATA[METHOD InvalidTargetStopsWithAStableError
+VAR_INST Service : FB_SetMaterialService; Ctrl : ST_ServiceCtrl; Context : ST_ServiceContext; Param : ST_MaterialParam; Wafers : ARRAY[1..2] OF ST_WaferStatus; nPhase : UINT; END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('InvalidTargetStopsWithAStableError');
+
+CASE nPhase OF
+	0: Service(Ctrl := Ctrl, Context := Context, ServiceId := 3, Param := Param, WaferStatusList := Wafers); nPhase := 1;
+	1: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 3, Param := Param, WaferStatusList := Wafers); nPhase := 2;
+	2: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 3, Param := Param, WaferStatusList := Wafers); nPhase := 3;
+	3: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 3, Param := Param, WaferStatusList := Wafers); nPhase := 4;
+	4: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 3, Param := Param, WaferStatusList := Wafers); nPhase := 5;
+	5:
+		// Arrange：Modify/Clear 的 TargetEndpointId=0 是明確輸入錯誤。
+		Param.CmdType := E_SetMaterialCmdType.Modify; Param.TargetEndpointId := 0; Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 3, Param := Param, WaferStatusList := Wafers);
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = TO_UDINT(E_FrameworkServiceErrorCode.SetMaterial_TaEpIdRequired), Message := 'Zero target must publish the required-target error.');
+		nPhase := 6;
+	6:
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 3, Param := Param, WaferStatusList := Wafers);
+		AssertTrue(Condition := Service.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped, Message := 'Invalid material request must follow the safe Stop path.');
+		nPhase := 0; TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MissingTargetIsRejected" Id="{2910a889-2217-49ff-8fdf-abe657dfc724}">
+      <Declaration><![CDATA[METHOD MissingTargetIsRejected
+VAR_INST Service : FB_SetMaterialService; Ctrl : ST_ServiceCtrl; Context : ST_ServiceContext; Param : ST_MaterialParam; Wafers : ARRAY[1..2] OF ST_WaferStatus; nPhase : UINT; END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('MissingTargetIsRejected');
+
+CASE nPhase OF
+	0: Wafers[1].EndpointId := 10; Wafers[2].EndpointId := 20; Service(Ctrl := Ctrl, Context := Context, ServiceId := 4, Param := Param, WaferStatusList := Wafers); nPhase := 1;
+	1: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 4, Param := Param, WaferStatusList := Wafers); nPhase := 2;
+	2: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 4, Param := Param, WaferStatusList := Wafers); nPhase := 3;
+	3: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 4, Param := Param, WaferStatusList := Wafers); nPhase := 4;
+	4: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 4, Param := Param, WaferStatusList := Wafers); nPhase := 5;
+	5:
+		// Arrange：使用非零但不存在的 EndpointId。
+		Param.CmdType := E_SetMaterialCmdType.Clear; Param.TargetEndpointId := 99;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		// Act
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 4, Param := Param, WaferStatusList := Wafers);
+		// Assert
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = TO_UDINT(E_FrameworkServiceErrorCode.SetMaterial_TaEpNotFound), Message := 'Unknown target must publish the not-found error.');
+		nPhase := 0; TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ModifyUsesTheStartingSnapshot" Id="{2457a959-b37b-4f0a-90c3-a5d2c20de00c}">
+      <Declaration><![CDATA[METHOD ModifyUsesTheStartingSnapshot
+VAR_INST Service : FB_SetMaterialService; Ctrl : ST_ServiceCtrl; Context : ST_ServiceContext; Param : ST_MaterialParam; Wafers : ARRAY[1..2] OF ST_WaferStatus; nPhase : UINT; END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('ModifyUsesTheStartingSnapshot');
+
+CASE nPhase OF
+	0:
+		Wafers[1].EndpointId := 101; Wafers[2].EndpointId := 102;
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 1, Param := Param, WaferStatusList := Wafers); nPhase := 1;
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 1, Param := Param, WaferStatusList := Wafers); nPhase := 2;
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 1, Param := Param, WaferStatusList := Wafers); nPhase := 3;
+	3:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 1, Param := Param, WaferStatusList := Wafers); nPhase := 4;
+	4:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 1, Param := Param, WaferStatusList := Wafers); nPhase := 5;
+	5:
+		// Arrange：Starting 驗證並 snapshot Modify 參數。
+		Param.CmdType := E_SetMaterialCmdType.Modify; Param.TargetEndpointId := 101; Param.MaterialId := 'WAFER-A'; Param.MaterialOperateState := E_MaterialOperateState.Processing;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 1, Param := Param, WaferStatusList := Wafers);
+		Param.MaterialId := 'MUTATED-AFTER-START';
+		nPhase := 6;
+	6:
+		// Act：Execute 必須使用 Starting 的 snapshot，而不是目前輸入。
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 1, Param := Param, WaferStatusList := Wafers);
+		AssertTrue(Condition := (Wafers[1].MaterialContext.Id = 'WAFER-A') AND (Wafers[1].MaterialContext.OperationState = E_MaterialOperateState.Processing), Message := 'Modify must use the snapshotted material context.');
+		AssertTrue(Condition := Wafers[2].MaterialContext.Id = '', Message := 'Modify must not change another endpoint.');
+		nPhase := 0; TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="UnsupportedCommandIsRejected" Id="{50aa1085-ddb7-4b61-914d-18f021ced03b}">
+      <Declaration><![CDATA[METHOD UnsupportedCommandIsRejected
+VAR_INST Service : FB_SetMaterialService; Ctrl : ST_ServiceCtrl; Context : ST_ServiceContext; Param : ST_MaterialParam; Wafers : ARRAY[1..2] OF ST_WaferStatus; nPhase : UINT; END_VAR
+VAR
+	nInvalidCommand : INT := 9999;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('UnsupportedCommandIsRejected');
+
+CASE nPhase OF
+	0: Wafers[1].EndpointId := 1; Service(Ctrl := Ctrl, Context := Context, ServiceId := 6, Param := Param, WaferStatusList := Wafers); nPhase := 1;
+	1: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 6, Param := Param, WaferStatusList := Wafers); nPhase := 2;
+	2: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 6, Param := Param, WaferStatusList := Wafers); nPhase := 3;
+	3: Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset; Ctrl.PackMLIn.bCommandChangeRequest := TRUE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 6, Param := Param, WaferStatusList := Wafers); nPhase := 4;
+	4: Ctrl.PackMLIn.bCommandChangeRequest := FALSE; Service(Ctrl := Ctrl, Context := Context, ServiceId := 6, Param := Param, WaferStatusList := Wafers); nPhase := 5;
+	5:
+		// Arrange：模擬反序列化或上游資料損壞造成的未知 enum 值。
+		// 故意繞過 strict enum 的編譯期保護，模擬外部資料或記憶體損壞。
+		MEMCPY(
+			ADR(Param.CmdType),
+			ADR(nInvalidCommand),
+			SIZEOF(Param.CmdType));
+		Param.TargetEndpointId := 1;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start; Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		// Act
+		Service(Ctrl := Ctrl, Context := Context, ServiceId := 6, Param := Param, WaferStatusList := Wafers);
+		// Assert
+		AssertTrue(Condition := Service.Status.ErrorList[1].MainErrorId = TO_UDINT(E_FrameworkServiceErrorCode.SetMaterial_InvalidCmd), Message := 'Unknown material command must publish the invalid-command error.');
+		nPhase := 0; TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

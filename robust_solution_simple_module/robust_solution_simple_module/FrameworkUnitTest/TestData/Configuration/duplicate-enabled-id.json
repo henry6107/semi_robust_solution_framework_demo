@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 4,
+  "modules": [
+    { "enabled": true, "moduleType": "TestModule", "slot": 1, "id": 10 },
+    { "enabled": true, "moduleType": "TestModule", "slot": 2, "id": 10 }
+  ]
+}

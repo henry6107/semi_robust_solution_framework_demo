@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ReferenceManagerTests" Id="{63722501-8e00-4565-842e-ed97e514343f}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ReferenceManagerTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation><ST><![CDATA[InvalidInterfacesAreRejectedBeforeRegistration();
+RegisteredAdsSymbolCanBeResolved();]]></ST></Implementation>
+    <Method Name="InvalidInterfacesAreRejectedBeforeRegistration" Id="{609ca1a8-93d3-4f97-972f-62e717e70189}">
+      <Declaration><![CDATA[METHOD InvalidInterfacesAreRejectedBeforeRegistration
+VAR_INST Manager : FB_ReferenceManager; NoProvider : FB_FakeBaseUnit; Missing : I_BaseUnit; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('InvalidInterfacesAreRejectedBeforeRegistration');
+
+// Assert：未綁定 interface 與未實作 I_AdsSymbolProvider 的 BaseUnit 都必須拒絕。
+AssertFalse(Condition := Manager.M_RegisterReference(BaseUnit := Missing), Message := 'An unbound BaseUnit must be rejected.');
+AssertFalse(Condition := Manager.M_RegisterReference(BaseUnit := NoProvider), Message := 'A BaseUnit without ADS metadata provider must be rejected.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="RegisteredAdsSymbolCanBeResolved" Id="{1ad8e075-454e-45d4-8c1d-5b387c62326d}">
+      <Declaration><![CDATA[METHOD RegisteredAdsSymbolCanBeResolved
+VAR_INST Manager : FB_ReferenceManager; Json : FB_JsonReadWriteDataType; END_VAR
+VAR Source : I_BaseUnit; Resolved : I_BaseUnit; sName : STRING(255); hr : HRESULT; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('RegisteredAdsSymbolCanBeResolved');
+
+// Arrange：使用具名 GVL instance，讓 runtime 可由 address/size 取得穩定 ADS symbol。
+Source := GVL_TestSymbols.RegisteredBaseUnit;
+sName := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.RegisteredBaseUnit), pData := ADR(GVL_TestSymbols.RegisteredBaseUnit), hrErrorCode => hr);
+AssertTrue(Condition := (hr = 0) AND (sName <> ''), Message := 'Test BaseUnit must expose an ADS symbol.');
+
+// Act / Assert。
+AssertTrue(Condition := Manager.M_RegisterReference(BaseUnit := Source), Message := 'A symbol-backed BaseUnit must register.');
+Resolved := Manager.M_Resolve(Name := sName);
+AssertTrue(Condition := Resolved = Source, Message := 'Resolve must return the registered interface.');
+Resolved := Manager.M_Resolve(Name := 'GVL_TestSymbols.DoesNotExist');
+AssertTrue(Condition := (Resolved = 0) AND Manager.Error, Message := 'Unknown reference source must be explicit.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

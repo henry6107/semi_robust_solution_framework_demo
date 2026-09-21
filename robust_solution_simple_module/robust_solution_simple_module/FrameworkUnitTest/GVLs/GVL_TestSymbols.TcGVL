@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_TestSymbols" Id="{a886749b-098e-4870-80ce-893ed4efcaf0}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	// 具名全域變數會產生 ADS symbol，供 symbol/reflection 相關 runtime 測試使用。
+	InfrastructureBool : BOOL;
+	InfrastructureOutputBool : BOOL;
+	InfrastructureDInt : DINT;
+	InfrastructureLReal : LREAL;
+	InfrastructureText : STRING(80);
+	ModuleOne : ST_TestModuleFixture;
+	ModuleTwo : ST_TestModuleFixture;
+	RegisteredBaseUnit : FB_BaseUnit;
+	SecondaryBaseUnit : FB_BaseUnit;
+	UnprovidedBaseUnit : FB_FakeBaseUnit;
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

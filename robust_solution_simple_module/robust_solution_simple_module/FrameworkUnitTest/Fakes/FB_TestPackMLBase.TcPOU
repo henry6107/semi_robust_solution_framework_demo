@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_TestPackMLBase" Id="{fbab0130-eb9e-4e11-b950-04693733433a}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TestPackMLBase EXTENDS FB_PackMLBase
+VAR_INPUT
+	StartingDone : BOOL := TRUE;
+	ExecuteDone : BOOL;
+	CompletingDone : BOOL := TRUE;
+END_VAR
+VAR_OUTPUT
+	StartingCalls : UDINT;
+	ExecuteCalls : UDINT;
+	CompletingCalls : UDINT;
+	FirstScanCalls : UDINT;
+	StateChangeCalls : UDINT;
+	ModeChangeCalls : UDINT;
+	LastPreviousState : E_PackMLState;
+	LastNewState : E_PackMLState;
+END_VAR
+]]></Declaration>
+    <Implementation><ST><![CDATA[SUPER^();]]></ST></Implementation>
+    <Method Name="H_OnStarting" Id="{bbab1321-1405-4abe-bbae-d7d1d25e0eed}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+VAR_INPUT bFirstScan : BOOL; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[StartingCalls := StartingCalls + 1;
+IF bFirstScan THEN FirstScanCalls := FirstScanCalls + 1; END_IF
+IF StartingDone THEN H_OnStarting := E_PackMLHookResult.Done; ELSE H_OnStarting := E_PackMLHookResult.Busy; END_IF]]></ST></Implementation>
+    </Method>
+    <Method Name="H_OnExecute" Id="{80f5ba35-6335-40e8-b2f7-c91bba9d5363}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT bFirstScan : BOOL; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[ExecuteCalls := ExecuteCalls + 1;
+IF bFirstScan THEN FirstScanCalls := FirstScanCalls + 1; END_IF
+IF ExecuteDone THEN H_OnExecute := E_PackMLHookResult.Done; ELSE H_OnExecute := E_PackMLHookResult.Busy; END_IF]]></ST></Implementation>
+    </Method>
+    <Method Name="H_OnCompleting" Id="{dd3daed0-6fd0-4551-9dcb-8b835a680a1c}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnCompleting : E_PackMLHookResult
+VAR_INPUT bFirstScan : BOOL; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[CompletingCalls := CompletingCalls + 1;
+IF bFirstScan THEN FirstScanCalls := FirstScanCalls + 1; END_IF
+IF CompletingDone THEN H_OnCompleting := E_PackMLHookResult.Done; ELSE H_OnCompleting := E_PackMLHookResult.Busy; END_IF]]></ST></Implementation>
+    </Method>
+    <Method Name="H_OnStateChanged" Id="{70de1bd6-d66e-424c-8bf3-73ca6f36ab81}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStateChanged
+VAR_INPUT ePreviousState : E_PackMLState; eNewState : E_PackMLState; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[StateChangeCalls := StateChangeCalls + 1;
+LastPreviousState := ePreviousState;
+LastNewState := eNewState;]]></ST></Implementation>
+    </Method>
+    <Method Name="H_OnModeChanged" Id="{15ded099-dc08-416a-a882-ec410e03c04c}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnModeChanged
+VAR_INPUT ePreviousMode : T_PackMLMode; eNewMode : T_PackMLMode; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[ModeChangeCalls := ModeChangeCalls + 1;]]></ST></Implementation>
+    </Method>
+    <Method Name="M_TestRequestCommand" Id="{1af1bd83-d282-4d35-8443-268db81fd438}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TestRequestCommand : BOOL
+VAR_INPUT Command : E_PackMLCommand; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_TestRequestCommand := RequestCommand(eTargetCmd := Command);]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

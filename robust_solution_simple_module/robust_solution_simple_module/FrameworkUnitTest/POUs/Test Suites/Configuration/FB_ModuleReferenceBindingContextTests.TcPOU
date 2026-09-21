@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ModuleReferenceBindingContextTests" Id="{c69477bf-07aa-41e5-8085-1d5834344cf3}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleReferenceBindingContextTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation><ST><![CDATA[RequiredPortResolvesFromItsActualStorage();
+OptionalMissingAndUnknownConfiguredKeysDiffer();
+ScopeOrderingAndDuplicateTakePreserveFirstError();]]></ST></Implementation>
+    <Method Name="RequiredPortResolvesFromItsActualStorage" Id="{53ac0237-0ef8-4256-a2cd-958f558aae50}">
+      <Declaration><![CDATA[METHOD RequiredPortResolvesFromItsActualStorage
+VAR_INST Manager : FB_ReferenceManager; Context : FB_ModuleReferenceBindingContext; Json : FB_JsonReadWriteDataType; Config : ST_ModuleFileConfig; END_VAR
+VAR Source : I_BaseUnit; Resolved : I_BaseUnit; Bindings : I_ModuleReferenceBindings; sSource : STRING(255); sModule : STRING(255); sPort : STRING(80); sError : STRING(255); hr : HRESULT; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('RequiredPortResolvesFromItsActualStorage');
+
+// Arrange：註冊 BaseUnit source，並以實際 Module instance 的 ADS symbol 建立 scope。
+Source := GVL_TestSymbols.RegisteredBaseUnit;
+sSource := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.RegisteredBaseUnit), pData := ADR(GVL_TestSymbols.RegisteredBaseUnit), hrErrorCode => hr);
+sModule := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.ModuleOne), pData := ADR(GVL_TestSymbols.ModuleOne), hrErrorCode => hr);
+AssertTrue(Condition := Manager.M_RegisterReference(BaseUnit := Source), Message := 'Reference source must register.');
+Config.ReferenceCount := 1; Config.References[1].Name := 'BaseUnitPort'; Config.References[1].Source := sSource;
+AssertTrue(Condition := Context.M_Begin(ModuleConfig := Config, ReferenceManager := Manager), Message := 'Binding session must begin.');
+Bindings := Context;
+AssertTrue(Condition := Bindings.M_SetModuleScope(ModuleSymbol := sModule, ErrorMessage => sError), Message := 'Module scope must be accepted once.');
+
+// Act：即使 port 尚未綁定，ANY storage 仍可解析其相對名稱。
+Resolved := Bindings.M_TakeRequired(Port := GVL_TestSymbols.ModuleOne.BaseUnitPort, PortName => sPort, ErrorMessage => sError);
+AssertTrue(Condition := (Resolved = Source) AND (sPort = 'BaseUnitPort'), Message := 'Required port must resolve by its actual storage name.');
+AssertTrue(Condition := Context.M_End(), Message := 'All configured keys were consumed.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="OptionalMissingAndUnknownConfiguredKeysDiffer" Id="{ac055eed-2c1c-4b13-b1b7-a7e7c8600026}">
+      <Declaration><![CDATA[METHOD OptionalMissingAndUnknownConfiguredKeysDiffer
+VAR_INST OptionalContext : FB_ModuleReferenceBindingContext; UnknownContext : FB_ModuleReferenceBindingContext; Manager : FB_ReferenceManager; Json : FB_JsonReadWriteDataType; EmptyConfig : ST_ModuleFileConfig; UnknownConfig : ST_ModuleFileConfig; END_VAR
+VAR Bindings : I_ModuleReferenceBindings; Result : I_BaseUnit; sModule : STRING(255); sPort : STRING(80); sError : STRING(255); bPresent : BOOL; hr : HRESULT; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('OptionalMissingAndUnknownConfiguredKeysDiffer');
+
+sModule := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.ModuleOne), pData := ADR(GVL_TestSymbols.ModuleOne), hrErrorCode => hr);
+
+// Optional omission 是合法結果：Present=FALSE、無錯誤，End 仍成功。
+AssertTrue(Condition := OptionalContext.M_Begin(ModuleConfig := EmptyConfig, ReferenceManager := Manager), Message := 'Empty binding session must begin.');
+Bindings := OptionalContext;
+AssertTrue(Condition := Bindings.M_SetModuleScope(ModuleSymbol := sModule, ErrorMessage => sError), Message := 'Optional session needs a scope.');
+Result := Bindings.M_TakeOptional(Port := GVL_TestSymbols.ModuleOne.BaseUnitPort, PortName => sPort, Present => bPresent, ErrorMessage => sError);
+AssertTrue(Condition := (Result = 0) AND NOT bPresent AND (sError = ''), Message := 'Missing optional key must be a clean omission.');
+AssertTrue(Condition := OptionalContext.M_End(), Message := 'Optional omission must not leave an unknown key.');
+
+// Configured key 若未被 adapter 消費，End 必須拒絕。
+UnknownConfig.ReferenceCount := 1; UnknownConfig.References[1].Name := 'UnknownPort'; UnknownConfig.References[1].Source := 'unused';
+AssertTrue(Condition := UnknownContext.M_Begin(ModuleConfig := UnknownConfig, ReferenceManager := Manager), Message := 'Unknown-key session must begin.');
+AssertFalse(Condition := UnknownContext.M_End(), Message := 'Unconsumed configured key must fail End.');
+AssertTrue(Condition := UnknownContext.Error, Message := 'Unknown configured key must latch an error.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="ScopeOrderingAndDuplicateTakePreserveFirstError" Id="{d2db61fd-6f2a-4f9f-b65f-9bd4cb3505d2}">
+      <Declaration><![CDATA[METHOD ScopeOrderingAndDuplicateTakePreserveFirstError
+VAR_INST Context : FB_ModuleReferenceBindingContext; Manager : FB_ReferenceManager; Config : ST_ModuleFileConfig; Json : FB_JsonReadWriteDataType; END_VAR
+VAR Bindings : I_ModuleReferenceBindings; Source : I_BaseUnit; Result : I_BaseUnit; sSource : STRING(255); sModule : STRING(255); sPort : STRING(80); sError : STRING(255); hr : HRESULT; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('ScopeOrderingAndDuplicateTakePreserveFirstError');
+
+Source := GVL_TestSymbols.RegisteredBaseUnit;
+sSource := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.RegisteredBaseUnit), pData := ADR(GVL_TestSymbols.RegisteredBaseUnit), hrErrorCode => hr);
+sModule := Json.GetSymbolNameByAddress(nData := SIZEOF(GVL_TestSymbols.ModuleOne), pData := ADR(GVL_TestSymbols.ModuleOne), hrErrorCode => hr);
+Manager.M_RegisterReference(BaseUnit := Source);
+Config.ReferenceCount := 1; Config.References[1].Name := 'BaseUnitPort'; Config.References[1].Source := sSource;
+Context.M_Begin(ModuleConfig := Config, ReferenceManager := Manager); Bindings := Context;
+Bindings.M_SetModuleScope(ModuleSymbol := sModule, ErrorMessage => sError);
+Result := Bindings.M_TakeRequired(Port := GVL_TestSymbols.ModuleOne.BaseUnitPort, PortName => sPort, ErrorMessage => sError);
+Result := Bindings.M_TakeRequired(Port := GVL_TestSymbols.ModuleOne.BaseUnitPort, PortName => sPort, ErrorMessage => sError);
+AssertTrue(Condition := Context.Error AND (FIND(Context.ErrorMessage, 'more than once') > 0), Message := 'Taking one configured key twice must fail explicitly.');
+
+// 第一次錯誤鎖存後，後續 End 不可覆蓋診斷。
+AssertFalse(Condition := Context.M_End(), Message := 'A failed binding session cannot end successfully.');
+AssertTrue(Condition := FIND(Context.ErrorMessage, 'more than once') > 0, Message := 'The first binding error must be preserved.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

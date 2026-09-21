@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ServiceBaseTests" Id="{fde3765a-e13a-4360-9569-478f164a3111}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ServiceBaseTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	// Keep the Service instance at Test Suite scope so its state persists across test phases.
+	TestService : FB_TestableServiceBase;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[StartCommandIsRejectedWhileStopped();
+ErrorListPreservesFirstOccurrenceAndCapacity();
+DataListSupportsUpsertClearAndOverflow();]]></ST>
+    </Implementation>
+    <Method Name="StartCommandIsRejectedWhileStopped" Id="{0675f0af-6974-4ab9-b7ad-5bef50694169}">
+      <Declaration><![CDATA[METHOD StartCommandIsRejectedWhileStopped
+VAR_INST
+	Ctrl : ST_ServiceCtrl;
+	Context : ST_ServiceContext;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('StartCommandIsRejectedWhileStopped');
+
+CASE nPhase OF
+	0:
+		// Initial cyclic update leaves Undefined through the normal ServiceBase path.
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Aborted,
+			Message := 'Initial Service update must reach Aborted.');
+		AssertTrue(
+			Condition := TestService.Status.CompletionBehavior = E_ServiceCompletionBehavior.Unknown,
+			Message := 'The test Service must publish its configured Unknown completion behavior.');
+		nPhase := 1;
+
+	1:
+		// Clear is valid from Aborted and establishes Stopped through a public command.
+		Ctrl.RequestId := 1001;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped,
+			Message := 'Valid Clear from Aborted must establish Stopped.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.bCommandAccepted
+				AND NOT TestService.Status.PackMLOut.bCommandRejected,
+			Message := 'Clear must be accepted while establishing the test state.');
+		AssertTrue(
+			Condition := TestService.Status.ResponseId = 1001,
+			Message := 'Service must acknowledge the Clear request.');
+		nPhase := 2;
+
+	2:
+		// Withdraw Clear so the next command creates a new request edge.
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := (TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
+				AND NOT TestService.Status.PackMLOut.bCommandAccepted
+				AND NOT TestService.Status.PackMLOut.bCommandRejected
+				AND (TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.NoError),
+			Message := 'Withdrawing Clear must leave a clean Stopped command interface.');
+		nPhase := 3;
+
+	3:
+		// Start is only valid from Idle, so Stopped must reject it without transitioning.
+		Ctrl.RequestId := 1002;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped,
+			Message := 'Rejected Start must not leave Stopped.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.bCommandRejected
+				AND NOT TestService.Status.PackMLOut.bCommandAccepted,
+			Message := 'Start must be rejected while the Service is Stopped.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.StartNotAllowedFromCurrentState,
+			Message := 'Rejected Start must report the state-specific PackML ErrorID.');
+		AssertTrue(
+			Condition := TestService.Status.ResponseId = 1002,
+			Message := 'Service must acknowledge the rejected Start request.');
+		nPhase := 4;
+
+	4:
+		// A held request is already consumed; changing its payload must not execute Reset.
+		Ctrl.RequestId := 1003;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped,
+			Message := 'A command request held TRUE must not be processed again.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.bCommandRejected
+				AND (TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.StartNotAllowedFromCurrentState),
+			Message := 'Rejected Start feedback must stay latched while the request remains TRUE.');
+		AssertTrue(
+			Condition := TestService.Status.ResponseId = 1002,
+			Message := 'Changing request data without a falling edge must not update ResponseId.');
+		nPhase := 5;
+
+	5:
+		// The request falling edge clears rejection feedback and arms the next command.
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := (TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
+				AND NOT TestService.Status.PackMLOut.bCommandAccepted
+				AND NOT TestService.Status.PackMLOut.bCommandRejected
+				AND (TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.NoError),
+			Message := 'The request falling edge must clear rejected command feedback.');
+		nPhase := 6;
+
+	6:
+		// A fresh Reset request proves rejection did not block later valid commands.
+		Ctrl.RequestId := 1004;
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TestService(
+			Ctrl := Ctrl,
+			Context := Context,
+			ServiceId := 1);
+
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.eStateCurrent = E_PackMLState.Idle,
+			Message := 'Fresh Reset from Stopped must remain operable after a rejected Start.');
+		AssertTrue(
+			Condition := TestService.Status.PackMLOut.bCommandAccepted
+				AND NOT TestService.Status.PackMLOut.bCommandRejected
+				AND (TestService.Status.PackMLOut.eStateErrorID = E_PackMLErrorID.NoError),
+			Message := 'Fresh Reset must be accepted after rejection feedback is cleared.');
+		AssertTrue(
+			Condition := TestService.Status.ResponseId = 1004,
+			Message := 'Service must acknowledge the fresh Reset request.');
+		AssertTrue(
+			Condition := TestService.Status.CompletionBehavior = E_ServiceCompletionBehavior.Unknown,
+			Message := 'Completion behavior must remain stable across PackML state transitions.');
+
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ErrorListPreservesFirstOccurrenceAndCapacity" Id="{fb69b0c7-c9c3-4f61-91fb-274b0d58b712}">
+      <Declaration><![CDATA[METHOD ErrorListPreservesFirstOccurrenceAndCapacity
+VAR_INST
+	Service : FB_TestableServiceBase;
+	Ctrl : ST_ServiceCtrl;
+	Context : ST_ServiceContext;
+	bInitialized : BOOL;
+END_VAR
+VAR nIndex : UINT; bAccepted : BOOL; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('ErrorListPreservesFirstOccurrenceAndCapacity');
+
+IF NOT bInitialized THEN
+	// Arrange：先綁定持久 Context，確保錯誤 metadata 可安全取用。
+	Context.ModuleId := 41;
+	Context.UtcDateTime := '20260921120000000';
+	Service(Ctrl := Ctrl, Context := Context, ServiceId := 7);
+	Service.M_TestClearErrors();
+
+	// Act：第一筆成立；同 MainErrorId 在同一輪不得重複新增。
+	AssertTrue(Condition := Service.M_TestAddError(MainErrorId := 100, SourceErrorId := 5, Message := 'first'), Message := 'First error must be accepted.');
+	AssertFalse(Condition := Service.M_TestAddError(MainErrorId := 100, SourceErrorId := 9, Message := 'duplicate'), Message := 'Duplicate MainErrorId must be rejected.');
+	FOR nIndex := 2 TO Param_Config.MaxServiceError DO
+		bAccepted := Service.M_TestAddError(MainErrorId := 99 + UINT_TO_UDINT(nIndex), SourceErrorId := 0, Message := 'fill');
+	END_FOR
+	AssertFalse(Condition := Service.M_TestAddError(MainErrorId := 999, SourceErrorId := 0, Message := 'overflow'), Message := 'The first ten errors must be preserved at capacity.');
+
+	// Assert：framework 補上的 Module、Service、時間與 lifecycle 欄位正確。
+	AssertTrue(Condition := (Service.Status.ErrorList[1].ModuleId = 41) AND (Service.Status.ErrorList[1].ServiceId = 7), Message := 'Error identity must include Module and Service.');
+	AssertTrue(Condition := (Service.Status.ErrorList[1].Message = 'first') AND (Service.Status.ErrorList[1].SourceErrorId = 5), Message := 'Duplicate submission must not replace the first snapshot.');
+	AssertTrue(Condition := Service.Status.ErrorList[1].Active AND NOT Service.Status.ErrorList[1].Acknowledged, Message := 'A new Service error must be active and unacknowledged.');
+	bInitialized := TRUE;
+END_IF
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="DataListSupportsUpsertClearAndOverflow" Id="{71e7239f-d06a-4c74-a2bb-0ba7f9f5bdef}">
+      <Declaration><![CDATA[METHOD DataListSupportsUpsertClearAndOverflow
+VAR_INST Service : FB_TestableServiceBase; Ctrl : ST_ServiceCtrl; Context : ST_ServiceContext; bInitialized : BOOL; END_VAR
+VAR nIndex : UINT; bAccepted : BOOL; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('DataListSupportsUpsertClearAndOverflow');
+
+IF NOT bInitialized THEN
+	Service(Ctrl := Ctrl, Context := Context, ServiceId := 8);
+	Service.M_TestClearAllData();
+
+	// Arrange / Act：相同 DataId 是更新，不增加 Count。
+	AssertFalse(Condition := Service.M_TestUpdateData(DataId := 0, Name := 'invalid', DataType := E_DescriptorType.Integer_32bit, Unit := '', Value := '0'), Message := 'DataId zero must be rejected.');
+	AssertTrue(Condition := Service.M_TestUpdateData(DataId := 1, Name := 'speed', DataType := E_DescriptorType.Float_64bit, Unit := 'rpm', Value := '10'), Message := 'First data value must be accepted.');
+	AssertTrue(Condition := Service.M_TestUpdateData(DataId := 1, Name := 'speed', DataType := E_DescriptorType.Float_64bit, Unit := 'rpm', Value := '20'), Message := 'Existing data must be updated.');
+	AssertTrue(Condition := (Service.Status.Data.Count = 1) AND (Service.Status.Data.DataList[1].Value = '20'), Message := 'Upsert must retain one entry with the latest value.');
+
+	// Act：清除會釋放容量並重設 overflow。
+	AssertTrue(Condition := Service.M_TestClearData(DataId := 1), Message := 'Existing data must be removable.');
+	AssertFalse(Condition := Service.M_TestClearData(DataId := 1), Message := 'Clearing a missing data ID must report false.');
+	FOR nIndex := 1 TO Param_Config.MaxServiceData DO
+		bAccepted := Service.M_TestUpdateData(DataId := UINT_TO_UDINT(nIndex), Name := 'fill', DataType := E_DescriptorType.Integer_32bit, Unit := '', Value := '1');
+	END_FOR
+	AssertFalse(Condition := Service.M_TestUpdateData(DataId := 999, Name := 'overflow', DataType := E_DescriptorType.Integer_32bit, Unit := '', Value := '1'), Message := 'Data beyond capacity must be rejected.');
+	AssertTrue(Condition := Service.Status.Data.Overflow AND (Service.Status.Data.Count = Param_Config.MaxServiceData), Message := 'Capacity rejection must set Overflow without changing Count.');
+	bInitialized := TRUE;
+END_IF
+
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

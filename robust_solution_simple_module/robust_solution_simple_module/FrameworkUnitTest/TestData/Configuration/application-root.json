@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 4,
+  "modules": [
+    {
+      "enabled": true,
+      "moduleType": "TestModule",
+      "slot": 1,
+      "id": 1002,
+      "inputMappings": [
+        {
+          "source": "GVL_TestSymbols.InfrastructureBool",
+          "target": "InputBool",
+          "sourceDataType": "BOOL",
+          "targetDataType": "BOOL"
+        }
+      ],
+      "outputMappings": [
+        {
+          "source": "OutputBool",
+          "target": "GVL_TestSymbols.InfrastructureOutputBool",
+          "sourceDataType": "BOOL",
+          "targetDataType": "BOOL"
+        }
+      ],
+      "references": {},
+      "variableList": [],
+      "alarmList": []
+    }
+  ]
+}

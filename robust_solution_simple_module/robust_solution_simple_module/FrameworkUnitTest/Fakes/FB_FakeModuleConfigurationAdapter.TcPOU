@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_FakeModuleConfigurationAdapter" Id="{b1ea3b4d-83e5-4305-bd54-e48496dc57ae}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_FakeModuleConfigurationAdapter IMPLEMENTS I_ModuleConfigurationAdapter
+VAR_INPUT
+	FailClear : BOOL;
+	FailPrepare : BOOL;
+	FailApply : BOOL;
+END_VAR
+VAR_OUTPUT
+	ClearCalls : UINT;
+	PrepareCalls : UINT;
+	ApplyCalls : UINT;
+	LastSlot : UINT;
+	LastRevision : UDINT;
+END_VAR
+]]></Declaration>
+    <Implementation><ST><![CDATA[]]></ST></Implementation>
+    <Method Name="M_ApplyRuntimeConfig" Id="{b34e7107-4b5a-4d5d-9c69-2a70bb13aecd}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ApplyRuntimeConfig : BOOL
+VAR_INPUT Slot : UINT; END_VAR
+VAR_IN_OUT CONSTANT RuntimeConfig : ST_ModuleRuntimeConfig; END_VAR
+VAR_OUTPUT ErrorMessage : STRING(255); END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[ApplyCalls := ApplyCalls + 1; LastSlot := Slot; LastRevision := RuntimeConfig.Revision;
+M_ApplyRuntimeConfig := NOT FailApply;
+IF FailApply THEN ErrorMessage := 'Fake adapter apply failure.'; ELSE ErrorMessage := ''; END_IF]]></ST></Implementation>
+    </Method>
+    <Method Name="M_ClearAllSlots" Id="{15f3fd3e-9c70-48b5-922e-e63213acc936}">
+      <Declaration><![CDATA[METHOD PUBLIC M_ClearAllSlots : BOOL
+VAR_OUTPUT ErrorMessage : STRING(255); END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[ClearCalls := ClearCalls + 1; M_ClearAllSlots := NOT FailClear;
+IF FailClear THEN ErrorMessage := 'Fake adapter clear failure.'; ELSE ErrorMessage := ''; END_IF]]></ST></Implementation>
+    </Method>
+    <Method Name="M_IsSlotSupported" Id="{40dcb094-4087-4c15-8687-a6cbb559ac30}">
+      <Declaration><![CDATA[METHOD PUBLIC M_IsSlotSupported : BOOL
+VAR_INPUT Slot : UINT; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_IsSlotSupported := (Slot >= 1) AND (Slot <= 2);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_PrepareInstance" Id="{e7839eee-6e15-4de0-a2f2-efe62fa7486d}">
+      <Declaration><![CDATA[METHOD PUBLIC M_PrepareInstance : BOOL
+VAR_INPUT Slot : UINT; ReferenceBindings : I_ModuleReferenceBindings; END_VAR
+VAR_IN_OUT ModuleConfig : ST_ModuleFileConfig; LinkVariableManager : FB_LinkVariableManager; END_VAR
+VAR_OUTPUT ModuleSymbol : STRING(255); ErrorMessage : STRING(255); END_VAR
+VAR bOk : BOOL; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[PrepareCalls := PrepareCalls + 1; LastSlot := Slot; ModuleSymbol := ''; ErrorMessage := '';
+IF FailPrepare THEN ErrorMessage := 'Fake adapter prepare failure.'; M_PrepareInstance := FALSE; RETURN; END_IF
+IF Slot = 1 THEN
+	bOk := LinkVariableManager.M_BeginModuleRegistration(Address := ADR(GVL_TestSymbols.ModuleOne), Size := SIZEOF(GVL_TestSymbols.ModuleOne), ModuleConfig := ModuleConfig);
+	bOk := LinkVariableManager.M_RegisterModuleNode(Variable := GVL_TestSymbols.ModuleOne.InputBool, Access := E_VariableAccess.ReadWrite);
+	bOk := LinkVariableManager.M_RegisterModuleNode(Variable := GVL_TestSymbols.ModuleOne.OutputBool, Access := E_VariableAccess.ReadWrite);
+	bOk := LinkVariableManager.M_RegisterModuleNode(Variable := GVL_TestSymbols.ModuleOne.LongRealValue, Access := E_VariableAccess.ReadWrite);
+ELSE
+	bOk := LinkVariableManager.M_BeginModuleRegistration(Address := ADR(GVL_TestSymbols.ModuleTwo), Size := SIZEOF(GVL_TestSymbols.ModuleTwo), ModuleConfig := ModuleConfig);
+	bOk := LinkVariableManager.M_RegisterModuleNode(Variable := GVL_TestSymbols.ModuleTwo.InputBool, Access := E_VariableAccess.ReadWrite);
+	bOk := LinkVariableManager.M_RegisterModuleNode(Variable := GVL_TestSymbols.ModuleTwo.OutputBool, Access := E_VariableAccess.ReadWrite);
+	bOk := LinkVariableManager.M_RegisterModuleNode(Variable := GVL_TestSymbols.ModuleTwo.LongRealValue, Access := E_VariableAccess.ReadWrite);
+END_IF
+IF NOT bOk OR NOT LinkVariableManager.M_EndModuleRegistration(ModuleSymbol => ModuleSymbol) THEN ErrorMessage := LinkVariableManager.ErrorMessage; M_PrepareInstance := FALSE; RETURN; END_IF
+M_PrepareInstance := TRUE;]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

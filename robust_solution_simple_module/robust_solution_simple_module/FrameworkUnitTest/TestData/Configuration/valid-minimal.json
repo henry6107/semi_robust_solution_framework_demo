@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 4,
+  "modules": [
+    {
+      "enabled": true,
+      "moduleType": "TestModule",
+      "slot": 1,
+      "id": 1001,
+      "inputMappings": [],
+      "outputMappings": [],
+      "references": {},
+      "variableList": [],
+      "alarmList": []
+    }
+  ]
+}

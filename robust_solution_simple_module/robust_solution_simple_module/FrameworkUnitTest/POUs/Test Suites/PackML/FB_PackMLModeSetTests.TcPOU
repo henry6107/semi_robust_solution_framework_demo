@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_PackMLModeSetTests" Id="{fabe26da-a610-4cf2-a3d3-f6002e1539fa}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_PackMLModeSetTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	_ModeSet : FB_TestPackMLModeSet;
+END_VAR
+]]></Declaration>
+    <Implementation><ST><![CDATA[SupportedModesAreExplicit();
+ManualModeUsesTheSafetyWhitelist();
+ManualAndProductionStateMatricesDiffer();]]></ST></Implementation>
+    <Method Name="SupportedModesAreExplicit" Id="{377c0366-9c5d-45f4-ba38-23221f6c537b}">
+      <Declaration><![CDATA[METHOD SupportedModesAreExplicit
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('SupportedModesAreExplicit');
+
+// Assert：只有 Manual 與 Production 是公開支援模式。
+AssertTrue(Condition := _ModeSet.M_IsModeAllowed(Mode := E_PackMLMode.Manual), Message := 'Manual mode must be supported.');
+AssertTrue(Condition := _ModeSet.M_IsModeAllowed(Mode := E_PackMLMode.Production), Message := 'Production mode must be supported.');
+AssertFalse(Condition := _ModeSet.M_IsModeAllowed(Mode := E_PackMLMode.Unknown), Message := 'Unknown mode must be rejected.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="ManualModeUsesTheSafetyWhitelist" Id="{2f8f923d-d14c-4c4b-984e-3a1999bc758e}">
+      <Declaration><![CDATA[METHOD ManualModeUsesTheSafetyWhitelist
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('ManualModeUsesTheSafetyWhitelist');
+
+// Arrange / Act / Assert：Manual 只允許 reset/start/stop/abort/clear。
+AssertTrue(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Reset, Mode := E_PackMLMode.Manual), Message := 'Manual Reset must be allowed.');
+AssertTrue(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Start, Mode := E_PackMLMode.Manual), Message := 'Manual Start must be allowed.');
+AssertTrue(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Stop, Mode := E_PackMLMode.Manual), Message := 'Manual Stop must be allowed.');
+AssertTrue(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Abort, Mode := E_PackMLMode.Manual), Message := 'Manual Abort must be allowed.');
+AssertTrue(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Clear, Mode := E_PackMLMode.Manual), Message := 'Manual Clear must be allowed.');
+AssertFalse(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Hold, Mode := E_PackMLMode.Manual), Message := 'Manual Hold must be rejected.');
+AssertFalse(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Unhold, Mode := E_PackMLMode.Manual), Message := 'Manual Unhold must be rejected.');
+AssertFalse(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Suspend, Mode := E_PackMLMode.Manual), Message := 'Manual Suspend must be rejected.');
+AssertFalse(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Unsuspend, Mode := E_PackMLMode.Manual), Message := 'Manual Unsuspend must be rejected.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="ManualAndProductionStateMatricesDiffer" Id="{bc0e739e-aa0a-4703-bfe4-03ed9a9f6163}">
+      <Declaration><![CDATA[METHOD ManualAndProductionStateMatricesDiffer
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('ManualAndProductionStateMatricesDiffer');
+
+// Manual 允許核心操作狀態，但不允許 Held、Suspended、Complete。
+AssertTrue(Condition := _ModeSet.M_IsStateAllowed(Mode := E_PackMLMode.Manual, State := E_PackMLState.Idle), Message := 'Manual Idle must be supported.');
+AssertTrue(Condition := _ModeSet.M_IsStateAllowed(Mode := E_PackMLMode.Manual, State := E_PackMLState.Execute), Message := 'Manual Execute must be supported.');
+AssertFalse(Condition := _ModeSet.M_IsStateAllowed(Mode := E_PackMLMode.Manual, State := E_PackMLState.Held), Message := 'Manual Held must be rejected.');
+AssertFalse(Condition := _ModeSet.M_IsStateAllowed(Mode := E_PackMLMode.Manual, State := E_PackMLState.Suspended), Message := 'Manual Suspended must be rejected.');
+AssertFalse(Condition := _ModeSet.M_IsStateAllowed(Mode := E_PackMLMode.Manual, State := E_PackMLState.Complete), Message := 'Manual Complete must be rejected.');
+
+// Production 接受完整 PackML state surface。
+AssertTrue(Condition := _ModeSet.M_IsStateAllowed(Mode := E_PackMLMode.Production, State := E_PackMLState.Held), Message := 'Production Held must be supported.');
+AssertTrue(Condition := _ModeSet.M_IsCommandAllowed(Command := E_PackMLCommand.Suspend, Mode := E_PackMLMode.Production), Message := 'Production Suspend must be supported.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

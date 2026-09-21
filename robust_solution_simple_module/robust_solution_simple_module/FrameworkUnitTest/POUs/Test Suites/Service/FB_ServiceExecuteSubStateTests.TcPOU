@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ServiceExecuteSubStateTests" Id="{0ea83c82-7616-4d06-bce2-f25ba3b3e2cf}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ServiceExecuteSubStateTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	TimelineService : FB_TestableServiceBase;
+	OverflowService : FB_TestableServiceBase;
+	CarryoverService : FB_TestableCarryoverSubStateService;
+	SnapshotCoordinator : FB_ServiceCoordinator;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[SecondRunDoesNotRecordCarryoverFinish();
+TimelineTracksTransitionsAndClearsOnStarting();
+OverflowPreservesFirstThirtyRecords();
+CoordinatorSnapshotUsesCurrentStepOnly();]]></ST>
+    </Implementation>
+    <Method Name="CoordinatorSnapshotUsesCurrentStepOnly" Id="{8164b434-bd08-48b7-b066-c07821d2c0c7}">
+      <Declaration><![CDATA[METHOD CoordinatorSnapshotUsesCurrentStepOnly
+VAR_INST
+	UpperCtrl : ST_ServiceCtrl;
+	EffectiveCtrl : ST_ServiceCtrl;
+	UpperParam : UDINT;
+	EffectiveParam : UDINT;
+	Status : ST_ServiceStatus;
+	Snapshot : ST_ServiceExecutionSnapshot;
+	bInitialized : BOOL;
+END_VAR
+VAR
+	bOk : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('CoordinatorSnapshotUsesCurrentStepOnly');
+
+IF NOT bInitialized THEN
+	bOk := SnapshotCoordinator.M_BeginRegistration();
+	bOk := bOk AND SnapshotCoordinator.M_Register(
+		ServiceId := 17,
+		AllowCompositeCall := FALSE,
+		UpperParam := UpperParam,
+		EffectiveParam := EffectiveParam,
+		UpperCtrl := UpperCtrl,
+		EffectiveCtrl := EffectiveCtrl,
+		Status := Status);
+	bOk := bOk AND SnapshotCoordinator.M_Seal();
+	bInitialized := TRUE;
+ELSE
+	bOk := SnapshotCoordinator.Ready;
+END_IF
+
+Status.ServiceId := 17;
+Status.PackMLOut.eStateCurrent := E_PackMLState.Execute;
+Status.ExecuteSubState.CurrentStep := 42;
+Status.ExecuteSubState.RecordCount := 1;
+Status.ExecuteSubState.Records[1].Step := 7;
+SnapshotCoordinator.M_ObserveCycle();
+bOk := bOk AND SnapshotCoordinator.M_GetServiceSnapshotById(ServiceId := 17, Snapshot => Snapshot);
+
+AssertTrue(Condition := bOk AND Snapshot.Valid AND (Snapshot.ExecuteSubState = 42),
+	Message := 'Coordinator snapshots must copy only ExecuteSubState.CurrentStep.');
+TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="OverflowPreservesFirstThirtyRecords" Id="{a020ad6f-e81c-456a-b8bd-b0b355d11784}">
+      <Declaration><![CDATA[METHOD OverflowPreservesFirstThirtyRecords
+VAR_INST
+	Ctrl : ST_ServiceCtrl;
+	Context : ST_ServiceContext;
+	nPhase : UINT;
+	NextState : UDINT := 1;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('OverflowPreservesFirstThirtyRecords');
+
+CASE nPhase OF
+	0:
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2,
+			TestExecuteSubState := 0, TestExecuteSubStateName := 'Overflow');
+		nPhase := 1;
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2);
+		nPhase := 2;
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2);
+		nPhase := 3;
+	3:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2);
+		nPhase := 4;
+	4:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2);
+		nPhase := 5;
+	5:
+		Context.UtcDateTime := '20260916100000000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2,
+			TestExecuteSubState := 1);
+		nPhase := 6;
+	6:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		IF NextState <= 31 THEN
+			OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2,
+				TestExecuteSubState := NextState);
+			NextState := NextState + 1;
+		ELSE
+			nPhase := 7;
+		END_IF
+	7:
+		AssertTrue(Condition := (OverflowService.Status.ExecuteSubState.CurrentStep = 31)
+			AND (OverflowService.Status.ExecuteSubState.RecordCount = Param_Config.MaxExecuteSubStateRecords)
+			AND OverflowService.Status.ExecuteSubState.Overflow,
+			Message := 'The thirty-first transition must set Overflow while retaining the current state.');
+		AssertTrue(Condition := (OverflowService.Status.ExecuteSubState.Records[1].Step = 1)
+			AND (OverflowService.Status.ExecuteSubState.Records[30].Step = 30)
+			AND (OverflowService.Status.ExecuteSubState.Records[30].EndTimestamp <> ''),
+			Message := 'Overflow must preserve the first thirty complete record slots.');
+		Context.UtcDateTime := '20260916100100000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Stop;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2);
+		nPhase := 8;
+	8:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2);
+		nPhase := 9;
+	9:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2);
+		nPhase := 10;
+	10:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2);
+		nPhase := 11;
+	11:
+		Context.UtcDateTime := '20260916100200000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2,
+			TestExecuteSubState := 99);
+		AssertTrue(Condition := (OverflowService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (OverflowService.Status.ExecuteSubState.RecordCount = 0)
+			AND NOT OverflowService.Status.ExecuteSubState.Overflow
+			AND (OverflowService.Status.ExecuteSubState.Records[1].Step = 0),
+			Message := 'The next Starting must clear Count, Overflow, and every old record before sampling.');
+		nPhase := 12;
+	12:
+		Context.UtcDateTime := '20260916100200001';
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		OverflowService(Ctrl := Ctrl, Context := Context, ServiceId := 2,
+			TestExecuteSubState := 99);
+		AssertTrue(Condition := (OverflowService.Status.ExecuteSubState.CurrentStep = 99)
+			AND (OverflowService.Status.ExecuteSubState.RecordCount = 1)
+			AND NOT OverflowService.Status.ExecuteSubState.Overflow
+			AND (OverflowService.Status.ExecuteSubState.Records[1].Step = 99)
+			AND (OverflowService.Status.ExecuteSubState.Records[2].Step = 0),
+			Message := 'The first evaluated Execute action must start the new timeline after clearing.');
+		NextState := 1;
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SecondRunDoesNotRecordCarryoverFinish" Id="{fc34773f-1d01-4d38-b185-da186d165c2b}">
+      <Declaration><![CDATA[METHOD SecondRunDoesNotRecordCarryoverFinish
+VAR_INST
+	Ctrl : ST_ServiceCtrl;
+	Context : ST_ServiceContext;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('SecondRunDoesNotRecordCarryoverFinish');
+
+CASE nPhase OF
+	0:
+		CarryoverService(Ctrl := Ctrl, Context := Context, ServiceId := 3);
+		nPhase := 1;
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		CarryoverService(Ctrl := Ctrl, Context := Context, ServiceId := 3);
+		nPhase := 2;
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		CarryoverService(Ctrl := Ctrl, Context := Context, ServiceId := 3);
+		nPhase := 3;
+	3:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		CarryoverService(Ctrl := Ctrl, Context := Context, ServiceId := 3);
+		nPhase := 4;
+	4:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		CarryoverService(Ctrl := Ctrl, Context := Context, ServiceId := 3);
+		nPhase := 5;
+	5:
+		Context.UtcDateTime := '20260916110000000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		CarryoverService(Ctrl := Ctrl, Context := Context, ServiceId := 3);
+		AssertTrue(
+			Condition := (CarryoverService.Status.PackMLOut.eStateCurrent = E_PackMLState.Execute)
+				AND (CarryoverService.Status.ExecuteSubState.CurrentStep = 0)
+				AND (CarryoverService.Status.ExecuteSubState.RecordCount = 0),
+			Message := 'Starting-to-Execute transition must not record the previous Finish substate.');
+		nPhase := 6;
+	6:
+		Context.UtcDateTime := '20260916110000001';
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		CarryoverService(Ctrl := Ctrl, Context := Context, ServiceId := 3);
+		AssertTrue(
+			Condition := (CarryoverService.Status.ExecuteSubState.CurrentStep = 1)
+				AND (CarryoverService.Status.ExecuteSubState.RecordCount = 1)
+				AND (CarryoverService.Status.ExecuteSubState.Records[1].Step = 1)
+				AND (CarryoverService.Status.ExecuteSubState.Records[1].Name = 'LiftReady')
+				AND (CarryoverService.Status.ExecuteSubState.Records[2].Step = 0),
+			Message := 'First evaluated Execute scan must start directly with LiftReady.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="TimelineTracksTransitionsAndClearsOnStarting" Id="{c5b309db-29a5-4548-96e9-a953e3c8b44e}">
+      <Declaration><![CDATA[METHOD TimelineTracksTransitionsAndClearsOnStarting
+VAR_INST
+	Ctrl : ST_ServiceCtrl;
+	Context : ST_ServiceContext;
+	nPhase : UINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TEST('TimelineTracksTransitionsAndClearsOnStarting');
+
+CASE nPhase OF
+	0:
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1,
+			TestExecuteSubState := 0, TestExecuteSubStateName := '',
+			StartingBusyScans := 0, CompleteExecute := FALSE);
+		nPhase := 1;
+
+	1:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Clear;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 2;
+
+	2:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 3;
+
+	3:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 4;
+
+	4:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 5;
+
+	5:
+		// Keep Starting active for one scan. Its first scan clears all prior history.
+		Context.UtcDateTime := '20260916090000000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1,
+			TestExecuteSubState := 1, TestExecuteSubStateName := 'A', StartingBusyScans := 1);
+		AssertTrue(Condition := TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Starting,
+			Message := 'Configured Starting must remain active for one scan.');
+		AssertTrue(Condition := (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.RecordCount = 0)
+			AND NOT TimelineService.Status.ExecuteSubState.Overflow,
+			Message := 'Entering Starting must clear the Execute substate timeline.');
+		nPhase := 6;
+
+	6:
+		Context.UtcDateTime := '20260916090100000';
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Execute)
+			AND (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.RecordCount = 0),
+			Message := 'Starting-to-Execute transition must wait for an evaluated Execute action.');
+		nPhase := 7;
+
+	7:
+		// The first scan that actually evaluates Execute publishes the first occurrence.
+		Context.UtcDateTime := '20260916090200000';
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.ExecuteSubState.CurrentStep = 1)
+			AND (TimelineService.Status.ExecuteSubState.RecordCount = 1)
+			AND (TimelineService.Status.ExecuteSubState.Records[1].Step = 1)
+			AND (TimelineService.Status.ExecuteSubState.Records[1].Name = 'A')
+			AND (TimelineService.Status.ExecuteSubState.Records[1].StartTimestamp = Context.UtcDateTime)
+			AND (TimelineService.Status.ExecuteSubState.Records[1].EndTimestamp = ''),
+			Message := 'The first evaluated Execute action must open the first occurrence.');
+		nPhase := 8;
+
+	8:
+		Context.UtcDateTime := '20260916090300000';
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1,
+			TestExecuteSubState := 2, TestExecuteSubStateName := 'B');
+		AssertTrue(Condition := (TimelineService.Status.ExecuteSubState.RecordCount = 2)
+			AND (TimelineService.Status.ExecuteSubState.Records[1].EndTimestamp = Context.UtcDateTime)
+			AND (TimelineService.Status.ExecuteSubState.Records[2].StartTimestamp = Context.UtcDateTime),
+			Message := 'A transition must close the old occurrence and open the new one at one timestamp.');
+		nPhase := 9;
+
+	9:
+		Context.UtcDateTime := '20260916090400000';
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1,
+			TestExecuteSubState := 1, TestExecuteSubStateName := 'A');
+		AssertTrue(Condition := (TimelineService.Status.ExecuteSubState.RecordCount = 3)
+			AND (TimelineService.Status.ExecuteSubState.Records[3].Step = 1),
+			Message := 'Re-entering the same state must append a distinct occurrence.');
+		nPhase := 10;
+
+	10:
+		Context.UtcDateTime := '20260916090500000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Hold;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Held)
+			AND (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.Records[3].EndTimestamp = Context.UtcDateTime),
+			Message := 'Hold must close the active occurrence while preserving history.');
+		nPhase := 11;
+
+	11:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 12;
+
+	12:
+		Context.UtcDateTime := '20260916090600000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Unhold;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Execute)
+			AND (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.RecordCount = 3),
+			Message := 'Unhold transition must wait for an evaluated Execute action.');
+		nPhase := 13;
+
+	13:
+		Context.UtcDateTime := '20260916090600001';
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.ExecuteSubState.CurrentStep = 1)
+			AND (TimelineService.Status.ExecuteSubState.RecordCount = 4)
+			AND (TimelineService.Status.ExecuteSubState.Records[4].Step = 1)
+			AND (TimelineService.Status.ExecuteSubState.Records[4].StartTimestamp = Context.UtcDateTime),
+			Message := 'The first Execute action after Unhold must append the resumed occurrence.');
+		nPhase := 14;
+
+	14:
+		Context.UtcDateTime := '20260916090700000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Suspend;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Suspended)
+			AND (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.Records[4].EndTimestamp = Context.UtcDateTime),
+			Message := 'Suspend must close the active occurrence.');
+		nPhase := 15;
+
+	15:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 16;
+
+	16:
+		Context.UtcDateTime := '20260916090800000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Unsuspend;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Execute)
+			AND (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.RecordCount = 4),
+			Message := 'Unsuspend transition must wait for an evaluated Execute action.');
+		nPhase := 17;
+
+	17:
+		Context.UtcDateTime := '20260916090800001';
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.ExecuteSubState.CurrentStep = 1)
+			AND (TimelineService.Status.ExecuteSubState.RecordCount = 5)
+			AND (TimelineService.Status.ExecuteSubState.Records[5].Step = 1)
+			AND (TimelineService.Status.ExecuteSubState.Records[5].StartTimestamp = Context.UtcDateTime),
+			Message := 'The first Execute action after Unsuspend must append without clearing history.');
+		nPhase := 18;
+
+	18:
+		Context.UtcDateTime := '20260916090900000';
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1, CompleteExecute := TRUE);
+		AssertTrue(Condition := (TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Completing)
+			AND (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.Records[5].EndTimestamp = Context.UtcDateTime),
+			Message := 'Natural completion must close the active occurrence.');
+		nPhase := 19;
+
+	19:
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1, CompleteExecute := FALSE);
+		nPhase := 20;
+
+	20:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 21;
+
+	21:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 22;
+
+	22:
+		// This Starting completes in the same scan. It clears history but does not sample Execute yet.
+		Context.UtcDateTime := '20260916091000000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1,
+			TestExecuteSubState := 2, TestExecuteSubStateName := 'B', StartingBusyScans := 0);
+		AssertTrue(Condition := (TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Execute)
+			AND (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.RecordCount = 0)
+			AND NOT TimelineService.Status.ExecuteSubState.Overflow
+			AND (TimelineService.Status.ExecuteSubState.Records[1].Step = 0),
+			Message := 'Same-scan Starting must clear history and defer Execute sampling.');
+		nPhase := 23;
+
+	23:
+		Context.UtcDateTime := '20260916091000001';
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.ExecuteSubState.CurrentStep = 2)
+			AND (TimelineService.Status.ExecuteSubState.RecordCount = 1)
+			AND (TimelineService.Status.ExecuteSubState.Records[1].Step = 2)
+			AND (TimelineService.Status.ExecuteSubState.Records[1].StartTimestamp = Context.UtcDateTime)
+			AND (TimelineService.Status.ExecuteSubState.Records[2].Step = 0),
+			Message := 'The next Execute action must record the first substate of the new run.');
+		nPhase := 24;
+
+	24:
+		Context.UtcDateTime := '20260916091100000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Stop;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Stopped)
+			AND (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.Records[1].EndTimestamp = Context.UtcDateTime),
+			Message := 'Stop must close the active occurrence.');
+		nPhase := 25;
+
+	25:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 26;
+
+	26:
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Reset;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 27;
+
+	27:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 28;
+
+	28:
+		Context.UtcDateTime := '20260916091200000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Start;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1,
+			TestExecuteSubState := 3, TestExecuteSubStateName := 'C');
+		nPhase := 29;
+
+	29:
+		Ctrl.PackMLIn.bCommandChangeRequest := FALSE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		nPhase := 30;
+
+	30:
+		Context.UtcDateTime := '20260916091300000';
+		Ctrl.PackMLIn.eCommand := E_PackMLCommand.Abort;
+		Ctrl.PackMLIn.bCommandChangeRequest := TRUE;
+		TimelineService(Ctrl := Ctrl, Context := Context, ServiceId := 1);
+		AssertTrue(Condition := (TimelineService.Status.PackMLOut.eStateCurrent = E_PackMLState.Aborted)
+			AND (TimelineService.Status.ExecuteSubState.CurrentStep = 0)
+			AND (TimelineService.Status.ExecuteSubState.Records[1].EndTimestamp = Context.UtcDateTime),
+			Message := 'Abort must close the active occurrence.');
+		nPhase := 0;
+		TEST_FINISHED();
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
+

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_TestPackMLModeSet" Id="{a49bdd1e-9068-4c63-aa1e-c479d0926e12}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TestPackMLModeSet EXTENDS FB_PackMLModeSet
+]]></Declaration>
+    <Implementation><ST><![CDATA[SUPER^();]]></ST></Implementation>
+    <Method Name="M_IsCommandAllowed" Id="{f1917c46-827c-4ef8-9f61-1e0d50948db1}">
+      <Declaration><![CDATA[METHOD PUBLIC M_IsCommandAllowed : BOOL
+VAR_INPUT Command : E_PackMLCommand; Mode : T_PackMLMode; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_IsCommandAllowed := H_IsCommandAllowedByMode(eRequestedCommand := Command, eActiveMode := Mode);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_IsModeAllowed" Id="{7ef8dcc3-c10e-4858-b556-84188e06c4d9}">
+      <Declaration><![CDATA[METHOD PUBLIC M_IsModeAllowed : BOOL
+VAR_INPUT Mode : T_PackMLMode; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_IsModeAllowed := H_IsModeSupported(eRequestedMode := Mode);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_IsStateAllowed" Id="{20e53377-0a23-4e6e-bac9-4c38fe914d17}">
+      <Declaration><![CDATA[METHOD PUBLIC M_IsStateAllowed : BOOL
+VAR_INPUT Mode : T_PackMLMode; State : E_PackMLState; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_IsStateAllowed := H_IsStateSupportedByMode(eRequestedMode := Mode, eCurrentState := State);]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

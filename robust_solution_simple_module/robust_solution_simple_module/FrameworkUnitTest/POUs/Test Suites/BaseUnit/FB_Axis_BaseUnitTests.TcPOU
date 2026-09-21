@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_Axis_BaseUnitTests" Id="{ab0b7a9c-83e6-4c31-8b10-5f0f500c221f}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Axis_BaseUnitTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	_Axis : FB_Axis_BaseUnit;
+END_VAR
+]]></Declaration>
+    <Implementation><ST><![CDATA[AllMotionCommandsRejectNonOwners();
+InitialAxisFeedbackIsNeutral();
+NcAxisLifecycleRequiresExplicitRuntimeOptIn();]]></ST></Implementation>
+    <Method Name="AllMotionCommandsRejectNonOwners" Id="{57d6d132-aa75-4c56-adb5-4802d945d8c6}">
+      <Declaration><![CDATA[METHOD AllMotionCommandsRejectNonOwners
+VAR bDone : BOOL; bInVelocity : BOOL; bError : BOOL; nErrorId : UDINT; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('AllMotionCommandsRejectNonOwners');
+
+// Arrange：不先取得 ownership，避免任何 MC function block 被啟動。
+// Act / Assert：六種命令都必須在 ownership gate 被拒絕，輸出保持中性。
+AssertFalse(Condition := _Axis.M_Halt(OwnerId := 1, Execute := TRUE, Deceleration := 1, Done => bDone, Error => bError), Message := 'Halt must reject a non-owner.');
+AssertFalse(Condition := bDone OR bError, Message := 'Rejected Halt outputs must be neutral.');
+AssertFalse(Condition := _Axis.M_Jog(OwnerId := 1, JogForward := TRUE, JogBackwards := FALSE, Mode := E_JogMode.MC_JOGMODE_CONTINOUS, Position := 0, Velocity := 1, Acceleration := 1, Deceleration := 1, Done => bDone, Error => bError, ErrorId => nErrorId), Message := 'Jog must reject a non-owner.');
+AssertFalse(Condition := bDone OR bError OR (nErrorId <> 0), Message := 'Rejected Jog outputs must be neutral.');
+AssertFalse(Condition := _Axis.M_MoveAbs(OwnerId := 1, Execute := TRUE, Position := 1, Velocity := 1, Acceleration := 1, Deceleration := 1, Done => bDone, Error => bError, ErrorId => nErrorId), Message := 'MoveAbs must reject a non-owner.');
+AssertFalse(Condition := _Axis.M_MoveVel(OwnerId := 1, Execute := TRUE, Direction := MC_Direction.MC_Positive_Direction, Velocity := 1, Acceleration := 1, Deceleration := 1, InVelocity => bInVelocity, Error => bError), Message := 'MoveVel must reject a non-owner.');
+AssertFalse(Condition := _Axis.M_Reset(OwnerId := 1, Execute := TRUE, Done => bDone, Error => bError, ErrorId => nErrorId), Message := 'Reset must reject a non-owner.');
+AssertFalse(Condition := _Axis.M_Stop(OwnerId := 1, Execute := TRUE, Deceleration := 1, Done => bDone, Error => bError, ErrorId => nErrorId), Message := 'Stop must reject a non-owner.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="InitialAxisFeedbackIsNeutral" Id="{a9c6ef6e-bb2f-41a1-8f2c-0c1526d7568d}">
+      <Declaration><![CDATA[METHOD InitialAxisFeedbackIsNeutral
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('InitialAxisFeedbackIsNeutral');
+
+// Assert：未連結 NC 軸時，只驗證不需驅動硬體的公開 feedback 初值。
+AssertTrue(Condition := (_Axis.AxisActualPosition = 0.0) AND (_Axis.AxisActualVelocity = 0.0), Message := 'Unlinked Axis feedback must start at zero.');
+AssertFalse(Condition := _Axis.AxisHasJob, Message := 'An unlinked Axis must not report a job.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="NcAxisLifecycleRequiresExplicitRuntimeOptIn" Id="{17aec118-0c94-4288-aa23-dd887803bccb}">
+      <Declaration><![CDATA[METHOD NcAxisLifecycleRequiresExplicitRuntimeOptIn
+VAR bDone : BOOL; bError : BOOL; nErrorId : UDINT; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[// RuntimeDependent：未在 XAE 將此 instance 的 _Axis 連到模擬 NC 軸時，不註冊這個 TcUnit case。
+IF NOT GVL_TestConfig.RunNcAxisRuntimeTests THEN RETURN; END_IF
+TEST('NcAxisLifecycleRequiresExplicitRuntimeOptIn');
+
+// Arrange：XAE 中已完成模擬 NC 軸連結，且測試開關明確設為 TRUE。
+AssertTrue(Condition := _Axis.M_AcquireResource(OwnerId := 77), Message := 'Runtime owner must acquire the Axis.');
+
+// Act：Reset 命令由真實 MC_Reset 執行；多掃描完成狀態由目標 Runtime 驗證。
+AssertTrue(Condition := _Axis.M_Reset(OwnerId := 77, Execute := TRUE, Done => bDone, Error => bError, ErrorId => nErrorId), Message := 'Owned Reset must reach the MC layer.');
+_Axis.M_CyclicUpdate();
+AssertFalse(Condition := bDone AND bError, Message := 'MC Reset must never report Done and Error together.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

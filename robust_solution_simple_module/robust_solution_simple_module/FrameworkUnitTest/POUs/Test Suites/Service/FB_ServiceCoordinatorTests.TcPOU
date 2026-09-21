@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_ServiceCoordinatorTests" Id="{bafc27be-3549-4040-9647-c869d5216d34}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ServiceCoordinatorTests EXTENDS TcUnit.FB_TestSuite
+]]></Declaration>
+    <Implementation><ST><![CDATA[RegistrationRejectsInvalidAndDuplicateServices();
+UpperStartSnapshotsParametersOnlyOnNewEdge();
+ModuleLifecycleWhitelistAndCompositeHandshakeAreEnforced();]]></ST></Implementation>
+    <Method Name="RegistrationRejectsInvalidAndDuplicateServices" Id="{91d011f2-53a8-4ba8-b018-26e0b6874595}">
+      <Declaration><![CDATA[METHOD RegistrationRejectsInvalidAndDuplicateServices
+VAR_INST Coordinator : FB_ServiceCoordinator; UpperCtrl : ST_ServiceCtrl; EffectiveCtrl : ST_ServiceCtrl; UpperParam : ST_TestServiceParam; EffectiveParam : ST_TestServiceParam; Status : ST_ServiceStatus; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('RegistrationRejectsInvalidAndDuplicateServices');
+
+// Arrange：先開始一次 registration session。
+AssertTrue(Condition := Coordinator.M_BeginRegistration(), Message := 'Registration must begin exactly once.');
+
+// Act / Assert：ServiceId=0 是第一個錯誤，後續註冊不得覆蓋。
+AssertFalse(Condition := Coordinator.M_Register(ServiceId := 0, AllowCompositeCall := FALSE, UpperCtrl := UpperCtrl, EffectiveCtrl := EffectiveCtrl, UpperParam := UpperParam, EffectiveParam := EffectiveParam, Status := Status), Message := 'ServiceId zero must be rejected.');
+AssertTrue(Condition := Coordinator.RegistrationError = E_ServiceRegistrationError.InvalidServiceId, Message := 'Invalid ServiceId must expose a stable error.');
+AssertFalse(Condition := Coordinator.M_Register(ServiceId := 1, AllowCompositeCall := FALSE, UpperCtrl := UpperCtrl, EffectiveCtrl := EffectiveCtrl, UpperParam := UpperParam, EffectiveParam := EffectiveParam, Status := Status), Message := 'A latched registration error must block later writes.');
+AssertTrue(Condition := Coordinator.FailedServiceId = 0, Message := 'First-error identity must be preserved.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="UpperStartSnapshotsParametersOnlyOnNewEdge" Id="{7a363566-ee3b-4432-866b-36d5154f8b84}">
+      <Declaration><![CDATA[METHOD UpperStartSnapshotsParametersOnlyOnNewEdge
+VAR_INST Coordinator : FB_ServiceCoordinator; UpperCtrl : ST_ServiceCtrl; EffectiveCtrl : ST_ServiceCtrl; UpperParam : ST_TestServiceParam; EffectiveParam : ST_TestServiceParam; Status : ST_ServiceStatus; ModuleCtrl : ST_ModuleCtrl; bInitialized : BOOL; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('UpperStartSnapshotsParametersOnlyOnNewEdge');
+
+IF NOT bInitialized THEN
+	// Arrange：以 suite instance 儲存區註冊，確保 reflection 可取得真實 DUT 名稱。
+	Coordinator.M_BeginRegistration();
+	AssertTrue(Condition := Coordinator.M_Register(ServiceId := 1, AllowCompositeCall := FALSE, UpperCtrl := UpperCtrl, EffectiveCtrl := EffectiveCtrl, UpperParam := UpperParam, EffectiveParam := EffectiveParam, Status := Status), Message := 'Valid Service storage must register.');
+	AssertTrue(Condition := Coordinator.M_Seal(), Message := 'A non-empty valid registry must seal.');
+	bInitialized := TRUE;
+END_IF
+
+// Act：新的 Start 上升沿 snapshot UpperParam。
+UpperParam.Value := 10; UpperParam.Sequence := 1;
+UpperCtrl.RequestId := 100; UpperCtrl.PackMLIn.eCommand := E_PackMLCommand.Start; UpperCtrl.PackMLIn.bCommandChangeRequest := TRUE;
+Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
+AssertTrue(Condition := EffectiveCtrl.PackMLIn.bCommandChangeRequest AND (EffectiveParam.Value = 10) AND (EffectiveParam.Sequence = 1), Message := 'New Start edge must copy control and parameters.');
+
+// request 保持高位時，變更 UpperParam 不可污染本次執行 snapshot。
+UpperParam.Value := 99; UpperParam.Sequence := 2;
+Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
+AssertTrue(Condition := (EffectiveParam.Value = 10) AND (EffectiveParam.Sequence = 1), Message := 'Held Start request must keep the first parameter snapshot.');
+
+// Falling edge re-arm，下一個 Start 才能取得新參數。
+UpperCtrl.PackMLIn.bCommandChangeRequest := FALSE;
+Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
+UpperCtrl.PackMLIn.bCommandChangeRequest := TRUE;
+Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
+AssertTrue(Condition := (EffectiveParam.Value = 99) AND (EffectiveParam.Sequence = 2), Message := 'A new Start edge must refresh the snapshot.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+    <Method Name="ModuleLifecycleWhitelistAndCompositeHandshakeAreEnforced" Id="{82032770-a7fc-461b-94fb-2a0e8d21a5bf}">
+      <Declaration><![CDATA[METHOD ModuleLifecycleWhitelistAndCompositeHandshakeAreEnforced
+VAR_INST Coordinator : FB_ServiceCoordinator; CompositeUpperCtrl : ST_ServiceCtrl; CompositeEffectiveCtrl : ST_ServiceCtrl; CompositeUpperParam : ST_TestServiceParam; CompositeEffectiveParam : ST_TestServiceParam; CompositeStatus : ST_ServiceStatus; ChildUpperCtrl : ST_ServiceCtrl; ChildEffectiveCtrl : ST_ServiceCtrl; ChildUpperParam : ST_TestServiceParam; ChildEffectiveParam : ST_TestServiceParam; ChildStatus : ST_ServiceStatus; ModuleCtrl : ST_ModuleCtrl; Dependencies : ARRAY[1..Param_Config.MaxCompositeDependencies] OF UDINT; StartParam : ST_TestServiceParam; bInitialized : BOOL; END_VAR
+VAR Submit : E_ServiceCallSubmitResult; Ownership : E_CompositeOwnershipState; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('ModuleLifecycleWhitelistAndCompositeHandshakeAreEnforced');
+
+IF NOT bInitialized THEN
+	Coordinator.M_BeginRegistration();
+	Coordinator.M_Register(ServiceId := 10, AllowCompositeCall := FALSE, UpperCtrl := CompositeUpperCtrl, EffectiveCtrl := CompositeEffectiveCtrl, UpperParam := CompositeUpperParam, EffectiveParam := CompositeEffectiveParam, Status := CompositeStatus);
+	Coordinator.M_Register(ServiceId := 20, AllowCompositeCall := TRUE, UpperCtrl := ChildUpperCtrl, EffectiveCtrl := ChildEffectiveCtrl, UpperParam := ChildUpperParam, EffectiveParam := ChildEffectiveParam, Status := ChildStatus);
+	Dependencies[1] := 20;
+	AssertTrue(Condition := Coordinator.M_RegisterCompositeDefinition(CompositeServiceId := 10, DependencyCount := 1, DependencyIds := Dependencies), Message := 'Valid Composite definition must register.');
+	AssertTrue(Condition := Coordinator.M_Seal(), Message := 'Composite registry must seal.');
+	ChildStatus.PackMLOut.eStateCurrent := E_PackMLState.Idle;
+	ChildStatus.CompletionBehavior := E_ServiceCompletionBehavior.NaturalCompletion;
+	Coordinator.M_ObserveCycle();
+	AssertTrue(Condition := Coordinator.M_RequestCompositeOwnership(CompositeServiceId := 10), Message := 'Composite ownership request must queue.');
+	Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
+	Ownership := Coordinator.M_GetCompositeOwnershipState(CompositeServiceId := 10);
+	AssertTrue(Condition := Ownership = E_CompositeOwnershipState.Owned, Message := 'Idle NaturalCompletion dependency must be owned atomically.');
+	bInitialized := TRUE;
+END_IF
+
+// Act：內部 Start 排入後，高位維持到 Service 回覆相同 RequestId。
+StartParam.Value := 55; StartParam.Sequence := 9;
+Submit := Coordinator.M_SubmitInternalStart(CallerServiceId := 10, TargetServiceId := 20, RequestId := 123, Parameters := StartParam);
+AssertTrue(Condition := Submit = E_ServiceCallSubmitResult.Queued, Message := 'Owner may queue dependency Start.');
+AssertTrue(Condition := Coordinator.M_SubmitInternalCommand(CallerServiceId := 10, TargetServiceId := 20, RequestId := 124, Command := E_PackMLCommand.Stop) = E_ServiceCallSubmitResult.Busy, Message := 'A second internal request must be busy.');
+Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
+AssertTrue(Condition := ChildEffectiveCtrl.PackMLIn.bCommandChangeRequest AND (ChildEffectiveCtrl.RequestId = 123) AND (ChildEffectiveParam.Value = 55), Message := 'Queued Start must become the effective child request.');
+ChildStatus.ResponseId := 123; ChildStatus.PackMLOut.bCommandAccepted := TRUE;
+Coordinator.M_ObserveCycle();
+AssertTrue(Condition := Coordinator.M_GetInternalCommandState(CallerServiceId := 10, TargetServiceId := 20) = E_ServiceInternalCommandState.Accepted, Message := 'Matching accepted response must finish the handshake.');
+Coordinator.M_PrepareCycle(ModuleInExecute := TRUE, ModuleCtrl := ModuleCtrl);
+AssertFalse(Condition := ChildEffectiveCtrl.PackMLIn.bCommandChangeRequest, Message := 'Accepted request must be forced low for one scan.');
+
+// Module 離開 Execute 時只允許 Stop/Abort/Clear/Reset；Start 必須被清除。
+ModuleCtrl.PackMLIn.eCommand := E_PackMLCommand.Start; ModuleCtrl.PackMLIn.bCommandChangeRequest := TRUE;
+Coordinator.M_PrepareCycle(ModuleInExecute := FALSE, ModuleCtrl := ModuleCtrl);
+AssertFalse(Condition := ChildEffectiveCtrl.PackMLIn.bCommandChangeRequest, Message := 'Module Start must never fan out to Services.');
+ModuleCtrl.PackMLIn.eCommand := E_PackMLCommand.Stop;
+Coordinator.M_PrepareCycle(ModuleInExecute := FALSE, ModuleCtrl := ModuleCtrl);
+AssertTrue(Condition := ChildEffectiveCtrl.PackMLIn.bCommandChangeRequest AND (ChildEffectiveCtrl.PackMLIn.eCommand = E_PackMLCommand.Stop), Message := 'Module Stop must fan out to Services.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

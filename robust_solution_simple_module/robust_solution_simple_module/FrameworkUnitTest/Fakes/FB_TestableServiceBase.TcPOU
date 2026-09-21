@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_TestableServiceBase" Id="{7adf419a-ced5-4d73-8e72-9b5f880b380e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TestableServiceBase EXTENDS FB_ServiceBase
+VAR_INPUT
+	TestExecuteSubState : UDINT;
+	TestExecuteSubStateName : STRING(80);
+	StartingBusyScans : UINT;
+	CompleteExecute : BOOL;
+END_VAR
+VAR
+	_StartingBusyScanCount : UINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[M_UpdateService(CompletionBehavior := E_ServiceCompletionBehavior.Unknown);]]></ST>
+    </Implementation>
+    <Method Name="H_GetExecuteSubState" Id="{2dc051f5-9daa-4f09-b028-817999b9263f}">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubState : UDINT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_GetExecuteSubState := TestExecuteSubState;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_GetExecuteSubStateName" Id="{dfbfb96c-1a4a-42a8-a91e-d29695c3cd26}">
+      <Declaration><![CDATA[METHOD PROTECTED H_GetExecuteSubStateName : STRING(80)
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[H_GetExecuteSubStateName := TestExecuteSubStateName;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnExecute" Id="{95b9d8dc-56d2-4fa1-848d-a09c7342fc00}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnExecute : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF CompleteExecute THEN
+	H_OnExecute := E_PackMLHookResult.Done;
+ELSE
+	H_OnExecute := E_PackMLHookResult.Busy;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="H_OnStarting" Id="{2f99d974-134f-4165-b909-3aa9bcd87425}">
+      <Declaration><![CDATA[METHOD PROTECTED H_OnStarting : E_PackMLHookResult
+VAR_INPUT
+	bFirstScan : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF bFirstScan THEN
+	_StartingBusyScanCount := 0;
+END_IF
+
+IF _StartingBusyScanCount < StartingBusyScans THEN
+	_StartingBusyScanCount := _StartingBusyScanCount + 1;
+	H_OnStarting := E_PackMLHookResult.Busy;
+ELSE
+	H_OnStarting := E_PackMLHookResult.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_TestAddError" Id="{9872bd95-5cda-439d-a56f-17dff8fe4268}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TestAddError : BOOL
+VAR_INPUT MainErrorId : UDINT; SourceErrorId : UDINT; Message : STRING; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_TestAddError := M_AddError(MainErrorId := MainErrorId, SourceErrorId := SourceErrorId, Message := Message);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_TestClearErrors" Id="{9f1a0861-faf8-4452-885d-9df0a0d8fb94}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TestClearErrors : BOOL
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_TestClearErrors := M_ClearAllError();]]></ST></Implementation>
+    </Method>
+    <Method Name="M_TestUpdateData" Id="{3048f9c6-1ece-4722-b64d-2fcc141b3035}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TestUpdateData : BOOL
+VAR_INPUT DataId : UDINT; Name : STRING(30); DataType : E_DescriptorType; Unit : STRING(10); Value : STRING(80); END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_TestUpdateData := M_UpdateData(DataId := DataId, Name := Name, DataType := DataType, Unit := Unit, Value := Value);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_TestClearData" Id="{1f550b43-697e-4a53-bc8f-75d4666b7804}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TestClearData : BOOL
+VAR_INPUT DataId : UDINT; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_TestClearData := M_ClearData(DataId := DataId);]]></ST></Implementation>
+    </Method>
+    <Method Name="M_TestClearAllData" Id="{3cfd514f-9c66-4845-a8b7-be3b24d3164f}">
+      <Declaration><![CDATA[METHOD PUBLIC M_TestClearAllData
+]]></Declaration>
+      <Implementation><ST><![CDATA[M_ClearAllData();]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

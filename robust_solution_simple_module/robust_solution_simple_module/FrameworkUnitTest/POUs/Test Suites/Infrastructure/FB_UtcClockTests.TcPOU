@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_UtcClockTests" Id="{90d12fa7-2ea2-4029-8b05-463bc92b0d30}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_UtcClockTests EXTENDS TcUnit.FB_TestSuite
+VAR
+	_Clock : FB_UtcClock;
+END_VAR
+]]></Declaration>
+    <Implementation><ST><![CDATA[UtcTimestampHasFixedSortableFormat();]]></ST></Implementation>
+    <Method Name="UtcTimestampHasFixedSortableFormat" Id="{4812c6fb-3f3a-4576-86e0-2c19d2d5250b}">
+      <Declaration><![CDATA[METHOD UtcTimestampHasFixedSortableFormat
+VAR nIndex : INT; sDigit : STRING(1); sFirst : STRING(20); bDigitsOnly : BOOL; END_VAR
+]]></Declaration>
+      <Implementation><ST><![CDATA[TEST('UtcTimestampHasFixedSortableFormat');
+
+// Arrange / Act：連續呼叫系統 UTC clock，固定格式應可直接做字典序比較。
+_Clock();
+sFirst := _Clock.UtcDateTime;
+_Clock();
+
+// Assert：YYYYMMDDHHMMSSUUU 共 17 位，且每一位都必須是十進位數字。
+bDigitsOnly := LEN(_Clock.UtcDateTime) = 17;
+FOR nIndex := 1 TO 17 DO
+	sDigit := MID(_Clock.UtcDateTime, 1, nIndex);
+	bDigitsOnly := bDigitsOnly AND (FIND('0123456789', sDigit) > 0);
+END_FOR
+AssertTrue(Condition := bDigitsOnly, Message := 'UTC timestamp must contain exactly 17 digits.');
+AssertTrue(Condition := _Clock.UtcDateTime >= sFirst, Message := 'Consecutive UTC timestamps must not move backwards.');
+
+TEST_FINISHED();]]></ST></Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

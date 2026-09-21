@@ -27,13 +27,130 @@
     <Compile Include="DUTs\ST_FakeAxisScriptStep.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\ST_ReferencePortTestBranch.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_TestModuleFixture.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_TestServiceParam.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\GVL_TestConfig.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\GVL_TestSymbols.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Fakes\FB_FakeAxis_BaseUnit.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PlcTask.TcTTO">
+    <Compile Include="Fakes\FB_FakeBaseUnit.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_FakeHookValueReader.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_FakeModuleConfigurationAdapter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_FakeModuleReferenceBindings.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_FakeVariableNodeReader.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_ReferencePortFixture.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_TestApplicationConfigRoot.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_TestableCarryoverSubStateService.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_TestableHookModule.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_TestableModuleBase.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_TestableServiceBase.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_TestCompositeService.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_TestPackMLBase.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Fakes\FB_TestPackMLModeSet.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\BaseUnit\FB_Axis_BaseUnitTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\BaseUnit\FB_BaseUnitTests.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\Test Suites\BaseUnit\FB_FakeAxis_BaseUnitTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Configuration\FB_ApplicationConfigRootTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Configuration\FB_ConfigValueSnapshotReaderTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Configuration\FB_LinkVariableManagerTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Configuration\FB_ModuleConfigurationManagerTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Configuration\FB_ModuleReferenceBindingContextTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Configuration\FB_ModuleTypeRegistryTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Configuration\FB_ReferenceManagerTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Infrastructure\FB_UtcClockTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Module\FB_ModuleAlarmManagerTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Module\FB_ModuleBaseTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\PackML\FB_PackMLBaseTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\PackML\FB_PackMLModeSetTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Service\FB_CompositeServiceBaseTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Service\FB_ServiceBaseTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Service\FB_ServiceCallerTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Service\FB_ServiceCoordinatorTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Service\FB_ServiceExecuteSubStateTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\Test Suites\Service\FB_SetMaterialServiceTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="PlcTask.TcTTO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\TEST_PROG.TcPOU">
@@ -47,6 +164,13 @@
     <Folder Include="POUs" />
     <Folder Include="POUs\Test Suites" />
     <Folder Include="POUs\Test Suites\BaseUnit" />
+    <Folder Include="POUs\Test Suites\Configuration" />
+    <Folder Include="POUs\Test Suites\Infrastructure" />
+    <Folder Include="POUs\Test Suites\Module" />
+    <Folder Include="POUs\Test Suites\PackML" />
+    <Folder Include="POUs\Test Suites\Service" />
+    <Folder Include="TestData" />
+    <Folder Include="TestData\Configuration" />
     <Folder Include="VISUs" />
   </ItemGroup>
   <ItemGroup>
@@ -66,10 +190,18 @@
       <DefaultResolution>Tc2_System, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc2_System</Namespace>
     </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Utilities">
+      <DefaultResolution>Tc2_Utilities, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Utilities</Namespace>
+    </PlaceholderReference>
     <PlaceholderReference Include="Tc3_Module">
       <DefaultResolution>Tc3_Module, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc3_Module</Namespace>
       <SystemLibrary>true</SystemLibrary>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_JsonXml">
+      <DefaultResolution>Tc3_JsonXml, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_JsonXml</Namespace>
     </PlaceholderReference>
     <PlaceholderReference Include="TcUnit">
       <DefaultResolution>TcUnit, * (www.tcunit.org)</DefaultResolution>
@@ -77,6 +209,24 @@
     </PlaceholderReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="TestData\Configuration\valid-minimal.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TestData\Configuration\application-root.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TestData\Configuration\unsupported-schema.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TestData\Configuration\legacy-ads-port.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TestData\Configuration\duplicate-enabled-id.json">
+      <SubType>Content</SubType>
+    </None>
+    <None Include="TestData\Configuration\malformed.json.invalid">
+      <SubType>Content</SubType>
+    </None>
     <None Include="FrameworkUnitTest.tmc">
       <SubType>Content</SubType>
     </None>
@@ -84,8 +234,8 @@
   <ProjectExtensions>
     <PlcProjectOptions>
       <XmlArchive>
-  <Data>
-    <o xml:space="preserve" t="OptionKey">
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
       <v n="Name">"&lt;ProjectRoot&gt;"</v>
       <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
         <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
@@ -161,14 +311,14 @@
       </d>
       <d n="Values" t="Hashtable" />
     </o>
-  </Data>
-  <TypeList>
-    <Type n="Boolean">System.Boolean</Type>
-    <Type n="Hashtable">System.Collections.Hashtable</Type>
-    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
-    <Type n="String">System.String</Type>
-  </TypeList>
-</XmlArchive>
+        </Data>
+        <TypeList>
+          <Type n="Boolean">System.Boolean</Type>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
     </PlcProjectOptions>
   </ProjectExtensions>
 </Project>
