@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_ConfigValueSnapshotReader" Id="{fa4763d6-6117-42aa-a0b3-a48b51b7f4b7}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_ConfigValueSnapshotReader
@@ -90,24 +90,6 @@ END_FOR
 
 Ready := NOT Error;]]></ST>
     </Implementation>
-    <Method Name="M_SetFirstError" Id="{7c30074d-20d4-415a-a499-1735aa1c13cd}">
-      <Declaration><![CDATA[METHOD PRIVATE M_SetFirstError
-VAR_INPUT
-	ErrorCodeValue : E_ConfigValueError;
-	SourceName : STRING(255);
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[IF Error THEN
-	RETURN;
-END_IF
-
-Error := TRUE;
-ErrorCode := ErrorCodeValue;
-ErrorMessage := F_ConfigValueErrorMessage(ErrorCode := ErrorCodeValue);
-ErrorSource := SourceName;]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="M_GetLReal" Id="{bcad1188-d864-4f96-a59a-b600466465ae}">
       <Declaration><![CDATA[METHOD PUBLIC M_GetLReal : LREAL
 VAR_INPUT
@@ -174,8 +156,12 @@ END_VAR
       <Implementation>
         <ST><![CDATA[Valid := FALSE;
 M_GetValueString := '';
-IF NOT Ready OR (SourceIndex < 1) OR (SourceIndex > _SourceCount)
-	OR NOT _ValueValid[SourceIndex] THEN
+IF NOT Ready OR (SourceIndex < 1) OR (SourceIndex > _SourceCount) THEN
+	RETURN;
+END_IF
+
+// TwinCAT 的普通 OR 不保證短路求值
+IF NOT _ValueValid[SourceIndex] THEN
 	RETURN;
 END_IF
 
@@ -202,6 +188,24 @@ ELSE
 END_CASE
 M_GetValueString := sValue;
 Valid := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_SetFirstError" Id="{7c30074d-20d4-415a-a499-1735aa1c13cd}">
+      <Declaration><![CDATA[METHOD PRIVATE M_SetFirstError
+VAR_INPUT
+	ErrorCodeValue : E_ConfigValueError;
+	SourceName : STRING(255);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Error THEN
+	RETURN;
+END_IF
+
+Error := TRUE;
+ErrorCode := ErrorCodeValue;
+ErrorMessage := F_ConfigValueErrorMessage(ErrorCode := ErrorCodeValue);
+ErrorSource := SourceName;]]></ST>
       </Implementation>
     </Method>
   </POU>
