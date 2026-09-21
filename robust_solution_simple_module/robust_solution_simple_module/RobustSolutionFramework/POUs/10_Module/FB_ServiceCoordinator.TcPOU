@@ -64,11 +64,15 @@ END_VAR
       <Declaration><![CDATA[METHOD PUBLIC FINAL M_BeginRegistration : BOOL
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_BeginRegistration := FALSE;
+        <ST><![CDATA[// 開啟一次性的 Service 註冊階段；必須先於 M_Register 與 M_Seal 呼叫。
+// 成功時會清除舊登錄資料與彙總狀態；重複呼叫則留下 RegistrationAlreadyStarted 錯誤。
+M_BeginRegistration := FALSE;
 IF _RegistrationStarted THEN
 	M_SetRegistrationError(Error := E_ServiceRegistrationError.RegistrationAlreadyStarted, ServiceId := 0);
 	RETURN;
 END_IF
+
+// 重設 Coordinator 的註冊內容，但不允許用此方法重新開啟已經開始過的註冊流程。
 MEMSET(ADR(_Entries), 0, SIZEOF(_Entries));
 _RegisteredCount := 0;
 _Sealed := FALSE;
@@ -111,9 +115,13 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_GetCompositeOwnershipState := E_CompositeOwnershipState.None;
+        <ST><![CDATA[// 查詢 Composite Service 的 ownership 流程狀態。
+// 找不到 Service 或目標不是 Composite 時回傳 None，呼叫端可將其視為無有效 ownership。
+M_GetCompositeOwnershipState := E_CompositeOwnershipState.None;
 nIndex := M_FindIndexByServiceId(ServiceId := CompositeServiceId);
 IF (nIndex = 0) OR NOT _Entries[nIndex].IsComposite THEN RETURN; END_IF
+
+// Pending 會在 M_PrepareCycle 中解析為 Owned、Rejected 或 Cancelled。
 M_GetCompositeOwnershipState := _Entries[nIndex].OwnershipState;]]></ST>
       </Implementation>
     </Method>
@@ -129,11 +137,15 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_GetInternalCommandState := E_ServiceInternalCommandState.None;
+        <ST><![CDATA[// 查詢 Composite 對指定 dependency 所送內部命令的握手狀態。
+// Caller、Target 或 dependency 關係無效時回傳 None，避免讀到其他 Service 的內部狀態。
+M_GetInternalCommandState := E_ServiceInternalCommandState.None;
 nCallerIndex := M_FindIndexByServiceId(ServiceId := CallerServiceId);
 nTargetIndex := M_FindIndexByServiceId(ServiceId := TargetServiceId);
 IF (nCallerIndex = 0) OR (nTargetIndex = 0) THEN RETURN; END_IF
 IF NOT M_IsDeclaredDependency(CompositeIndex := nCallerIndex, TargetServiceId := TargetServiceId) THEN RETURN; END_IF
+
+// ownership 已移轉時不公開舊狀態；Cancelled 例外保留，讓原 Caller 得知請求被取消。
 IF (_Entries[nTargetIndex].CompositeOwnerServiceId <> CallerServiceId)
 	AND (_Entries[nTargetIndex].InternalCommandState <> E_ServiceInternalCommandState.Cancelled) THEN RETURN; END_IF
 M_GetInternalCommandState := _Entries[nTargetIndex].InternalCommandState;]]></ST>
@@ -152,10 +164,14 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_GetServiceSnapshotById := FALSE;
+        <ST><![CDATA[// 依 ServiceId 取得最近一次 M_ObserveCycle 保存的執行快照，而非即時讀取 Service 狀態。
+// 查詢失敗或快照尚未建立時回傳 FALSE，並確保輸出 Snapshot 為零值。
+M_GetServiceSnapshotById := FALSE;
 MEMSET(ADR(Snapshot), 0, SIZEOF(Snapshot));
 nIndex := M_FindIndexByServiceId(ServiceId := ServiceId);
 IF nIndex = 0 THEN RETURN; END_IF
+
+// Valid 只有在 M_ObserveCycle 至少觀察過該 Service 一次後才會成立。
 Snapshot := _Entries[nIndex].ObservedSnapshot;
 M_GetServiceSnapshotById := Snapshot.Valid;]]></ST>
       </Implementation>
@@ -173,10 +189,14 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_GetServiceStatusByIndex := FALSE;
+        <ST><![CDATA[// 以 1-based 註冊索引複製 Service 的即時 Status，供 Module 層彙整 alarm、data 與狀態。
+// 索引或登錄儲存位置無效時回傳 FALSE，並將輸出 Status 清為零值。
+M_GetServiceStatusByIndex := FALSE;
 MEMSET(ADR(Status), 0, SIZEOF(Status));
 IF (Index = 0) OR (Index > _RegisteredCount) THEN RETURN; END_IF
 IF NOT _Entries[Index].InUse OR (_Entries[Index].StatusAddress = 0) THEN RETURN; END_IF
+
+// StatusAddress 指向 M_Register 時提供的長期存在變數；此處只複製內容，不保留新指標。
 pStatus := _Entries[Index].StatusAddress;
 Status := pStatus^;
 M_GetServiceStatusByIndex := TRUE;]]></ST>
@@ -216,21 +236,29 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_AllIdle := FALSE;
+        <ST><![CDATA[// 每個 PLC scan 在所有 Service 執行完成後呼叫，用來保存本週期結果。
+// Coordinator 未 Ready 或沒有已註冊 Service 時，所有彙總狀態維持 FALSE。
+_AllIdle := FALSE;
 _AllStopped := FALSE;
 _AllAborted := FALSE;
 IF NOT Ready OR (_RegisteredCount = 0) THEN RETURN; END_IF
+
+// 先假設所有 Service 位於同一目標狀態，再逐筆以 AND 收斂彙總結果。
 _AllIdle := TRUE;
 _AllStopped := TRUE;
 _AllAborted := TRUE;
 FOR nIndex := 1 TO _RegisteredCount DO
 	pStatus := _Entries[nIndex].StatusAddress;
+
+	// 保存穩定快照，讓 Composite 在下一個控制週期查詢 ResponseId、PackML 與執行步驟。
 	_Entries[nIndex].ObservedSnapshot.Valid := TRUE;
 	_Entries[nIndex].ObservedSnapshot.ServiceId := _Entries[nIndex].ServiceId;
 	_Entries[nIndex].ObservedSnapshot.ResponseId := pStatus^.ResponseId;
 	_Entries[nIndex].ObservedSnapshot.PackMLOut := pStatus^.PackMLOut;
 	_Entries[nIndex].ObservedSnapshot.ExecuteSubState := pStatus^.ExecuteSubState.CurrentStep;
 	_Entries[nIndex].ObservedSnapshot.CompletionBehavior := pStatus^.CompletionBehavior;
+
+	// 只有相同 RequestId 的回覆可完成內部命令；完成後要求 M_PrepareCycle 輸出一個低電位週期。
 	IF (_Entries[nIndex].InternalCommandState = E_ServiceInternalCommandState.RequestHigh)
 		AND (pStatus^.ResponseId = _Entries[nIndex].InternalRequestId) THEN
 		IF pStatus^.PackMLOut.bCommandAccepted THEN
@@ -241,6 +269,7 @@ FOR nIndex := 1 TO _RegisteredCount DO
 			_Entries[nIndex].InternalRequestMustGoLow := TRUE;
 		END_IF
 	END_IF
+	// 同步更新 Module lifecycle 使用的 AllIdle、AllStopped 與 AllAborted。
 	_AllIdle := _AllIdle AND (pStatus^.PackMLOut.eStateCurrent = E_PackMLState.Idle);
 	_AllStopped := _AllStopped AND (pStatus^.PackMLOut.eStateCurrent = E_PackMLState.Stopped);
 	_AllAborted := _AllAborted AND (pStatus^.PackMLOut.eStateCurrent = E_PackMLState.Aborted);
@@ -321,9 +350,11 @@ FOR nIndex := 1 TO _RegisteredCount DO
 		_Entries[nIndex].UpperModeWasHigh := bUpperModeHigh;
 		CONTINUE;
 	END_IF
+	
 	// A low level re-arms the corresponding upper request channel.
 	IF NOT bUpperCommandHigh THEN _Entries[nIndex].UpperCommandBlockedUntilFalse := FALSE; END_IF
 	IF NOT bUpperModeHigh THEN _Entries[nIndex].UpperModeBlockedUntilFalse := FALSE; END_IF
+	
 	// A Service owned by a Composite accepts only the owner's internal command path;
 	// direct upper commands and all upper mode changes remain suppressed.
 	IF _Entries[nIndex].CompositeOwnerServiceId <> 0 THEN
@@ -331,11 +362,13 @@ FOR nIndex := 1 TO _RegisteredCount DO
 		IF bUpperModeHigh THEN _Entries[nIndex].UpperModeBlockedUntilFalse := TRUE; END_IF
 		pEffectiveCtrl^.PackMLIn.eMode := E_PackMLMode.Unknown;
 		pEffectiveCtrl^.PackMLIn.bModeChangeRequest := FALSE;
+		
 		// After acceptance or rejection, force one low scan to complete the request handshake.
 		IF _Entries[nIndex].InternalRequestMustGoLow THEN
 			pEffectiveCtrl^.PackMLIn.eCommand := E_PackMLCommand.None;
 			pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
 			_Entries[nIndex].InternalRequestMustGoLow := FALSE;
+			
 		// Promote a queued command to the asserted request state, then hold it high
 		// until M_ObserveCycle sees the matching Service response.
 		ELSIF _Entries[nIndex].InternalCommandState = E_ServiceInternalCommandState.Queued THEN
@@ -343,22 +376,27 @@ FOR nIndex := 1 TO _RegisteredCount DO
 			pEffectiveCtrl^.PackMLIn.eCommand := _Entries[nIndex].InternalCommand;
 			pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := TRUE;
 			_Entries[nIndex].InternalCommandState := E_ServiceInternalCommandState.RequestHigh;
+			
 		ELSIF _Entries[nIndex].InternalCommandState = E_ServiceInternalCommandState.RequestHigh THEN
 			pEffectiveCtrl^.RequestId := _Entries[nIndex].InternalRequestId;
 			pEffectiveCtrl^.PackMLIn.eCommand := _Entries[nIndex].InternalCommand;
 			pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := TRUE;
+			
 		ELSE
 			pEffectiveCtrl^.PackMLIn.eCommand := E_PackMLCommand.None;
 			pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
 		END_IF
+		
 		_Entries[nIndex].UpperCommandWasHigh := bUpperCommandHigh;
 		_Entries[nIndex].UpperModeWasHigh := bUpperModeHigh;
 		CONTINUE;
 	END_IF
+	
 	// With no Composite owner, the Service normally follows its direct upper control.
 	pEffectiveCtrl^ := pUpperCtrl^;
 	IF _Entries[nIndex].UpperCommandBlockedUntilFalse THEN
 		pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
+		
 	ELSE
 		// Snapshot parameters only on a newly asserted Start request. This keeps one
 		// execution's effective parameters stable while the upper input remains high.
@@ -369,10 +407,12 @@ FOR nIndex := 1 TO _RegisteredCount DO
 				srcAddr := _Entries[nIndex].UpperParamAddress, n := _Entries[nIndex].ParameterSize);
 		END_IF
 	END_IF
+	
 	// Mode requests use the same return-low re-arm rule as command requests.
 	IF _Entries[nIndex].UpperModeBlockedUntilFalse THEN
 		pEffectiveCtrl^.PackMLIn.bModeChangeRequest := FALSE;
 	END_IF
+	
 	_Entries[nIndex].UpperCommandWasHigh := bUpperCommandHigh;
 	_Entries[nIndex].UpperModeWasHigh := bUpperModeHigh;
 END_FOR]]></ST>
@@ -466,8 +506,12 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_Register := FALSE;
+        <ST><![CDATA[// 在 M_BeginRegistration 與 M_Seal 之間登錄一個 Service 的控制、參數與狀態儲存位置。
+// 此方法保存呼叫端變數的位址而非內容，因此這些變數必須與 Coordinator 具有相同或更長生命週期。
+M_Register := FALSE;
 IF (_RegistrationError <> E_ServiceRegistrationError.None) OR NOT _RegistrationStarted THEN RETURN; END_IF
+
+// 註冊封存後不可再新增；註冊錯誤採 first-error-wins，後續呼叫只會回傳 FALSE。
 IF _Sealed THEN
 	M_SetRegistrationError(Error := E_ServiceRegistrationError.RegistryAlreadySealed, ServiceId := ServiceId);
 	RETURN;
@@ -486,6 +530,8 @@ IF _RegisteredCount >= Param_Config.MaxServicesPerModule THEN
 	M_SetRegistrationError(Error := E_ServiceRegistrationError.CapacityExceeded, ServiceId := ServiceId);
 	RETURN;
 END_IF
+
+// 控制、狀態與 ANY 參數都必須指向有效儲存空間。
 IF (ADR(UpperCtrl) = 0) OR (ADR(EffectiveCtrl) = 0) OR (ADR(Status) = 0)
 	OR (UpperParam.pValue = 0) OR (EffectiveParam.pValue = 0)
 	OR (UpperParam.diSize <= 0) OR (EffectiveParam.diSize <= 0) THEN
@@ -494,6 +540,8 @@ IF (ADR(UpperCtrl) = 0) OR (ADR(EffectiveCtrl) = 0) OR (ADR(Status) = 0)
 END_IF
 nUpperParamSize := DINT_TO_UDINT(UpperParam.diSize);
 nEffectiveParamSize := DINT_TO_UDINT(EffectiveParam.diSize);
+
+// Upper 與 Effective 參數不只大小必須相同，實際 DUT 型別名稱也必須一致。
 IF nUpperParamSize <> nEffectiveParamSize THEN
 	M_SetRegistrationError(Error := E_ServiceRegistrationError.ParameterSizeMismatch, ServiceId := ServiceId);
 	RETURN;
@@ -510,6 +558,8 @@ IF sUpperParamType <> sEffectiveParamType THEN
 	M_SetRegistrationError(Error := E_ServiceRegistrationError.ParameterTypeMismatch, ServiceId := ServiceId);
 	RETURN;
 END_IF
+
+// 所有驗證通過後才提交 entry，避免留下半完成的註冊資料。
 nTargetIndex := _RegisteredCount + 1;
 _Entries[nTargetIndex].InUse := TRUE;
 _Entries[nTargetIndex].ServiceId := ServiceId;
@@ -544,7 +594,9 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_RegisterCompositeDefinition := FALSE;
+        <ST><![CDATA[// 為已註冊的 Composite Service 宣告可呼叫的 dependency 清單；應在所有 Service 註冊後、M_Seal 前呼叫。
+// DependencyIds 的位址會被保存而非複製，因此陣列必須在 Coordinator 使用期間持續存在且不得任意改寫。
+M_RegisterCompositeDefinition := FALSE;
 IF (_RegistrationError <> E_ServiceRegistrationError.None) OR NOT _RegistrationStarted THEN RETURN; END_IF
 IF _Sealed THEN
 	M_SetRegistrationError(Error := E_ServiceRegistrationError.RegistryAlreadySealed, ServiceId := CompositeServiceId);
@@ -567,6 +619,8 @@ IF DependencyCount > Param_Config.MaxCompositeDependencies THEN
 	M_SetRegistrationError(Error := E_ServiceRegistrationError.CompositeDependencyCapacityExceeded, ServiceId := CompositeServiceId);
 	RETURN;
 END_IF
+
+// 每個 dependency 必須已註冊、允許 Composite 呼叫，且不可指向自己或在清單中重複。
 FOR nDependency := 1 TO DependencyCount DO
 	IF DependencyIds[nDependency] = 0 THEN
 		M_SetRegistrationError(Error := E_ServiceRegistrationError.InvalidCompositeDependencyId, ServiceId := CompositeServiceId);
@@ -592,6 +646,8 @@ FOR nDependency := 1 TO DependencyCount DO
 		END_IF
 	END_FOR
 END_FOR
+
+// 驗證完成後一次提交 definition；nested Composite 會在 M_Seal 統一拒絕。
 _Entries[nCompositeIndex].IsComposite := TRUE;
 _Entries[nCompositeIndex].CompositeDependenciesAddress := ADR(DependencyIds);
 _Entries[nCompositeIndex].CompositeDependencyCount := DependencyCount;
@@ -613,14 +669,20 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_ReleaseCompositeOwnership := FALSE;
+        <ST><![CDATA[// 釋放 Composite 實際持有的所有 dependency；未知或非 Composite Service 會回傳 FALSE。
+// 通常在 sequence 完成、Stop、Abort、Clear 或 Reset 清理階段呼叫。
+M_ReleaseCompositeOwnership := FALSE;
 nCompositeIndex := M_FindIndexByServiceId(ServiceId := CompositeServiceId);
 IF (nCompositeIndex = 0) OR NOT _Entries[nCompositeIndex].IsComposite THEN RETURN; END_IF
 pDependencies := _Entries[nCompositeIndex].CompositeDependenciesAddress;
 FOR nDependency := 1 TO _Entries[nCompositeIndex].CompositeDependencyCount DO
 	nDependencyIndex := M_FindIndexByServiceId(ServiceId := pDependencies[nDependency - 1]);
+
+	// 只清除仍屬於此 Composite 的 dependency，避免破壞其他 owner 後續取得的 ownership。
 	IF _Entries[nDependencyIndex].CompositeOwnerServiceId = CompositeServiceId THEN
 		_Entries[nDependencyIndex].CompositeOwnerServiceId := 0;
+
+		// 尚未完成的內部命令標記為 Cancelled，並立即撤除送往 Service 的 request high。
 		IF (_Entries[nDependencyIndex].InternalCommandState = E_ServiceInternalCommandState.Queued)
 			OR (_Entries[nDependencyIndex].InternalCommandState = E_ServiceInternalCommandState.RequestHigh) THEN
 			_Entries[nDependencyIndex].InternalCommandState := E_ServiceInternalCommandState.Cancelled;
@@ -630,6 +692,8 @@ FOR nDependency := 1 TO _Entries[nCompositeIndex].CompositeDependencyCount DO
 		pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
 	END_IF
 END_FOR
+
+// Composite 回到 None；下次使用前必須重新呼叫 M_RequestCompositeOwnership。
 _Entries[nCompositeIndex].OwnershipState := E_CompositeOwnershipState.None;
 M_ReleaseCompositeOwnership := TRUE;]]></ST>
       </Implementation>
@@ -644,14 +708,20 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_RequestCompositeOwnership := FALSE;
+        <ST><![CDATA[// 提出取得 Composite 全部 dependency ownership 的請求；Coordinator 必須已完成註冊並 Ready。
+// 回傳 TRUE 只代表請求已接受或原本已持有，不代表本次呼叫已立即取得 ownership。
+M_RequestCompositeOwnership := FALSE;
 IF NOT Ready THEN RETURN; END_IF
 nIndex := M_FindIndexByServiceId(ServiceId := CompositeServiceId);
 IF (nIndex = 0) OR NOT _Entries[nIndex].IsComposite THEN RETURN; END_IF
+
+// 已持有時採 idempotent 成功；其他狀態則重新排入 Pending。
 IF _Entries[nIndex].OwnershipState = E_CompositeOwnershipState.Owned THEN
 	M_RequestCompositeOwnership := TRUE;
 	RETURN;
 END_IF
+
+// M_PrepareCycle 會在 Module Execute 期間以原子方式解析 Pending，結果需另行查詢。
 _Entries[nIndex].OwnershipState := E_CompositeOwnershipState.Pending;
 M_RequestCompositeOwnership := TRUE;]]></ST>
       </Implementation>
@@ -667,16 +737,22 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[M_Seal := FALSE;
+        <ST><![CDATA[// 結束一次性註冊階段並使 Ready 成立；所有 Service 與 Composite definition 都必須先完成。
+// 封存失敗會留下穩定的 RegistrationError，且 registry 不會進入可執行狀態。
+M_Seal := FALSE;
 IF _RegistrationError <> E_ServiceRegistrationError.None THEN RETURN; END_IF
+
 IF _Sealed THEN
 	M_SetRegistrationError(Error := E_ServiceRegistrationError.RegistryAlreadySealed, ServiceId := 0);
 	RETURN;
 END_IF
+
 IF NOT _RegistrationStarted OR (_RegisteredCount = 0) THEN
 	M_SetRegistrationError(Error := E_ServiceRegistrationError.EmptyRegistry, ServiceId := 0);
 	RETURN;
 END_IF
+
+// Composite 不可依賴另一個 Composite，避免形成巢狀 ownership 與不明確的控制優先序。
 FOR nIndex := 1 TO _RegisteredCount DO
 	IF _Entries[nIndex].IsComposite THEN
 		pDependencies := _Entries[nIndex].CompositeDependenciesAddress;
@@ -690,6 +766,8 @@ FOR nIndex := 1 TO _RegisteredCount DO
 		END_FOR
 	END_IF
 END_FOR
+
+// 封存時將所有有效控制 request 拉低並清除舊快照，建立一致的首個執行週期。
 FOR nIndex := 1 TO _RegisteredCount DO
 	pEffectiveCtrl := _Entries[nIndex].EffectiveCtrlAddress;
 	pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
@@ -699,6 +777,8 @@ END_FOR
 _AllIdle := FALSE;
 _AllStopped := FALSE;
 _AllAborted := FALSE;
+
+// _Sealed 最後才設為 TRUE，確保 Ready 不會看見部分初始化的 registry。
 _Sealed := TRUE;
 M_Seal := TRUE;]]></ST>
       </Implementation>
@@ -734,12 +814,14 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT Ready THEN
+        <ST><![CDATA[// 由 Composite owner 對 dependency 排入 lifecycle 命令（Stop、Abort、Clear、Reset）。
+// 方法只負責驗證與 queue；M_PrepareCycle 才會輸出 request，M_ObserveCycle 再判讀回覆。
+IF NOT Ready THEN
 	M_SubmitInternalCommand := E_ServiceCallSubmitResult.CoordinatorNotReady;
 	RETURN;
 END_IF
 
-// Accept ONLY Stop, Abort, Clear, Reset cmd
+// Start 必須使用 M_SubmitInternalStart，以便在送出命令前驗證並快照參數。
 IF (Command <> E_PackMLCommand.Stop) AND (Command <> E_PackMLCommand.Abort)
 	AND (Command <> E_PackMLCommand.Clear) AND (Command <> E_PackMLCommand.Reset) THEN
 	M_SubmitInternalCommand := E_ServiceCallSubmitResult.InvalidCommand;
@@ -753,6 +835,8 @@ IF nTargetIndex = 0 THEN
 END_IF
 
 nCallerIndex := M_FindIndexByServiceId(ServiceId := CallerServiceId);
+
+// Caller 必須是有宣告此 Target 的 Composite，且目前確實持有該 dependency。
 IF (nCallerIndex = 0) OR NOT M_IsDeclaredDependency(
 	CompositeIndex := nCallerIndex, TargetServiceId := TargetServiceId) THEN
 	M_SubmitInternalCommand := E_ServiceCallSubmitResult.DependencyNotDeclared;
@@ -762,12 +846,16 @@ IF _Entries[nTargetIndex].CompositeOwnerServiceId <> CallerServiceId THEN
 	M_SubmitInternalCommand := E_ServiceCallSubmitResult.NotOwner;
 	RETURN;
 END_IF
+
+// 一個 Target 同時間只允許一筆內部請求；包含等待強制 low 的 scan 都視為 Busy。
 IF (_Entries[nTargetIndex].InternalCommandState = E_ServiceInternalCommandState.Queued)
 	OR (_Entries[nTargetIndex].InternalCommandState = E_ServiceInternalCommandState.RequestHigh)
 	OR _Entries[nTargetIndex].InternalRequestMustGoLow THEN
 	M_SubmitInternalCommand := E_ServiceCallSubmitResult.Busy;
 	RETURN;
 END_IF
+
+// 所有驗證通過後才提交 RequestId 與命令，供後續 response correlation 使用。
 _Entries[nTargetIndex].InternalRequestId := RequestId;
 _Entries[nTargetIndex].InternalCommand := Command;
 _Entries[nTargetIndex].InternalCommandState := E_ServiceInternalCommandState.Queued;
@@ -792,7 +880,9 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT Ready THEN
+        <ST><![CDATA[// 由 Composite owner 對 dependency 排入 Start，並在排入當下快照本次執行參數。
+// 方法只負責驗證、複製與 queue；實際 request high 由 M_PrepareCycle 在後續週期輸出。
+IF NOT Ready THEN
 	M_SubmitInternalStart := E_ServiceCallSubmitResult.CoordinatorNotReady;
 	RETURN;
 END_IF
@@ -802,6 +892,8 @@ IF nTargetIndex = 0 THEN
 	RETURN;
 END_IF
 nCallerIndex := M_FindIndexByServiceId(ServiceId := CallerServiceId);
+
+// Caller 必須宣告 Target 為 dependency，並先成功取得該 Target 的 ownership。
 IF (nCallerIndex = 0) OR NOT M_IsDeclaredDependency(
 	CompositeIndex := nCallerIndex, TargetServiceId := TargetServiceId) THEN
 	M_SubmitInternalStart := E_ServiceCallSubmitResult.DependencyNotDeclared;
@@ -811,6 +903,8 @@ IF _Entries[nTargetIndex].CompositeOwnerServiceId <> CallerServiceId THEN
 	M_SubmitInternalStart := E_ServiceCallSubmitResult.NotOwner;
 	RETURN;
 END_IF
+
+// 前一筆請求尚在 queue、維持 high 或等待 low 時，不可覆寫參數與 RequestId。
 IF (_Entries[nTargetIndex].InternalCommandState = E_ServiceInternalCommandState.Queued)
 	OR (_Entries[nTargetIndex].InternalCommandState = E_ServiceInternalCommandState.RequestHigh)
 	OR _Entries[nTargetIndex].InternalRequestMustGoLow THEN
@@ -821,6 +915,8 @@ IF (Parameters.pValue = 0) OR (Parameters.diSize <= 0) THEN
 	M_SubmitInternalStart := E_ServiceCallSubmitResult.ParameterSizeMismatch;
 	RETURN;
 END_IF
+
+// ANY 參數的大小與實際 DUT 型別都必須和 M_Register 記錄的 Target 參數一致。
 nParameterSize := DINT_TO_UDINT(Parameters.diSize);
 IF nParameterSize <> _Entries[nTargetIndex].ParameterSize THEN
 	M_SubmitInternalStart := E_ServiceCallSubmitResult.ParameterSizeMismatch;
@@ -836,6 +932,8 @@ IF sParameterType <> _Entries[nTargetIndex].ParameterTypeName THEN
 	M_SubmitInternalStart := E_ServiceCallSubmitResult.ParameterTypeMismatch;
 	RETURN;
 END_IF
+
+// 驗證完成後先複製參數，再提交 Start request，確保 Service 不會看到半更新資料。
 MEMCPY(destAddr := _Entries[nTargetIndex].EffectiveParamAddress,
 	srcAddr := Parameters.pValue, n := nParameterSize);
 _Entries[nTargetIndex].InternalRequestId := RequestId;
