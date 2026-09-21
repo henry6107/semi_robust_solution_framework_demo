@@ -220,49 +220,44 @@ Alarm 發布後，Framework 彙整 Service Data，建立 JSON configured Variabl
 
 ## 圖解 4：狀態機共通讀法與 Module 狀態機
 
-Module 和 Service 都繼承 Framework 的 PackML 狀態機，但各自管理的對象不同：**Module 協調一組 Service 的生命週期；Service 在自己的狀態 Hook 中執行設備動作或流程。** 本節先說明 Hook 的執行規則，再讀 Module 圖；下一節對照 Service 圖，回答新增動作應寫在哪個 Hook。
+先用簡化的正常完成與復歸路徑認識 PackML 狀態圖的讀法，再將相同讀法套用到 Module 狀態圖；Service 的狀態與實作位置接在圖解 5。
 
-### 4.1 閱讀狀態機前要知道的事
+### 4.1 PackML 狀態機怎麼讀
 
-![State Hook 跨 PLC scan 執行示意圖](./assets/state-hook-scan-lifecycle.png)
+![PackML 狀態機基本讀法示意圖](./assets/packml-state-machine-reading.png)
 
-[查看可縮放的 SVG 原圖](./assets/state-hook-scan-lifecycle.svg)
+讀這張圖時，先看**方框代表目前所處的狀態**，再看**箭頭代表狀態間的轉換**。箭頭旁的 `Start`、`Reset` 是促使流程前進的命令；`Busy`、`Done` 則用來描述狀態中的工作是否完成，兩者不要混為一談。
 
-這張小圖取 Service 的正常完成路徑，將「接受命令」「執行目前狀態的 Hook」及「Hook 完成後換狀態」分開。圖中的 `Start` 是命令；`Busy` 與 `Done` 是 Hook 的回傳結果，並不是上位命令的接受／拒絕回覆。命令仍須通過目前狀態與模式的檢查；**命令被接受，也不代表設備動作已完成。**
+| 圖上的標記 | 讀法 |
+|---|---|
+| 黃色方框：Stable State | 可持續停留、等待下一個有效命令或條件。例如 `Idle` 等待 `Start`，完成後的狀態等待 `Reset`。 |
+| 白色方框：Transient State | 正在完成狀態轉換所需的工作，例如 `Starting`、`Completing`、`Resetting`。工作尚未完成時留在原狀態，完成後轉到下一狀態。 |
+| 綠色方框：`Execute` | 主要工作正在進行，可持續停留；它不是「經過一下就必須離開」的轉換狀態。圖中以綠色單獨標示，方便與準備及收尾階段區分。 |
+| `Busy` 自迴圈 | 表示工作尚未完成，維持目前狀態，稍後再評估。箭頭繞回同一方框，並不是重新從 `Idle` 開始。 |
+| `Done` 箭頭 | 表示目前階段已完成，轉入箭頭指向的下一個狀態；`Done` 不是操作員另發出的命令。 |
 
-| 本文用語 | 判讀方式 | 典型狀態與 Hook 行為 |
-|---|---|---|
-| Stable State（等待狀態） | 保持目前狀態，直到允許的命令觸發轉換；其狀態 Hook 不以 `Busy`／`Done` 決定離開時機。 | `Stopped`、`Idle`、`Aborted`、`Held`、`Complete`。Module 的 `H_OnIdle()` 會主動提出 `Start`，所以 Module 的 `Idle` 通常很短。 |
-| Transient State（轉換狀態） | Hook 在每個相關 PLC scan 執行；回傳 `Busy` 時留在此狀態，回傳 `Done` 時移至下一狀態。 | `Starting`、`Completing`、`Stopping`、`Aborting`、`Clearing`、`Resetting`、`Holding`、`Unholding`。 |
-| `Execute`（持續執行狀態） | `H_OnExecute()` 同樣回傳 `Busy`／`Done`，但可長時間持續執行；`Busy` 留在 `Execute`，`Done` 才進入 `Completing`。Framework 的 `bTransitionActive` 不把它列作 Transient。 | 軸持續移動、等待真空回授、執行 Composite 步驟。不能單憑「正在做事」判斷狀態是否為 Transient。 |
-| `Undefined`（初始特殊狀態） | 啟動時的預設／尚未確立狀態；預設 Hook 回傳 `Done` 後直接到 `Aborted`，再循 `Clear → Stopped → Reset` 進入可操作流程。 | 不在此處編寫一般 Service 動作。 |
+沿著箭頭讀一次：`Idle` 等到 `Start`，進入 `Starting` 做啟動前準備；準備完成後進入 `Execute` 執行主要工作；工作完成後進入 `Completing` 處理收尾，最後停在完成狀態。收到 `Reset` 後進入 `Resetting`，復歸未完成時仍留在這裡，完成後才回到 `Idle`。狀態下方的藍色短句只是幫助理解的工作例子，並非 PackML 對每個狀態規定的固定程式內容。
 
-每次進入新狀態，該狀態 Hook 第一次被呼叫時的 `bFirstScan` 為 `TRUE`，可用來初始化僅做一次的資料；後續 scan 持續呼叫同一 Hook 時為 `FALSE`。`Done` 會切換目前狀態，但**新狀態的 Hook 要到下一次呼叫狀態機才執行**。例如 `H_OnStarting()` 回傳 `Done` 後，本 scan 可觀察到 `Execute`，`H_OnExecute()` 不會在同一次狀態機呼叫中接著執行。
+**這是讀圖用的簡化路徑。** Stop、Abort、Hold 等其他分支會在後面的完整狀態圖出現。
 
-本文使用 Stable／Transient／持續執行三類來對應**此 Framework 的 Hook 行為**；狀態名稱及主要轉換參考 PackML。PackML 的狀態定義可參閱 [OPC Foundation：PackML Execute State Machine](https://reference.opcfoundation.org/specs/OPC-30050/6.3.8)，實際可用路徑與 Hook 行為仍以本專案實作為準。
+本文以 Stable／Transient／持續執行作為這張簡圖的閱讀分類；PackML 的狀態與轉換定義可參閱 [OPC Foundation：PackML Execute State Machine](https://reference.opcfoundation.org/specs/OPC-30050/6.3.8)。
 
 ### 4.2 Module 圖：管理一組 Service 的狀態
 
 ![Module 狀態機示意圖](./assets/module-state-machine.png)
 
-圖中的主路徑可讀作 `Stopped → Resetting → Idle → Starting → Execute`。Module 進入 `Execute` 後，Service Coordinator 才能依個別上位命令或 Composite 流程選擇 Service 控制；當 Module 不在 `Execute`，Coordinator 以 Module 的控制要求管理所屬 Service。圖中的 Stop、Abort 路徑表示 Module 對整組 Service 的生命週期控制，不是 Module 自己直接操作某支軸或某個 I/O。
+圖中的主路徑可讀作 `Stopped → Resetting → Idle → Starting → Execute`。Module 進入 `Execute` 後，Service Coordinator 才能依個別上位命令或 Composite 流程選擇 Service 控制。當 Module 不在 `Execute` 且 Coordinator 已完成登錄時，Coordinator 以 `ModuleCtrl.PackMLIn` 準備**每個已登錄 Service 的有效控制**，暫時遮蔽個別上位與 Composite 的命令；但只允許 `Stop`、`Abort`、`Clear`、`Reset` 命令請求轉送至整組 Service。`Start` 等其他命令會在 Service 有效控制中清為無請求；`H_OnIdle()` 提出的 Module 內部 `Start` 也不會寫入 `ModuleCtrl.PackMLIn`，因此不會啟動 Service。群組生命週期控制表示轉送共同要求、等待各 Service 的狀態一致；每個 Service 仍依自己的狀態規則與 Hook 處理命令，Module 不會直接操作某支軸或某個 I/O。
 
 | Module 狀態或路徑 | Framework 預期執行的內容 |
 |---|---|
 | `Undefined → Aborted` | 初始狀態的預設 Hook 完成後直接進入 `Aborted`；圖中的虛線不是經過 `Aborting`。 |
-| `Aborted → Clearing → Stopped` | 接受 `Clear` 後，Module 等待所有已登錄 Service 進入 `Stopped`，再完成 `Clearing`。 |
-| `Stopped → Resetting → Idle` | 接受 `Reset` 後，Module 等待所有 Service 進入 `Idle`，再完成 `Resetting`。 |
+| `Aborted → Clearing → Stopped` | Module 的 `Clear` 要求送至各 Service；Module 等待所有已登錄 Service 進入 `Stopped`，再完成 `Clearing`。 |
+| `Stopped → Resetting → Idle` | Module 的 `Reset` 要求送至各 Service；Module 等待所有 Service 進入 `Idle`，再完成 `Resetting`。 |
 | `Idle → Starting → Execute` | `H_OnIdle()` 會提出內部 `Start`；目前 `Starting` 依繼承的預設 Hook 完成，進入持續運作的 `Execute`。 |
 | `Stopping → Stopped` | 接受有效的 `Stop` 後，Module 等待所有 Service 進入 `Stopped`；尚未全部到達時保持 `Stopping`。 |
 | `Aborting → Aborted` | 接受有效的 `Abort` 或外部故障後，Module 等待所有 Service 進入 `Aborted`；尚未全部到達時保持 `Aborting`。 |
 
-這裡的「所有 Service」由 Service Coordinator 的 `AllIdle`、`AllStopped`、`AllAborted` 判斷。Module 的 `H_OnAborting()`、`H_OnClearing()`、`H_OnResetting()`、`H_OnStopping()`、`H_OnIdle()` 在 `FB_ModuleBase` 中是 `FINAL`，**不是衍生 Module 放入個別設備動作的擴充點**。衍生 Module 使用 `H_RegisterServices()` 登錄 Service、在 `H_UpdateService()` 逐一呼叫 Service，並在 `H_UpdateBaseUnit()` 更新設備。單項動作的狀態邏輯寫在對應 Service。
-
 每個 Module scan 先更新 Module PackML，再由 Coordinator 準備並執行 Service；Service 結果於本 scan 稍後被觀察。因而 Module 等待 `AllStopped` 等整體條件時，會依**前一次已觀察到的 Service 狀態**判斷，不能預期 Service 本 scan 剛到達目標狀態，Module 同一時間就已完成轉換。圖解 3 的執行順序可用來對照這個時序。
-
-### 4.3 Module 圖的範圍
-
-本圖聚焦 Demo 中 Module 使用的啟動、運作、停止與中止主路徑。`Complete` 與 Hold 相關分支在下一張 Service 圖說明；不要因為 Module 圖未畫出這些分支，就把兩層的完成與暫停語意混為一談。
 
 ## 圖解 5：Service 狀態機與 Hook 實作位置
 
@@ -292,9 +287,7 @@ Service 將一項動作的準備、執行、正常收尾與中斷收尾分開。
 | `… → Stopping → Stopped` | 收到有效的 `Stop` 時，由 `H_OnStopping()` 執行受控停止、等待設備結果並清理資源。 | 經 `Resetting` 回 `Idle`。 |
 | `… → Aborting → Aborted` | 收到有效的 `Abort`、外部故障或 Service 自行提出 Abort 時，由 `H_OnAborting()` 執行異常路徑所需的清理。 | `Clear → Clearing → Stopped`，再 Reset。 |
 
-Hold 表示暫停／恢復同一動作，Stop 表示結束目前動作，Abort 表示異常中止；三者不能共用一段沒有區分的「停止設備」程式。**目前 Demo 的 Service 沒有覆寫 Hold 系列 Hook**；Framework 的預設 `Holding`／`Unholding` Hook 會立即回傳 `Done`。若新 Service 需要真正暫停實體設備，必須先實作對應的暫停、維持與恢復邏輯，再使用這條路徑。
-
-`Aborted` 是等待 `Clear` 的穩定狀態；`H_OnClearing()` 適合清除已記錄的 Service 錯誤，完成後才到 `Stopped`。`H_OnResetting()` 則處理從 `Stopped` 或 `Complete` 返回 `Idle` 的準備。圖中虛線 `Undefined → Aborted` 代表初始特殊路徑。
+Hold 表示暫停／恢復同一動作，Stop 表示結束目前動作，Abort 表示異常中止；三者不能共用一段沒有區分的「停止設備」程式。
 
 ### 5.3 新增 Service 動作：要寫在哪個 Hook？
 
@@ -313,8 +306,6 @@ Hold 表示暫停／恢復同一動作，Stop 表示結束目前動作，Abort �
 | 實作真正的暫停、暫停期間監看、恢復 | `H_OnHolding()`／`H_OnHeld()`／`H_OnUnholding()` | 只有設計了設備暫停語意時才使用這組 Hook。 |
 | 編排多個既有 Service 的先後順序 | Composite Service 的 `H_DeclareServices()` 與 `H_OnCompositeExecute()` | Composite 的 `H_OnExecute()` 由 Framework 固定處理；在 `H_OnCompositeExecute()` 寫製程步驟。 |
 
-Module 的 `H_UpdateService()` 負責**每個 scan 呼叫各 Service**，`H_UpdateBaseUnit()` 負責更新設備；它們不是放置某個 Service 的 Starting／Execute／Stopping 行為的位置。若動作有多個 Execute 內部步驟，可覆寫 Service 的 `H_GetExecuteSubState()`、`H_GetExecuteSubStateName()` 對外顯示進度，而不必為每一步新增 PackML 狀態。
-
 ### 5.4 用 Demo 的四種動作對照
 
 1. **VacuumOn：單一輸出加回授**。`H_OnExecute()` 將 `VacuumOnCtrl` 設為 `TRUE`；`IsVacuumOn` 成立後回傳 `Done`。這是「輸出命令與完成回授」放在 Execute 的最小例子。
@@ -331,7 +322,5 @@ Demo 的 `NaturalCompletion`、`ExecuteUntilExternalStop` 是 Service 對外發�
 - 正常完成、Stop、Abort 是否各自完成所需的設備動作與資源處理？`Done` 是否代表該路徑真正完成？
 - 若 `Complete` 後設備可能仍運作，資源占用與後續 Stop／Abort 是否仍能正確處理？
 - 若提供 Hold，是否真的有暫停及恢復設備的實作？若是多 Service 流程，是否由 Composite 管理依賴與步驟？
-
-對照程式：[PackML 狀態機基底](../robust_solution_simple_module/RobustSolutionFramework/POUs/30_PackML_Base/FB_PackMLBase.TcPOU)、[Module 基底](../robust_solution_simple_module/RobustSolutionFramework/POUs/10_Module/FB_ModuleBase.TcPOU)、[Service 基底](../robust_solution_simple_module/RobustSolutionFramework/POUs/20_Service/FB_ServiceBase.TcPOU)、[VacuumOn](../robust_solution_simple_module/RobustSolutionDemoProject/POUs/10_Chamber1/Services/Vacuum/FB_Chamber1VacuumOnService.TcPOU)、[SpinAxis MoveAbs](../robust_solution_simple_module/RobustSolutionDemoProject/POUs/10_Chamber1/Services/SpinAxis/FB_Chamber1SpinAxisMoveAbsServices.TcPOU)、[SpinAxis MoveVelCW](../robust_solution_simple_module/RobustSolutionDemoProject/POUs/10_Chamber1/Services/SpinAxis/FB_Chamber1SpinAxisMoveVelCWServices.TcPOU)、[SpinAxis JogCW](../robust_solution_simple_module/RobustSolutionDemoProject/POUs/10_Chamber1/Services/SpinAxis/FB_Chamber1SpinAxisJogCWServices.TcPOU)、[Prepare Wafer Transfer](../robust_solution_simple_module/RobustSolutionDemoProject/POUs/10_Chamber1/Services/FB_Chamber1Ep1PrepareWaferTransfer.TcPOU)。
 
 <!-- 後續架構圖解請從此處接續，使用「## 圖解 6：主題」及其後續編號。 -->
