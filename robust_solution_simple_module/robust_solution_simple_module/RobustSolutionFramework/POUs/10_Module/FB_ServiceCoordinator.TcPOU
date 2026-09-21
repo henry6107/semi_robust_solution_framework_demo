@@ -263,7 +263,8 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[//
+        <ST><![CDATA[// Resolve Composite ownership only while the Module can execute Services.
+// Pending requests are cancelled outside Execute so they cannot leak into a later cycle.
 IF Ready AND ModuleInExecute THEN
 	M_ProcessOwnershipRequests();
 ELSIF Ready THEN
@@ -274,16 +275,23 @@ ELSIF Ready THEN
 	END_FOR
 END_IF
 
+// Build the effective control input consumed by each registered Service.
 FOR nIndex := 1 TO _RegisteredCount DO
 	pUpperCtrl := _Entries[nIndex].UpperCtrlAddress;
 	pEffectiveCtrl := _Entries[nIndex].EffectiveCtrlAddress;
+	
+	// A registration error makes all Service request signals inactive.
 	IF NOT Ready THEN
 		pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
 		pEffectiveCtrl^.PackMLIn.bModeChangeRequest := FALSE;
 		CONTINUE;
 	END_IF
+	
 	bUpperCommandHigh := pUpperCtrl^.PackMLIn.bCommandChangeRequest;
 	bUpperModeHigh := pUpperCtrl^.PackMLIn.bModeChangeRequest;
+	
+	// Outside Module Execute, cancel Composite-issued requests and propagate only the
+	// Module lifecycle commands that are valid for bringing every Service to a safe state.
 	IF NOT ModuleInExecute THEN
 		IF (_Entries[nIndex].InternalCommandState = E_ServiceInternalCommandState.Queued)
 			OR (_Entries[nIndex].InternalCommandState = E_ServiceInternalCommandState.RequestHigh)
@@ -305,23 +313,31 @@ FOR nIndex := 1 TO _RegisteredCount DO
 			pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
 		END_IF
 		
+		// If an upper request is already high while control is unavailable, require it
+		// to return low before it may be forwarded after the Module re-enters Execute.
 		IF bUpperCommandHigh THEN _Entries[nIndex].UpperCommandBlockedUntilFalse := TRUE; END_IF
 		IF bUpperModeHigh THEN _Entries[nIndex].UpperModeBlockedUntilFalse := TRUE; END_IF
 		_Entries[nIndex].UpperCommandWasHigh := bUpperCommandHigh;
 		_Entries[nIndex].UpperModeWasHigh := bUpperModeHigh;
 		CONTINUE;
 	END_IF
+	// A low level re-arms the corresponding upper request channel.
 	IF NOT bUpperCommandHigh THEN _Entries[nIndex].UpperCommandBlockedUntilFalse := FALSE; END_IF
 	IF NOT bUpperModeHigh THEN _Entries[nIndex].UpperModeBlockedUntilFalse := FALSE; END_IF
+	// A Service owned by a Composite accepts only the owner's internal command path;
+	// direct upper commands and all upper mode changes remain suppressed.
 	IF _Entries[nIndex].CompositeOwnerServiceId <> 0 THEN
 		IF bUpperCommandHigh THEN _Entries[nIndex].UpperCommandBlockedUntilFalse := TRUE; END_IF
 		IF bUpperModeHigh THEN _Entries[nIndex].UpperModeBlockedUntilFalse := TRUE; END_IF
 		pEffectiveCtrl^.PackMLIn.eMode := E_PackMLMode.Unknown;
 		pEffectiveCtrl^.PackMLIn.bModeChangeRequest := FALSE;
+		// After acceptance or rejection, force one low scan to complete the request handshake.
 		IF _Entries[nIndex].InternalRequestMustGoLow THEN
 			pEffectiveCtrl^.PackMLIn.eCommand := E_PackMLCommand.None;
 			pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
 			_Entries[nIndex].InternalRequestMustGoLow := FALSE;
+		// Promote a queued command to the asserted request state, then hold it high
+		// until M_ObserveCycle sees the matching Service response.
 		ELSIF _Entries[nIndex].InternalCommandState = E_ServiceInternalCommandState.Queued THEN
 			pEffectiveCtrl^.RequestId := _Entries[nIndex].InternalRequestId;
 			pEffectiveCtrl^.PackMLIn.eCommand := _Entries[nIndex].InternalCommand;
@@ -339,10 +355,13 @@ FOR nIndex := 1 TO _RegisteredCount DO
 		_Entries[nIndex].UpperModeWasHigh := bUpperModeHigh;
 		CONTINUE;
 	END_IF
+	// With no Composite owner, the Service normally follows its direct upper control.
 	pEffectiveCtrl^ := pUpperCtrl^;
 	IF _Entries[nIndex].UpperCommandBlockedUntilFalse THEN
 		pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
 	ELSE
+		// Snapshot parameters only on a newly asserted Start request. This keeps one
+		// execution's effective parameters stable while the upper input remains high.
 		bNewStartRequest := bUpperCommandHigh AND NOT _Entries[nIndex].UpperCommandWasHigh
 			AND (pUpperCtrl^.PackMLIn.eCommand = E_PackMLCommand.Start);
 		IF bNewStartRequest THEN
@@ -350,6 +369,7 @@ FOR nIndex := 1 TO _RegisteredCount DO
 				srcAddr := _Entries[nIndex].UpperParamAddress, n := _Entries[nIndex].ParameterSize);
 		END_IF
 	END_IF
+	// Mode requests use the same return-low re-arm rule as command requests.
 	IF _Entries[nIndex].UpperModeBlockedUntilFalse THEN
 		pEffectiveCtrl^.PackMLIn.bModeChangeRequest := FALSE;
 	END_IF

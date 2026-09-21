@@ -1786,16 +1786,30 @@ External Setpoint Generation:
 		</Motion>
 		<Plc>
 			<Project GUID="{D1F70DB5-3536-488A-83E6-E4C0D6DDBD8B}" Name="RobustSolutionFramework" PrjFilePath="RobustSolutionFramework\RobustSolutionFramework.plcproj" TmcFilePath="RobustSolutionFramework\RobustSolutionFramework.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{D6632B69-648B-108E-6120-2903D9CF726C}" TmcPath="RobustSolutionFramework\RobustSolutionFramework.tmc">
+				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{354E79C4-E73C-A7CF-6B3E-D4A994CCFC4F}" TmcPath="RobustSolutionFramework\RobustSolutionFramework.tmc">
 					<Name>RobustSolutionFramework Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<JsonDynPous><![CDATA[null]]></JsonDynPous>
 				</Instance>
 			</Project>
 			<Project GUID="{77C99B7E-274C-4127-B1EA-48EE00657A6C}" Name="FrameworkUnitTest" PrjFilePath="FrameworkUnitTest\FrameworkUnitTest.plcproj" TmcFilePath="FrameworkUnitTest\FrameworkUnitTest.tmc" ReloadTmc="true" AmsPort="852" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502040" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{1B4ACC48-BAC1-03DB-300F-05A9AD056785}" TmcPath="FrameworkUnitTest\FrameworkUnitTest.tmc">
+				<Instance Id="#x08502040" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{705AC32D-5BAD-0E2D-4F7A-729060FAE510}" TmcPath="FrameworkUnitTest\FrameworkUnitTest.tmc">
 					<Name>FrameworkUnitTest Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
+					<Vars VarGrpType="2" AreaNo="1">
+						<Name>PlcTask Outputs</Name>
+						<Var>
+							<Name>TEST_PROG.AxisBaseUnitTests._Axis._Axis.PlcToNc</Name>
+							<Type GUID="{96B75FEB-2D84-43BE-A3EC-D9A681F27D52}" Namespace="MC">PLCTONC_AXIS_REF</Type>
+						</Var>
+					</Vars>
+					<Vars VarGrpType="1">
+						<Name>PlcTask Inputs</Name>
+						<Var>
+							<Name>TEST_PROG.AxisBaseUnitTests._Axis._Axis.NcToPlc</Name>
+							<Type GUID="{25521FAA-EA5F-4C7F-8864-BBCCDACD2E98}" Namespace="MC">NCTOPLC_AXIS_REF</Type>
+						</Var>
+					</Vars>
 					<Contexts>
 						<Context>
 							<Id>0</Id>
@@ -1814,7 +1828,7 @@ External Setpoint Generation:
 				</Instance>
 			</Project>
 			<Project GUID="{211D1B58-22B7-4F39-8E50-EDC8876BDF19}" Name="RobustSolutionDemoProject" PrjFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.plcproj" TmcFilePath="RobustSolutionDemoProject\RobustSolutionDemoProject.tmc" ReloadTmc="true" AmsPort="853" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{6AA10163-9839-B3D4-3DAB-BD1EDBF82F1C}" TmcPath="RobustSolutionDemoProject\RobustSolutionDemoProject.tmc">
+				<Instance Id="#x08502080" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{E36163D3-622E-6B78-17B6-9448E11E1272}" TmcPath="RobustSolutionDemoProject\RobustSolutionDemoProject.tmc">
 					<Name>RobustSolutionDemoProject Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" AreaNo="1">
