@@ -177,6 +177,12 @@
     <PlaceholderReference Include="RobustSolution_BATW">
       <DefaultResolution>[RobustSolution], * (BATW)</DefaultResolution>
       <Namespace>RobustSolution_BATW</Namespace>
+      <Parameters>
+        <Parameter ListName="PARAM_CONFIG">
+          <Key>MODULECONFIGFILEPATH</Key>
+          <Value>'C:\ProgramData\RobustSolution\Tests\application-root.json'</Value>
+        </Parameter>
+      </Parameters>
     </PlaceholderReference>
     <PlaceholderReference Include="Tc2_MC2">
       <DefaultResolution>Tc2_MC2, * (Beckhoff Automation GmbH)</DefaultResolution>

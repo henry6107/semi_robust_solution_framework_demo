@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_ModuleConfigurationManagerTests" Id="{714e3e37-7a3f-4076-a08a-047167ea118b}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_ModuleConfigurationManagerTests EXTENDS TcUnit.FB_TestSuite
@@ -155,6 +155,16 @@ Manager(
 );
 nCycles := nCycles + 1;
 IF Manager.Error THEN
+	
+	// 下一個 scan 才會關閉 Busy 的訊號
+	Manager(
+		Execute := TRUE,
+		FilePath := sPath,
+		LinkVariableManager := Links,
+		ReferenceManager := References,
+		ModuleTypeRegistry := Registry
+	);
+	
 	// Assert：parser HRESULT 可能因 runtime 版本不同；穩定契約是 Error、非 Ready、且有診斷內容。
 	AssertFalse(
 		Condition := Manager.Ready OR Manager.Busy,
@@ -322,6 +332,16 @@ Manager(
 nCycles := nCycles + 1;
 
 IF Manager.Ready THEN
+	
+	// 下一個 scan 才會關閉 Busy 的訊號
+	Manager(
+		Execute := TRUE,
+		FilePath := sPath,
+		LinkVariableManager := Links,
+		ReferenceManager := References,
+		ModuleTypeRegistry := Registry
+	);
+
 	AssertFalse(
 		Condition := Manager.Error OR Manager.Busy,
 		Message := 'Valid fixture must finish Ready.'

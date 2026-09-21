@@ -1793,7 +1793,7 @@ External Setpoint Generation:
 				</Instance>
 			</Project>
 			<Project GUID="{77C99B7E-274C-4127-B1EA-48EE00657A6C}" Name="FrameworkUnitTest" PrjFilePath="FrameworkUnitTest\FrameworkUnitTest.plcproj" TmcFilePath="FrameworkUnitTest\FrameworkUnitTest.tmc" ReloadTmc="true" AmsPort="852" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502040" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{6DDFB788-6E0F-9547-7D76-6DB0056A997C}" TmcPath="FrameworkUnitTest\FrameworkUnitTest.tmc">
+				<Instance Id="#x08502040" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{030A10F2-768F-CB94-805C-B976E08759AC}" TmcPath="FrameworkUnitTest\FrameworkUnitTest.tmc">
 					<Name>FrameworkUnitTest Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" AreaNo="1">
