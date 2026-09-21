@@ -78,11 +78,14 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[H_OnClearing := E_PackMLHookResult.Busy;
+
 IF bFirstScan THEN M_ClearLifecycleRequests(); END_IF
 IF NOT _OwnershipHeld THEN
+	M_ClearAllError();
 	H_OnClearing := E_PackMLHookResult.Done;
 	RETURN;
 END_IF
+
 bAllSafe := TRUE;
 FOR nDependency := 1 TO _DependencyCount DO
 	IF NOT M_GetDependencySnapshot(DependencyIndex := nDependency, Snapshot => Snapshot) THEN
@@ -99,7 +102,11 @@ FOR nDependency := 1 TO _DependencyCount DO
 		bAllSafe := FALSE;
 	END_CASE
 END_FOR
-IF bAllSafe THEN H_OnClearing := E_PackMLHookResult.Done; END_IF]]></ST>
+
+IF bAllSafe THEN
+	M_ClearAllError();
+	H_OnClearing := E_PackMLHookResult.Done;
+END_IF]]></ST>
       </Implementation>
     </Method>
     <Method Name="H_OnComplete" Id="{feb33163-1d69-464e-a85d-a71446a7336d}" FolderPath="StateAction\">
@@ -445,6 +452,8 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF (DependencyIndex = 0) OR (DependencyIndex > _DependencyCount) THEN RETURN; END_IF
+
+// 對所有 Dependency Service 下統一命令
 IF NOT _LifecycleCommandSubmitted[DependencyIndex] THEN
 	SubmitResult := M_CommandDependency(ServiceId := _DependencyServiceIds[DependencyIndex], Command := Command);
 	IF SubmitResult = E_ServiceCallSubmitResult.Queued THEN
@@ -456,6 +465,7 @@ IF NOT _LifecycleCommandSubmitted[DependencyIndex] THEN
 	END_IF
 	RETURN;
 END_IF
+
 CommandState := M_GetDependencyCommandState(ServiceId := _DependencyServiceIds[DependencyIndex]);
 IF CommandState = E_ServiceInternalCommandState.Rejected THEN
 	M_AddError(MainErrorId := TO_UDINT(E_CompositeServiceErrorCode.InternalCommandRejected),
