@@ -31,7 +31,9 @@ M_RegisterService(
 
 ## 控制與參數分流
 
-Module 不在 Execute 時，所有已登錄 Service 都接收 Module 的 PackML command、mode 與 RequestId。此期間上位維持為 TRUE 的 request 會被鎖住；Module 回到 Execute 後，必須先看到該 request 回到 FALSE，後續新上升沿才會送入 Service，避免舊命令延遲執行。
+Module 不在 Execute 時，Coordinator 只將 Module 控制輸入中的 `Stop`、`Abort`、`Clear`、`Reset` 命令請求轉送給所有已登錄 Service，並保留 `RequestId` 與 mode 請求。其他命令（包含 `Start`）及未提出的命令請求，在 Service 的 Effective Ctrl 中一律設為 `eCommand = None`、`bCommandChangeRequest = FALSE`。Module 在 `H_OnIdle()` 排入的內部 `Start` 也不會寫入 Module 控制輸入，因此不會啟動 Service。此期間個別上位 Service 維持為 TRUE 的 request 會被鎖住；Module 回到 Execute 後，必須先看到該 request 回到 FALSE，後續新上升沿才會送入 Service，避免舊命令延遲執行。
+
+白名單只檢查命令種類，不判斷 Module 是否接受該命令；遭 Module 拒絕的白名單命令仍可能到達 Service。由 `bExternalFault` 觸發、但未出現在 `ModuleCtrl.PackMLIn` 的 Module Abort，也不會由這項白名單自動產生 Service Abort。
 
 Module 在 Execute 時，Coordinator 將上位 Ctrl 寫入 Effective Ctrl。只有新的 Start request 上升沿會將 Upper Param 複製到 Effective Param；request 維持 TRUE 期間的參數修改不會影響 Service 本次執行。若 Service 已被 Composite 擁有，Coordinator 改派送 Composite 的內部命令，並屏蔽上位 command 與 mode request；Coordinator 不代寫 ResponseId，因此上位會以 timeout 辨識未送達的命令。
 

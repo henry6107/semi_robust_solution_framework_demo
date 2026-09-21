@@ -263,7 +263,8 @@ VAR
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF Ready AND ModuleInExecute THEN
+        <ST><![CDATA[//
+IF Ready AND ModuleInExecute THEN
 	M_ProcessOwnershipRequests();
 ELSIF Ready THEN
 	FOR nIndex := 1 TO _RegisteredCount DO
@@ -272,6 +273,7 @@ ELSIF Ready THEN
 		END_IF
 	END_FOR
 END_IF
+
 FOR nIndex := 1 TO _RegisteredCount DO
 	pUpperCtrl := _Entries[nIndex].UpperCtrlAddress;
 	pEffectiveCtrl := _Entries[nIndex].EffectiveCtrlAddress;
@@ -291,6 +293,18 @@ FOR nIndex := 1 TO _RegisteredCount DO
 		END_IF
 		pEffectiveCtrl^.RequestId := ModuleCtrl.RequestId;
 		pEffectiveCtrl^.PackMLIn := ModuleCtrl.PackMLIn;
+		
+		// Only Module lifecycle commands may control the registered Services.
+		// Module Start and other commands must not become Service requests.
+		IF (NOT pEffectiveCtrl^.PackMLIn.bCommandChangeRequest)
+			OR ((pEffectiveCtrl^.PackMLIn.eCommand <> E_PackMLCommand.Stop)
+				AND (pEffectiveCtrl^.PackMLIn.eCommand <> E_PackMLCommand.Abort)
+				AND (pEffectiveCtrl^.PackMLIn.eCommand <> E_PackMLCommand.Clear)
+				AND (pEffectiveCtrl^.PackMLIn.eCommand <> E_PackMLCommand.Reset)) THEN
+			pEffectiveCtrl^.PackMLIn.eCommand := E_PackMLCommand.None;
+			pEffectiveCtrl^.PackMLIn.bCommandChangeRequest := FALSE;
+		END_IF
+		
 		IF bUpperCommandHigh THEN _Entries[nIndex].UpperCommandBlockedUntilFalse := TRUE; END_IF
 		IF bUpperModeHigh THEN _Entries[nIndex].UpperModeBlockedUntilFalse := TRUE; END_IF
 		_Entries[nIndex].UpperCommandWasHigh := bUpperCommandHigh;
